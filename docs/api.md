@@ -206,6 +206,8 @@ A fórmula é a de [importacao-regioes.md](importacao-regioes.md). Resumo do que
    - **`estimated_modis`:** para cada cenário `c` (ano de calibração), `detections_c = Σ bruto[bioma, periodo] × fator[bioma, Aqua→S-NPP, mes, periodo, c]`.
 4. Totais por ano, sazonalidade e anomalias são calculados **por cenário**. Só no fim: valor central = mediana dos cenários, faixa = percentis 5 e 95 por **interpolação linear** (o padrão do `numpy.percentile`). Com 13 cenários, o método muda o número, então ele vai escrito também no `metadata.json`.
    - **O número de cenários não é fixo.** A API usa os anos de calibração que existem em `fatores_harmonizacao` (10 ou 13, conforme a validação, e janeiro tem um a menos). Nada no código assume uma quantidade.
+   - **Meses isolados usam todos os cenários que têm fator naquele mês.** Em janeiro, o cenário 2012 fica de fora, porque o S-NPP só começa em 20/01/2012.
+   - **Totais do ano (`years[]`, ranking e anomalias anuais) usam só os cenários completos**, ou seja, os que têm fator nos 12 meses (12 de 13, ou 9 de 10). Um cenário com algum mês sem fator sai do ano inteiro: não entra com zero nem com o mês preenchido pela mediana dos outros, porque isso criaria um valor que ninguém mediu e estreitaria a faixa. Regra no item 7 da "Fórmula do calendário" de [importacao-regioes.md](importacao-regioes.md).
 5. Preenche com zero os meses sem linha e junta os dias sem dado.
 6. Para `recent`, soma as contagens diárias da área na janela atual e em todas as janelas de mesmo tamanho num raio de ±15 dias da mesma data, em cada ano de referência, e tira a mediana e o P25–P75 entre essas janelas.
 
