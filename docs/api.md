@@ -27,7 +27,7 @@ Base: `/api/v1`.
 | `GET` | `/regions` | Regiões prontas para o seletor (biomas) | RF06 |
 | `POST` | `/calendar` | Calendário, sazonalidade, ranking de anos, mês atual, anomalias e indicadores de uma área | RF06–RF12, RD06 |
 | `POST` | `/export` | Pacote de auditoria em ZIP da mesma busca | RF13, RD05 |
-| `GET` | `/detections/recent` | Focos recentes dentro da área visível do mapa, para a camada de focos | RD07 |
+| `GET` | `/detections/recent` | Focos recentes na área visível do mapa: hexágonos com a contagem no mapa afastado, pontos no mapa próximo | RD07 |
 
 `/calendar` e `/export` usam `POST` porque o GeoJSON da área pode ser grande demais para a URL.
 
@@ -230,24 +230,71 @@ O PNG do calendário é gerado no front, a partir do que está na tela.
 
 A camada de focos recentes do mapa. Vem da nossa API, e não do GIBS: as camadas de fogo do GIBS são vector tiles, que o Leaflet não lê sem plugin, e deram erro nos testes. Os dados são os focos NRT que o job de atualização grava em `focos`.
 
+Tem dois modos, para nunca cortar dados:
+
+- **Mapa afastado:** **hexágonos** com a contagem de focos de cada um (mapa de calor). Mostra tudo, sem limite.
+- **Mapa próximo:** os **pontos** individuais.
+
 Pedido:
 
 ```
-GET /api/v1/detections/recent?bbox=-63.5,-6.0,-57.0,0.5&hours=24
+GET /api/v1/detections/recent?bbox=-63.5,-6.0,-57.0,0.5&hours=168&zoom=5
 ```
 
 | Parâmetro | Valores | Significado |
 | --- | --- | --- |
 | `bbox` | `oeste,sul,leste,norte` | Área visível do mapa |
 | `hours` | `24`, `72` ou `168` (padrão `24`) | Janela de tempo até agora |
+| `zoom` | inteiro (zoom do Leaflet) | Escolhe o modo e o tamanho dos hexágonos |
+| `mode` | `auto` (padrão), `hexagons` ou `points` | Força um modo. O front usa `auto` |
 
-Resposta: GeoJSON, que o Leaflet desenha direto.
+### Como o modo é escolhido (`mode=auto`)
+
+| Zoom | Modo | Hexágono |
+| --- | --- | --- |
+| até 4 | `hexagons` | Resolução H3 4 (~1.770 km²) |
+| 5 e 6 | `hexagons` | Resolução H3 5 (~250 km²) |
+| 7 | `hexagons` | Resolução H3 6 (~36 km², a do banco) |
+| 8 em diante | `points` | — |
+
+Se o modo `points` passar de **50.000 focos**, a API devolve hexágonos de resolução 6 no lugar. Nunca corta a lista.
+
+O banco guarda só a resolução 6. A API junta as células nas resoluções 4 e 5 com `h3.cell_to_parent`. O hexágono pai não cobre os filhos com exatidão, o que não importa num mapa de calor.
+
+### Resposta
+
+Sempre GeoJSON, que o Leaflet desenha direto, sem precisar da biblioteca H3 no front.
+
+**`hexagons`:**
 
 ```json
 {
   "type": "FeatureCollection",
+  "mode": "hexagons",
+  "h3_resolution": 5,
+  "hours": 168,
   "updated_at": "2026-11-14T15:00:00Z",
-  "truncated": false,
+  "total_detections": 51588,
+  "features": [
+    { "type": "Feature",
+      "geometry": { "type": "Polygon", "coordinates": [[[-60.31, -3.05], [-60.22, -2.97], [-60.11, -3.01], [-60.10, -3.12], [-60.19, -3.20], [-60.30, -3.16], [-60.31, -3.05]]] },
+      "properties": { "h3": "85a8100ffffffff", "detections": 37 } }
+  ]
+}
+```
+
+- `h3` vai como **texto**, nunca como número (ver "H3 IDs").
+- O front pinta os hexágonos com a mesma paleta do calendário (cividis em escala log).
+
+**`points`:**
+
+```json
+{
+  "type": "FeatureCollection",
+  "mode": "points",
+  "hours": 24,
+  "updated_at": "2026-11-14T15:00:00Z",
+  "total_detections": 3833,
   "features": [
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-60.21, -3.12] },
       "properties": { "satellite": "N20", "acquired_utc": "2026-11-14T05:42:00Z", "confidence": "nominal", "frp": 12.4, "daynight": "N" } }
@@ -255,10 +302,32 @@ Resposta: GeoJSON, que o Leaflet desenha direto.
 }
 ```
 
+### Regras
+
 - Só confiança nominal e alta, o mesmo filtro do calendário.
-- No máximo **50.000 focos** por resposta. Acima disso, `truncated: true`, e a tela pede para aproximar o mapa.
 - Cache com a mesma regra da seção "Desempenho": a chave inclui o `updated_at`, então o cache se renova sozinho a cada atualização NRT.
-- Erros: `invalid_bbox` (400) e `invalid_hours` (400).
+- Erros: `invalid_bbox` (400), `invalid_hours` (400) e `invalid_mode` (400).
+
+### Consulta e desempenho
+
+A consulta filtra **primeiro pelo tempo**, pelo índice parcial `focos_nrt ON focos (datahora_utc) WHERE qualidade = 'NRT'` (migration 003 da frente A), e depois pelo bbox. Os últimos dias são sempre NRT, porque o SP chega meses depois.
+
+```sql
+SELECT h3, count(*) AS n
+FROM focos
+WHERE qualidade = 'NRT'
+  AND datahora_utc >= now() - %s::interval
+  AND confianca IN ('nominal', 'alta')
+  AND lon BETWEEN %s AND %s AND lat BETWEEN %s AND %s   -- bbox visível
+GROUP BY h3;
+```
+
+Medido pela frente A em 14/11, com o histórico completo (46,4 milhões de focos), na issue #5:
+
+| Consulta | Tempo |
+| --- | --- |
+| 7 dias, bbox da Amazônia, agrupado por célula (51.588 focos → 7.962 hexágonos) | 19 ms (466 ms na primeira execução, com o disco disputado) |
+| 24 h, bbox da Amazônia (3.833 focos) | 1 ms |
 
 ## `GET /regions`
 
@@ -288,6 +357,7 @@ Formato único:
 | --- | --- | --- |
 | 400 | `invalid_geometry` | GeoJSON inválido ou de tipo não aceito |
 | 400 | `invalid_period` | Data fora de `2003-01` a `last_month`, ou `start` depois de `end` |
+| 400 | `invalid_bbox`, `invalid_hours`, `invalid_mode` | Parâmetro inválido em `GET /detections/recent` |
 | 404 | `region_not_found` | `region_id` não existe |
 | 413 | `area_too_large` | Mais de 150.000 células |
 | 500 | `internal_error` | Qualquer outro. A mensagem não expõe detalhes do servidor |
