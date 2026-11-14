@@ -119,11 +119,14 @@ Recorte: **País = Brasil**, em CSV. O recorte da Amazônia é feito no processa
 
 Uso na harmonização:
 
-- **Referência histórica:** só o MODIS Aqua. O calendário começa em 2003, o primeiro ano completo do Aqua. Somar Terra e Aqua criaria um salto artificial em julho de 2002.
-- **S-NPP → escala Aqua:** fator calculado na sobreposição de 2012 a 2026.
-- **NOAA-20 → escala S-NPP:** fator calculado na sobreposição de 2018 a 2026.
-- **Atualização diária:** API com `VIIRS_NOAA20_NRT` e `VIIRS_NOAA21_NRT`.
-- **Recarga mensal:** substituir os últimos ~6 meses de NRT pelos dados SP.
+- **Escala da série: VIIRS (S-NPP).** De fevereiro de 2012 em diante, o calendário mostra a contagem real do VIIRS, sem conversão.
+- **2003 a janeiro de 2012:** só o MODIS Aqua, convertido para a escala do VIIRS por um fator Aqua → S-NPP, com faixa de incerteza. O calendário começa em 2003, o primeiro ano completo do Aqua. Somar Terra e Aqua criaria um salto artificial em julho de 2002.
+- **Fator Aqua → S-NPP:** por bioma × mês × dia/noite, um cenário por ano de calibração. Os anos saem da validação deixando um ano de fora (2012–2024, ou 2012–2021 se a deriva da órbita do Aqua pesar). 2025 em diante fica fora.
+- **NOAA-20:** usado de novembro de 2026 em diante, com fator 1 (tratado como igual ao S-NPP).
+- **Atualização:** job NRT a cada 3 h pela API, com `VIIRS_NOAA20_NRT` e `VIIRS_NOAA21_NRT`.
+- **Recarga SP mensal:** fora do escopo da submissão.
+
+Regras completas em [importacao-regioes.md](importacao-regioes.md) e [decisoes-harmonizacao.md](decisoes-harmonizacao.md).
 
 ## Fontes
 

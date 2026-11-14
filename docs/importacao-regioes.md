@@ -28,15 +28,17 @@ Um só importador lê qualquer CSV do FIRMS: pedido de arquivo por país ou regi
 
 ## Tabelas
 
-Cinco tabelas separam o dado bruto, as regiões, a cobertura, a calibração e o resultado pronto para a API.
+Oito tabelas (mais a `config`) separam o dado bruto, as regiões e suas células, a cobertura, as falhas de satélite, a calibração e o resultado pronto para a API.
 
 | Tabela | Uma linha por | Colunas principais | Quem grava |
 | --- | --- | --- | --- |
 | `focos` | Foco detectado | Campos normalizados do importador + `h3` | Importador e jobs de atualização |
-| `regioes` | Região | `id`, `nome`, `geom` (polígono), `celulas_h3`, `fonte_poligono` | Cadastro manual |
+| `regioes` | Região | `id`, `nome`, `geom` (polígono), `fonte_poligono` | `pipeline.py cadastrar` |
+| `celula_regiao` | Célula H3 (cada célula numa região só) | `h3` (chave), `regiao_id` | `pipeline.py cadastrar` |
 | `cobertura` | Região × satélite | `regiao_id`, `satelite`, `data_inicio`, `data_fim`, `atualizado_em` | Importador |
-| `fatores_harmonizacao` | Região (bioma) × par de satélites × mês × dia/noite × ano de calibração | `regiao_id`, `satelite_origem`, `satelite_destino`, `mes`, `periodo`, `ano_calibracao`, `fator` (proposta: + `n_focos_origem`, `fusao_com`) | Job de calibração |
-| `agregados` (contrato 1) | Célula H3 × ano × mês × satélite × dia/noite | `h3`, `ano`, `mes`, `regiao_id`, `satelite`, `periodo`, `focos_brutos`, `frp_soma` | Job de agregação |
+| `fatores_harmonizacao` | Região (bioma) × par de satélites × mês × dia/noite × ano de calibração | `regiao_id`, `satelite_origem`, `satelite_destino`, `mes`, `periodo`, `ano_calibracao`, `fator`, `n_focos_origem`, `fusao_com` | Job de calibração |
+| `dias_sem_dados` | Dia × satélite com falha | `data`, `satelite` | `pipeline.py sem_dados` (FIRMS `missing_data`) |
+| `agregados` (contrato 1) | Célula H3 × ano × mês × satélite × dia/noite | `h3`, `ano`, `mes`, `regiao_id`, `satelite`, `periodo`, `focos_brutos`, `frp_soma` (contagem bruta; o fator é aplicado na API, ver [banco.md](banco.md)) | Job de agregação |
 
 O formato segue o `docs/banco.md` e a migration `001_inicial.sql` da frente A (PR #2). Pontos principais:
 
@@ -98,7 +100,7 @@ Adicionar uma região leva quatro passos e não muda nada no front nem na API.
 
 1. **Baixar os focos.** Pedido no [Archive Download do FIRMS](https://firms.modaps.eosdis.nasa.gov/download/create.php), por país ou região customizada, com MODIS, VIIRS S-NPP e VIIRS NOAA-20, de 2000-11-01 até hoje, em CSV. Se a região está dentro de um país já carregado (por exemplo, o Pantanal dentro do Brasil), este passo é pulado.
 2. **Importar.** `importar <arquivo.csv>` grava em `focos` e atualiza `cobertura`.
-3. **Cadastrar o polígono.** Inserir a região em `regioes` com o polígono oficial (IBGE para biomas brasileiros, fonte oficial do país nos outros casos). O cadastro calcula `celulas_h3`.
+3. **Cadastrar o polígono.** Inserir a região em `regioes` com o polígono oficial (IBGE para biomas brasileiros, fonte oficial do país nos outros casos). O cadastro grava as células da região em `celula_regiao`.
 4. **Recalcular.** `recalcular <regiao>` calcula os fatores de harmonização da região, gera os `agregados` das células dela e invalida o cache dessas células.
 
 Depois disso, os jobs de atualização diária e de recarga mensal passam a incluir a região automaticamente, usando o bounding box do polígono.
