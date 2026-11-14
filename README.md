@@ -17,6 +17,7 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 3 | [Plano de extração — Brasil (Amazônia)](docs/plano-extracao-amazonia.md) | Quais dados baixar, papel de cada satélite, dados de validação (IBGE, INPE), jobs de atualização | Antes de mexer no pipeline |
 | 4 | [Importação de novas regiões](docs/importacao-regioes.md) | Importador, tabelas, chave única, fatores de harmonização por região, como adicionar região | Antes de mexer no banco, no pipeline ou na API |
 | 5 | [Arquitetura e stack](docs/arquitetura.md) | Stack de cada componente, o que já está decidido e o que falta decidir | Antes de escrever qualquer código |
+| 6 | [Tarefas](docs/tarefas.md) | Frentes, responsáveis, branches, pastas de cada um, marcos e status | Antes de começar qualquer tarefa |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
