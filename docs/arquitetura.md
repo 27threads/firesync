@@ -20,9 +20,9 @@ Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir"
 
 | # | Ponto | Opções levantadas | Escolha | Responsável |
 | --- | --- | --- | --- | --- |
-| 1 | Linguagem do pipeline | | a decidir | |
-| 2 | Banco de dados | | a decidir | |
-| 3 | Resolução H3 | | a decidir | |
+| 1 | Linguagem do pipeline | Python | Python (pandas, geopandas, pyarrow) | frente A |
+| 2 | Banco de dados | PostgreSQL + PostGIS + h3-pg; DuckDB | PostgreSQL + PostGIS (H3 calculado no Python, ver [banco.md](banco.md)) | frente A |
+| 3 | Resolução H3 | 5, 6, 7 | 6 (proposta em [banco.md](banco.md)) | frentes A e C |
 | 4 | Linguagem e framework da API | | a decidir | |
 | 5 | Framework do front | | a decidir | |
 | 6 | Biblioteca de mapa e desenho de área (RD01) | | a decidir | |
@@ -31,14 +31,15 @@ Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir"
 | 9 | Formato do download (RF13) | PNG, PDF, CSV | a decidir | |
 | 10 | Granularidade mostrada no calendário | mensal ou diária | a decidir | |
 | 11 | Onde roda o job NRT e a recarga SP | | a decidir | |
-| 12 | Hospedagem pública (front, API e banco) | | a decidir | |
+| 12 | Hospedagem pública (front, API e banco) | VPS; Postgres gerenciado | VPS com `docker compose`, incluindo `focos` (decidido no PR #2, ver [banco.md](banco.md)) | frentes A e C |
 | 13 | Cálculo da anomalia (RF11, RF12) | mediana histórica, média de vários anos | a decidir | |
 
 Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases, por que ela foi escolhida.
 
 ## Justificativas
 
-_(vazio)_
+- **1. Python no pipeline:** preferência do time de dados. Tem as bibliotecas de dado geoespacial prontas (geopandas para o recorte por polígono, pyarrow para parquet) e já roda o download e a análise ([pipeline-dados.md](pipeline-dados.md)).
+- **2. PostgreSQL:** escolha do time de dados. Tem PostGIS para os polígonos de `regioes`. O H3 é calculado no Python e guardado como `BIGINT`, então qualquer Postgres serve ([banco.md](banco.md)). Serve tanto para o pipeline quanto para a API, e tem hospedagem gratuita em vários provedores.
 
 ## Componentes
 
