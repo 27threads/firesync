@@ -10,6 +10,7 @@ data-pipeline/data/*.csv
 data-pipeline/data/*/
 !data-pipeline/data/*.zip
 data-pipeline/reports/eda.html
+data-pipeline/relatorios/
 *.part
 *.log
 
