@@ -166,7 +166,18 @@ O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, 
 ## 7. Pendências
 
 1. ~~Cobertura da faixa por estação~~: feita (seção "Cobertura dentro e fora da temporada de fogo").
-2. **B6, comparação com o INPE.** O script está pronto (`data-pipeline/harmonizacao/validar_inpe.py`, branch `trabalho/harmonizacao`) e passou no autoteste com dados inventados (degrau de +1% com fatores certos, +102% com fatores pela metade). O PR #21 (série do INPE com o satélite de referência: NOAA-12 até 03/07/2002, Aqua depois) já entrou na `main`; o comando foi passado ao Eduardo no PR #26 e aguarda a rodada no banco de teste. Mede, por bioma: correlação mensal e anual, os 5 anos com mais fogo, o mês de pico, a sazonalidade e o **degrau em 2012** (razão firesync/INPE antes e depois da troca de satélite; perto de zero quer dizer que a troca não inventou fogo). Contexto da frente A (issue #19): a série do Aqua no FIRMS já tem correlação mensal de 0,998 com a do INPE e o mesmo mês de pico em 23 de 23 anos, então o degrau em 2012 mede principalmente a nossa conversão.
+2. **B6, comparação com o INPE.** O script está pronto (`data-pipeline/harmonizacao/validar_inpe.py`, branch `trabalho/harmonizacao`) e passou no autoteste com dados inventados (degrau de +1% com fatores certos, +102% com fatores pela metade). O PR #21 (série do INPE com o satélite de referência: NOAA-12 até 03/07/2002, Aqua depois) já entrou na `main`.
+
+   **Estado em 14/11/2026:** o Eduardo fez uma primeira rodada no banco de teste, e a revisão do Mateus (PR #26) achou três erros no script, já corrigidos com um teste para cada um: a faixa anual somava os percentis dos meses (agora soma por cenário), meses sem detecção saíam da comparação (agora entram como zero) e gravar os fatores não mudava a versão dos dados. Falta o Eduardo **rodar a B6 de novo** com a versão corrigida. **Só depois dessa rodada** os números entram aqui e os gráficos vão para a página do projeto.
+
+   **Resultado da primeira rodada (PROVISÓRIO, de uma versão com os erros acima; não usar na página do projeto nem no vídeo):**
+
+   - Forma da série: correlação mensal de 0,94 a 0,99 por bioma (Amazônia 0,992), anual de 0,89 a 0,99, sazonalidade de 0,95 a 1,00; 4 ou 5 dos 5 anos com mais fogo em comum com o INPE; mês de pico igual (tolerância de 1 mês) em 83% a 100% dos anos.
+   - Degrau em 2012: Amazônia −2,4%, Caatinga +2,9%, Cerrado +5,9%, Pantanal +9,9%, Pampa +10,8%, Mata Atlântica −14,1%. Três biomas ficam entre 10% e 14%, o que é pequeno diante do teste inventado com erro (+102%), mas não é "quase nada" e precisa ser declarado no Método se a segunda rodada confirmar.
+   - O Pantanal saiu com 275 meses e 22 anos completos, contra 276 e 23 dos outros biomas: é a marca do erro dos meses zerados, então os números dele são os que mais devem mudar.
+   - A queda da razão em 2025 (cerca de 4,9) aparece no gráfico e já está declarada nos limites.
+
+   A comparação mede, por bioma: correlação mensal e anual, os 5 anos com mais fogo, o mês de pico, a sazonalidade e o **degrau em 2012** (razão firesync/INPE antes e depois da troca de satélite; perto de zero quer dizer que a troca não inventou fogo). Contexto da frente A (issue #19): a série do Aqua no FIRMS já tem correlação mensal de 0,998 com a do INPE e o mesmo mês de pico em 23 de 23 anos, então o degrau em 2012 mede principalmente a nossa conversão.
 3. **Levar o código da B3 e da B6 para o `main`.** Os scripts (`prototipo_fator.py`, `calibrar.py`, `validar_inpe.py` e os autotestes) estão só na branch `trabalho/harmonizacao`. O envio direto ao `main` foi bloqueado pelo controle de permissões em 14/11/2026. Depende de decisão do Weberson: abrir um PR ou liberar o envio.
 4. Confirmar o mínimo de focos por condição (a calibração gravada usou 30).
 5. Investigar a queda de S-NPP/Aqua em 2025.
