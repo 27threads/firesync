@@ -52,6 +52,8 @@ A equipe quer ganhar um prêmio global do Space Apps. Leia o [docs/premiacao.md]
 - **Exceção: hotfix urgente.** Só quando o site no ar está quebrado e não dá para esperar a esteira. Só um administrador pode, porque a proteção deixa administradores passarem por cima. Depois do hotfix, abra um PR com o teste que reproduz o bug, como manda a regra dos bugs, para a correção ficar protegida.
 - A `main` é protegida no GitHub: exige PR e os 5 jobs da esteira verdes.
 
+- **Versionamento SemVer** ([docs/versionamento.md](docs/versionamento.md)): toda mensagem de commit e todo título de PR começam com o tipo (`feat:`, `fix:`, `docs:`, `test:`, `ci:`, `chore:`, `refactor:`…). Mudança que quebra o contrato leva `!` (`feat(api)!: …`). Versões só pelo workflow **Release**, nunca com tag à mão.
+
 ## Uso de IA
 
 Toda parte gerada ou assistida por IA precisa entrar na tabela "Uso de IA" do README, no mesmo commit do código.
