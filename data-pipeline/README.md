@@ -10,6 +10,7 @@ Baixa os focos do FIRMS, normaliza, aplica os filtros de qualidade, carrega no b
 | --- | --- |
 | `pipeline.py` | `download`, `stage`, `clean`, `cadastrar` |
 | `agregar.py` | Gera `agregados` (B4) |
+| `logs.py` | Logs estruturados em JSON (RNF07), usados por todas as etapas |
 | `eda.py` | Análise exploratória por satélite |
 | `test_pipeline.py` | Testes dos filtros |
 | `regioes.json` | Entrada das regiões. A fonte de verdade é a tabela `regioes`, gravada pelo `cadastrar` |

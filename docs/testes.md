@@ -59,7 +59,7 @@ Cada jornada roda no desktop e no celular. Os seletores usam papéis e textos ac
 
 | Parte | Medida | Mínimo | Onde fica o mínimo |
 | --- | --- | --- | --- |
-| `data-pipeline/` | Linhas e ramos, juntando unidade e integração | **56%**, o medido na primeira esteira (PR #24): `agregar.py` 80%, `job_nrt.py` 85%, `pipeline.py` 51% | `data-pipeline/.coveragerc` |
+| `data-pipeline/` | Linhas e ramos, juntando unidade e integração | **63%**, o medido com os logs estruturados: `agregar.py` 88%, `job_nrt.py` 94%, `logs.py` 97%, `pipeline.py` 51% (a primeira esteira, no PR #24, mediu 56%) | `data-pipeline/.coveragerc` |
 | `backend/src/` | Linhas e ramos | **90%**, a partir do primeiro código | `.github/workflows/ci.yml` |
 
 O `eda.py` (análise exploratória) fica fora da cobertura. Download, `stage`, `clean` e `cadastrar` dependem do FIRMS e do IBGE, e são as próximas partes a ganhar teste.

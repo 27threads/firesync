@@ -24,6 +24,7 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 8 | [Banco de dados — decisões para o backend](docs/banco.md) | Imagem, H3, resolução, schema, consulta da API, compose sugerido, benchmark | Antes de mexer no banco ou na API |
 | 9 | [Contrato da API](docs/api.md) | Endpoints, pedido, resposta, erros, export de auditoria. JSON de exemplo em [api-exemplo.json](docs/api-exemplo.json) | Antes de mexer na API ou no front |
 | 10 | [Prompt do frontend](docs/prompt-frontend.md) | Prompt para o agente que constrói o front: direção de design, regras de dado na tela, animação, performance e etapas de construção | Antes de começar a frente D |
+| 11 | [Simulação e auditoria pelos logs](docs/simulacao.md) | Como rodar o sistema de ponta a ponta num banco descartável e auditar pelos logs se ele entrega o que os critérios cobram | Antes de rodar a simulação ou investigar um problema |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
@@ -103,6 +104,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `docs/pipeline-dados.md` | Claude Code (Claude Opus 5.5) | Redação do relatório do que foi feito e dos achados da análise exploratória |
 | `docs/prompt-frontend.md` | Claude Code (Claude Opus 5.5) | Prompt do front escrito a partir dos docs do repo. A equipe aprova antes de usar |
 | `docs/api.md`, `docs/api-exemplo.json` (issues #22 e #29) | Claude Code (Claude Opus 5.5) | Correções do contrato escritas a partir das issues da auditoria. Revisado pela equipe |
+| `data-pipeline/logs.py`, logs em `pipeline.py`, `agregar.py`, `job_nrt.py`, `tests/test_logs.py`, `docs/simulacao.md` | Claude Code (Claude Opus 5.5) | Logs estruturados gerados a partir do RNF07 e dos pontos de decisão do pipeline. Revisado pela equipe |
 
 ## Dados e créditos
 

@@ -151,6 +151,39 @@ Na VPS ele roda no container do `Dockerfile` desta pasta, com um laço de 3 h (c
 python job_nrt.py
 ```
 
+## Logs estruturados (`logs.py`, RNF07)
+
+Todo o pipeline (`pipeline.py`, `agregar.py`, `job_nrt.py`) escreve **uma linha JSON por evento** em stderr, que o `docker compose logs` já junta. Nada de `print`: o que importa para depurar tem nome de evento e campos.
+
+```json
+{"ts": "2026-11-14T21:00:03.120511Z", "level": "info", "logger": "firesync.job_nrt", "event": "nrt_run_finished", "run_id": "3f2a9c1b7d4e", "duration_ms": 28411, "detections_inserted": 739, "detections_updated": 12, "nrt_replaced_by_sp": 0, "updated_at": "2026-11-14T21:00:02Z"}
+```
+
+- `ts` em UTC. Nomes de evento e de campo em inglês, porque o repositório é público.
+- Todos os eventos de uma rodada do job NRT levam o mesmo `run_id`. Para seguir uma rodada: `docker compose logs job-nrt | grep '"run_id": "3f2a9c1b7d4e"'`.
+- Erro: `level` `error`, com `error_type`, `error_message` e `traceback`. No job NRT, o `step` diz onde parou (`setup`, `download`, `import`, `missing_days`, `aggregate`).
+- `LOG_LEVEL=DEBUG` mostra também as decisões de rotina (arquivo já baixado, parquet em dia, cada chamada HTTP com a URL mascarada). O padrão é `INFO`.
+- A MAP_KEY nunca entra no log: URL do FIRMS só passa por `mask_key`, e um teste confere isso.
+
+Pontos de decisão registrados:
+
+| Evento | Onde | O que decide ou mostra |
+| --- | --- | --- |
+| `nrt_run_skipped` (warning) | job NRT | Outra rodada segura a trava: esta sai sem fazer nada |
+| `nrt_run_started`, `nrt_download_done`, `nrt_run_finished` | job NRT | Fontes, bbox, bytes baixados, focos novos e atualizados, NRT trocado por SP, duração e o `updated_at` gravado |
+| `nrt_run_failed` (error) | job NRT | Etapa onde parou. O `atualizado_em` não muda, a API segue com a rodada anterior |
+| `import_file_done`, `import_file_skipped` | `importar` | Tipo do arquivo (MODIS ou VIIRS), linhas lidas, dentro da cobertura, chaves repetidas, satélites, período, novos, atualizados |
+| `nrt_replaced_by_sp` | `importar` | Quantos focos NRT saíram porque o SP do satélite chegou |
+| `aggregate_started`, `aggregate_window_done`, `aggregate_finished` | `agregar` | Satélite escolhido para cada trecho de meses, focos que entram no calendário (`detections`), linhas mensais e diárias (Aqua não entra no diário), escopo parcial ou completo e se o `data_version` mudou |
+| `firms_availability`, `download_api_chunk`, `nrt_file_superseded_by_sp` | `download` | Último dia SP e NRT de cada fonte, trecho baixado de novo por estar perto do fim da disponibilidade, NRT apagado porque o SP chegou |
+| `stage_file_done`, `stage_skipped` | `stage` | Linhas no bbox e dentro da cobertura, arquivo sem focos |
+| `clean_done` | `clean` | Quantas linhas cada filtro tirou |
+| `missing_days_loaded` | `sem_dados` | Dias sem dado por satélite e o último dia SP usado na regra |
+| `region_registered`, `regions_removed` (warning) | `cadastrar` | Células de cada região. Região removida apaga, em cascata, as células, os agregados e os fatores dela |
+| `command_started`, `command_finished`, `command_failed` | `pipeline.py <etapa>` | Início, duração e erro de cada etapa rodada pela linha de comando |
+
+Os logs da API (endpoint, tempo, número de células, status HTTP) ficam com a frente C, quando a API existir.
+
 ## Agregação (`agregar.py`, tarefa B4)
 
 Monta `agregados` a partir de `focos`, em SQL, dentro do banco. É a contagem **bruta**: os fatores são aplicados na API. Fica num módulo separado do importador, como pede o `tarefas.md`.

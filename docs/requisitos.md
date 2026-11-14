@@ -58,7 +58,7 @@ Não vêm do texto do desafio. São necessários porque o sistema é público e 
   - Limite por IP, com valores em configuração. Proposta inicial: 60 pedidos por minuto no geral, 10 por minuto em `POST /calendar` e 2 por minuto em `POST /export`.
   - Acima do limite: HTTP `429` com o código `rate_limited` e o cabeçalho `Retry-After`.
   - Um segundo limite no servidor web (ver `infra/`), antes de o pedido chegar à API.
-- [ ] **RNF07:** **Monitoramento.** ⏳ **parcial:** `config.atualizado_em` gravado pelo job e logs de cada rodada; falta o aviso de dado velho e os logs da API.
+- [ ] **RNF07:** **Monitoramento.** ⏳ **parcial:** `config.atualizado_em` gravado pelo job e logs estruturados em JSON no pipeline e no job NRT ([pipeline-dados.md](pipeline-dados.md), seção "Logs estruturados"); falta o aviso de dado velho e os logs da API.
   - **Dado velho:** se o `updated_at` passar de **6 horas** (duas rodadas do job NRT perdidas), a equipe recebe um aviso, e a tela mostra ao usuário que os dados podem estar desatualizados. Para o público de emergência, mostrar dado velho como se fosse atual é pior do que avisar.
   - **Logs da API:** cada pedido registra o endpoint, o tempo de resposta, o número de células da área e o status HTTP.
   - **Logs do job NRT:** cada rodada registra quantos focos entraram, quanto tempo levou e os erros.
