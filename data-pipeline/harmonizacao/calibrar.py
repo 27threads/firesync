@@ -36,6 +36,7 @@ Saídas na pasta --saida:
 """
 import argparse
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -55,7 +56,9 @@ REGIAO_DA_DECISAO = "Amazônia"  # a decisão dos anos usa a Amazônia, que tem 
 FAIXA = (5, 95)
 
 # Ordem da fusão quando o Aqua não atinge o mínimo (docs/decisoes-harmonizacao.md):
-#   "vizinhos": meses m-1 e m+1 no mesmo período e mesmo ano (dezembro e janeiro são vizinhos)
+#   "vizinhos": meses m-1 e m+1 no mesmo período e mesmo ano (dezembro e janeiro são vizinhos; o vizinho de
+#               dezembro é o janeiro DO MESMO ANO, não o do ano seguinte: cada cenário usa só o próprio ano,
+#               e os dois meses são da mesma estação)
 #   "ano_periodo": o ano inteiro do bioma, só no mesmo período (noite com noite)
 #   "ano": o ano inteiro do bioma, dia e noite juntos (último recurso)
 # Dia e noite só se juntam no fim porque o fator noturno é ~5x o diurno (B1, 2024): juntar antes
@@ -208,12 +211,21 @@ def decidir(erros, medida):
 # ---------------------------------------------------------------- saída
 
 def gravar(fatores, anos):
+    """Troca os fatores Aqua -> SNPP e grava a versão dos dados, tudo num commit (mesma regra da issue #15).
+
+    `atualizado_em` é a chave do cache da API, e `data_version` faz a API recarregar os fatores. Sem isso, a API
+    continuaria servindo números calculados com os fatores antigos.
+    """
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from agregar import VERSAO
     from pipeline import db
     conn = db()
     ids = dict(conn.execute("SELECT nome, id FROM regioes").fetchall())
     f = fatores[fatores["ano"].isin(anos) & fatores["fator"].notna()]
+    versao = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     with conn.transaction():
+        for chave in ("atualizado_em", "data_version"):
+            conn.execute(VERSAO, (chave, versao))
         conn.execute("DELETE FROM fatores_harmonizacao WHERE satelite_origem = 'Aqua' AND satelite_destino = 'SNPP'")
         with conn.cursor() as cur:
             cur.executemany(

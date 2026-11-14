@@ -23,7 +23,7 @@ def test_faixa_do_ano_soma_por_cenario_e_nao_os_percentis():
     cont = contagens([("X", 2005, m, "Aqua", "D", 1 if m <= 2 else 0) for m in range(1, 13)])
     fat = fatores([("X", 1, "D", 2012, 1.0), ("X", 1, "D", 2013, 10.0),
                    ("X", 2, "D", 2012, 10.0), ("X", 2, "D", 2013, 1.0)])
-    ano = validar_inpe.anual(cont, fat, ate=2005).iloc[0]
+    ano = validar_inpe.anual(cont, fat, ate=2005).query("ano == 2005").iloc[0]
     # cenário 2012: 1 + 10 = 11; cenário 2013: 10 + 1 = 11. A faixa do ano é 11 a 11.
     assert ano["firesync"] == pytest.approx(11)
     assert ano["band_low"] == pytest.approx(11)

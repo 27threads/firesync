@@ -11,9 +11,16 @@ satélite só (o Aqua, "AQUA_M-T"). O que precisa bater é a FORMA da série. Me
     O INPE usa o Aqua o tempo todo; o firesync troca de Aqua x fator para o VIIRS observado em fev/2012.
     Se a harmonização funciona, a razão fica estável e o degrau fica perto de zero.
 
+Regras da conta (as mesmas da API, docs/importacao-regioes.md, "Fórmula do calendário"):
+  - mês sem linha em `agregados` é ZERO detecções (dado, não falta de dado) e entra na série;
+  - totais do ano são somados POR CENÁRIO, e só depois saem a mediana e a faixa: a soma dos percentis dos meses
+    não é o percentil da soma;
+  - cenário sem fator para um período com focos não entra naquele mês (nem no ano); mês sem nenhum cenário
+    válido fica sem estimativa e é contado no relatório, nunca vira zero.
+
 Uso (dentro de data-pipeline/):
-    python harmonizacao/validar_inpe.py --saida relatorios/b6                     # lê o banco (agregados + fatores)
-    python harmonizacao/validar_inpe.py --serie serie.csv --saida pasta           # sem banco, a partir da série exportada
+    python harmonizacao/validar_inpe.py --saida relatorios/b6                       # lê o banco (agregados + fatores)
+    python harmonizacao/validar_inpe.py --contagens c.csv --fatores f.csv --saida pasta   # sem banco (testes)
 
 Opções:
     --inpe CAMINHO     CSV do INPE (padrão: referencia/inpe_mensal_biomas.csv). Usa só satelite = AQUA_M-T e
@@ -22,6 +29,7 @@ Opções:
 
 Saídas na pasta --saida:
     serie_firesync_vs_inpe.csv   bioma, ano, mes, firesync (valor central), band_low, band_high, origem, inpe
+    serie_anual_firesync.csv     bioma, ano, firesync, band_low, band_high, origem (faixa somada por cenário)
     metricas_b6.csv              as medidas acima, por bioma
     relatorio_b6.txt             resumo
     grafico_<bioma>.png          (se o matplotlib estiver instalado) totais anuais, razão por ano e sazonalidade
@@ -55,37 +63,62 @@ WHERE f.satelite_origem = 'Aqua' AND f.satelite_destino = 'SNPP'
 
 # ---------------------------------------------------------------- série harmonizada
 
-def harmonizar(contagens, fatores):
-    """Mesma conta da API (importacao-regioes.md, "Fórmula do calendário"), no bioma inteiro.
+def por_cenario(contagens, fatores, ate=None):
+    """Valor harmonizado de cada mês em cada cenário: bioma, ano, mes, cenario, valor, origem.
 
-    contagens: bioma, ano, mes, satelite, periodo, focos (só o satélite do mês, como em agregados)
+    contagens: bioma, ano, mes, satelite, periodo, focos (só o satélite do mês, como em `agregados`)
     fatores:   bioma, mes, periodo, ano_calibracao, fator
+    ate:       último ano da série (padrão: o último ano das contagens). Mês sem linha entra com zero.
+
+    Mês observado pelo VIIRS tem o mesmo valor em todos os cenários. Mês estimado: soma de focos x fator do
+    cenário; se falta o fator de um período COM focos, o valor daquele cenário fica vazio.
     """
-    f = fatores.pivot_table(index=["bioma", "mes", "periodo"], columns="ano_calibracao", values="fator")
+    ate = int(contagens["ano"].max()) if ate is None else ate
+    c = contagens[(contagens["ano"] >= ANO_INICIO) & (contagens["ano"] <= ate)]
+    c = c.groupby(["bioma", "ano", "mes", "periodo"], as_index=False)["focos"].sum()
+    grade = pd.MultiIndex.from_product(
+        [sorted(c["bioma"].unique()), range(ANO_INICIO, ate + 1), range(1, 13), ["D", "N"], sorted(fatores["ano_calibracao"].unique())],
+        names=["bioma", "ano", "mes", "periodo", "cenario"]).to_frame(index=False)
+    g = grade.merge(c, on=["bioma", "ano", "mes", "periodo"], how="left").fillna({"focos": 0})
+    g = g.merge(fatores.rename(columns={"ano_calibracao": "cenario"}), on=["bioma", "mes", "periodo", "cenario"], how="left")
+    observado = (g["ano"] > INICIO_VIIRS[0]) | ((g["ano"] == INICIO_VIIRS[0]) & (g["mes"] >= INICIO_VIIRS[1]))
+    g["valor"] = np.where(observado, g["focos"], np.where(g["focos"] > 0, g["focos"] * g["fator"], 0.0))
+    g["falta"] = g["valor"].isna()
+    g["origem"] = np.where(observado, "observado_viirs", "estimado_modis")
+    s = g.groupby(["bioma", "ano", "mes", "cenario", "origem"], as_index=False).agg(valor=("valor", "sum"), falta=("falta", "any"))
+    s.loc[s["falta"], "valor"] = np.nan
+    return s.drop(columns="falta")
+
+
+def resumir(cen, chaves):
+    """Soma por `chaves` DENTRO de cada cenário e só depois tira a mediana e a faixa entre os cenários."""
+    soma = cen.groupby(chaves + ["cenario"])["valor"].agg(lambda v: v.sum(skipna=False)).reset_index()
+    origens = cen.groupby(chaves)["origem"].agg(lambda o: o.iloc[0] if o.nunique() == 1 else "misto")
     linhas = []
-    for (bioma, ano, mes), g in contagens.groupby(["bioma", "ano", "mes"]):
-        observado = (ano, mes) >= INICIO_VIIRS
-        if observado:
-            linhas.append((bioma, ano, mes, float(g["focos"].sum()), np.nan, np.nan, "observado_viirs"))
-            continue
-        e = None
-        for _, r in g.iterrows():
-            chave = (bioma, mes, r["periodo"])
-            if chave not in f.index:
-                continue
-            parcela = r["focos"] * f.loc[chave]  # um valor por cenário
-            # soma simples: cenário sem fator num período com focos vira vazio e sai (mesma regra do calibrar.py)
-            e = parcela if e is None else e + parcela
-        if e is None or e.dropna().empty:
-            linhas.append((bioma, ano, mes, 0.0, 0.0, 0.0, "estimado_modis"))
-            continue
-        e = e.dropna().to_numpy()
-        linhas.append((bioma, ano, mes, float(np.median(e)), float(np.percentile(e, FAIXA[0])),
-                       float(np.percentile(e, FAIXA[1])), "estimado_modis"))
-    return pd.DataFrame(linhas, columns=["bioma", "ano", "mes", "firesync", "band_low", "band_high", "origem"])
+    for chave, g in soma.groupby(chaves):
+        e = g["valor"].dropna().to_numpy()
+        origem = origens.loc[chave]
+        if len(e) == 0:
+            valores = (np.nan, np.nan, np.nan)
+        elif origem == "observado_viirs":
+            valores = (float(e[0]), np.nan, np.nan)
+        else:
+            valores = (float(np.median(e)), float(np.percentile(e, FAIXA[0])), float(np.percentile(e, FAIXA[1])))
+        linhas.append((*chave, *valores, origem))
+    return pd.DataFrame(linhas, columns=chaves + ["firesync", "band_low", "band_high", "origem"])
 
 
-def serie_do_banco(ate):
+def harmonizar(contagens, fatores, ate=None):
+    """Série mensal: bioma, ano, mes, firesync (valor central), band_low, band_high, origem."""
+    return resumir(por_cenario(contagens, fatores, ate), ["bioma", "ano", "mes"])
+
+
+def anual(contagens, fatores, ate=None):
+    """Totais do ano, com a faixa somada por cenário: bioma, ano, firesync, band_low, band_high, origem."""
+    return resumir(por_cenario(contagens, fatores, ate), ["bioma", "ano"])
+
+
+def dados_do_banco(ate):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     from pipeline import db
     conn = db()
@@ -95,7 +128,7 @@ def serie_do_banco(ate):
                        columns=["bioma", "mes", "periodo", "ano_calibracao", "fator"])
     if fat.empty:
         sys.exit("fatores_harmonizacao está vazia: rode a calibração (calibrar.py --gravar) antes")
-    return harmonizar(cont, fat)
+    return cont, fat
 
 
 def ler_inpe(caminho, ate):
@@ -111,31 +144,31 @@ def ler_inpe(caminho, ate):
 # ---------------------------------------------------------------- comparação
 
 def comparar(s):
-    """s: bioma, ano, mes, firesync, inpe (só meses presentes nas duas séries). Uma linha de medidas por bioma."""
+    """s: bioma, ano, mes, firesync, inpe (meses presentes nas duas séries). Uma linha de medidas por bioma."""
     linhas = []
-    for bioma, g in s.groupby("bioma"):
+    for bioma, g in s.dropna(subset=["firesync"]).groupby("bioma"):
         g = g.sort_values(["ano", "mes"])
-        anual = g.groupby("ano")[["firesync", "inpe"]].sum()
-        anual = anual[g.groupby("ano").size().reindex(anual.index) == 12]  # só anos completos
-        top_f = set(anual["firesync"].nlargest(5).index)
-        top_i = set(anual["inpe"].nlargest(5).index)
+        anual_ = g.groupby("ano")[["firesync", "inpe"]].sum()
+        anual_ = anual_[g.groupby("ano").size().reindex(anual_.index) == 12]  # só anos completos
+        top_f = set(anual_["firesync"].nlargest(5).index)
+        top_i = set(anual_["inpe"].nlargest(5).index)
         pico = g.loc[g.groupby("ano")["firesync"].idxmax(), ["ano", "mes"]].set_index("ano")["mes"]
         pico_i = g.loc[g.groupby("ano")["inpe"].idxmax(), ["ano", "mes"]].set_index("ano")["mes"]
         dif = (pico - pico_i.reindex(pico.index)).abs()
         dif = np.minimum(dif, 12 - dif)  # dezembro e janeiro são vizinhos
         saz_f = g.groupby("mes")["firesync"].mean()
         saz_i = g.groupby("mes")["inpe"].mean()
-        razao = (anual["firesync"] / anual["inpe"]).replace([np.inf, -np.inf], np.nan)
+        razao = (anual_["firesync"] / anual_["inpe"]).replace([np.inf, -np.inf], np.nan)
         antes = razao[(razao.index >= ANO_INICIO) & (razao.index <= 2011)].mean()
         depois = razao[razao.index >= 2013].mean()
         linhas.append({
             "bioma": bioma,
             "meses": len(g),
-            "anos_completos": len(anual),
+            "anos_completos": len(anual_),
             "corr_mensal_pearson": g["firesync"].corr(g["inpe"]),
             # Spearman = Pearson dos postos (sem depender do scipy, que não está no requirements)
             "corr_mensal_spearman": g["firesync"].rank().corr(g["inpe"].rank()),
-            "corr_anual_pearson": anual["firesync"].corr(anual["inpe"]),
+            "corr_anual_pearson": anual_["firesync"].corr(anual_["inpe"]),
             "top5_anos_firesync": " ".join(map(str, sorted(top_f))),
             "top5_anos_inpe": " ".join(map(str, sorted(top_i))),
             "top5_em_comum": len(top_f & top_i),
@@ -148,7 +181,7 @@ def comparar(s):
     return pd.DataFrame(linhas)
 
 
-def graficos(s, saida, biomas):
+def graficos(s, anual_fs, saida, biomas):
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -160,20 +193,22 @@ def graficos(s, saida, biomas):
         g = s[s["bioma"] == bioma]
         if g.empty:
             continue
-        anual = g.groupby("ano")[["firesync", "inpe", "band_low", "band_high"]].sum(min_count=1)
+        a_fs = anual_fs[anual_fs["bioma"] == bioma].set_index("ano")
+        inpe_ano = g.groupby("ano")["inpe"].sum()
         fig, ax = plt.subplots(1, 3, figsize=(16, 4.5))
         a = ax[0]
-        a.plot(anual.index, anual["firesync"], color="#00204d", label="firesync (VIIRS scale)")
-        est = anual[anual.index <= 2011]
+        a.plot(a_fs.index, a_fs["firesync"], color="#00204d", label="firesync (VIIRS scale)")
+        est = a_fs[a_fs["origem"] != "observado_viirs"]
         a.fill_between(est.index, est["band_low"], est["band_high"], color="#00204d", alpha=0.15,
-                       label=f"uncertainty band (P{FAIXA[0]}-P{FAIXA[1]})")
+                       label=f"uncertainty band (P{FAIXA[0]}-P{FAIXA[1]}, summed per scenario)")
         a2 = a.twinx()
-        a2.plot(anual.index, anual["inpe"], color="#c9a900", label="INPE (Aqua reference)")
+        a2.plot(inpe_ano.index, inpe_ano.values, color="#c9a900", label="INPE (Aqua reference)")
         a.axvline(2012, color="gray", ls="--", lw=1)
         a.set_title(f"{bioma}: annual fire detections")
-        a.legend(loc="upper left", fontsize=8); a2.legend(loc="upper right", fontsize=8)
+        a.legend(loc="upper left", fontsize=8)
+        a2.legend(loc="upper right", fontsize=8)
         b = ax[1]
-        r = anual["firesync"] / anual["inpe"]
+        r = a_fs["firesync"].reindex(inpe_ano.index) / inpe_ano
         b.plot(r.index, r.values, marker="o", color="#00204d")
         b.axvline(2012, color="gray", ls="--", lw=1)
         b.set_ylim(0, np.nanmax(r.values) * 1.3)  # eixo a partir de zero: sem isso, variações de 2% parecem saltos
@@ -194,26 +229,35 @@ def graficos(s, saida, biomas):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--serie", help="CSV já exportado (bioma, ano, mes, firesync, band_low, band_high, origem)")
+    ap.add_argument("--contagens", help="CSV no formato de agregados (bioma, ano, mes, satelite, periodo, focos)")
+    ap.add_argument("--fatores", help="CSV dos fatores (bioma, mes, periodo, ano_calibracao, fator)")
     ap.add_argument("--inpe", default=str(Path(__file__).resolve().parent.parent / "referencia" / "inpe_mensal_biomas.csv"))
     ap.add_argument("--ate", type=int, default=2025)
     ap.add_argument("--saida", required=True)
     a = ap.parse_args()
+    if bool(a.contagens) != bool(a.fatores):
+        sys.exit("--contagens e --fatores vão juntos")
 
     saida = Path(a.saida)
     saida.mkdir(parents=True, exist_ok=True)
-    fs = pd.read_csv(a.serie) if a.serie else serie_do_banco(a.ate)
-    fs = fs[(fs["ano"] >= ANO_INICIO) & (fs["ano"] <= a.ate)]
-    inpe = ler_inpe(a.inpe, a.ate)
-    s = fs.merge(inpe, on=["bioma", "ano", "mes"], how="inner")
+    cont, fat = (pd.read_csv(a.contagens), pd.read_csv(a.fatores)) if a.contagens else dados_do_banco(a.ate)
+    cen = por_cenario(cont, fat, a.ate)
+    mensal = resumir(cen, ["bioma", "ano", "mes"])
+    anual_fs = resumir(cen, ["bioma", "ano"])
+    anual_fs.to_csv(saida / "serie_anual_firesync.csv", index=False)
+    s = mensal.merge(ler_inpe(a.inpe, a.ate), on=["bioma", "ano", "mes"], how="inner")
     s.to_csv(saida / "serie_firesync_vs_inpe.csv", index=False)
 
     m = comparar(s)
     m.to_csv(saida / "metricas_b6.csv", index=False)
+    sem_fator = int(mensal["firesync"].isna().sum())
+    zerados = int((mensal["firesync"] == 0).sum())
     rel = [f"B6: firesync x INPE (AQUA_M-T, meses completos), {ANO_INICIO} a {a.ate}",
            "Forma da série: correlações perto de 1 e picos coincidentes = mesma forma. Degrau em 2012 perto de 0 = "
-           "a troca de satélite não criou salto artificial.", "",
-           m.round(3).to_string(index=False), "", graficos(s, saida, ["Amazônia", "Pantanal"])]
+           "a troca de satélite não criou salto artificial.",
+           f"Meses com zero detecções no firesync (entram na comparação): {zerados}. "
+           f"Meses sem estimativa por falta de fator (ficam fora): {sem_fator}.", "",
+           m.round(3).to_string(index=False), "", graficos(s, anual_fs, saida, ["Amazônia", "Pantanal"])]
     texto = "\n".join(rel)
     (saida / "relatorio_b6.txt").write_text(texto, encoding="utf-8")
     print(texto)
