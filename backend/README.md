@@ -14,7 +14,7 @@ Regras que valem aqui:
 - IDs H3 saem sempre como texto, nunca como número.
 - A resolução H3 vem da tabela `config`. A API não sobe se ela não bater com as células do banco.
 
-Linguagem: **Python**, confirmada por Rafael para esta primeira parte. O framework HTTP continua a decidir; FastAPI é uma proposta (ver [docs/arquitetura.md](../docs/arquitetura.md), ponto 4).
+Implementação atual em **Python**. O estado da decisão da linguagem e do framework HTTP está no ponto 4 de [docs/arquitetura.md](../docs/arquitetura.md).
 
 ## Estrutura
 
@@ -50,12 +50,6 @@ Os serviços recebem os contratos de repositório por injeção de dependência.
 
 As regras de alerta continuam em `config/alert_rules.json` na raiz do repositório. Dados reais, segredos e exports gerados não devem ser commitados em `backend/data/`. Os dados pequenos e versionados dos testes ficam em `tests/fixtures/`.
 
-A separação permite testar e alterar as camadas de forma independente. Desempenho e capacidade de escala serão medidos quando houver implementação e consultas reais.
-
-## Commits
-
-Na branch `dev-backend-rafael`, cada classe de produção ou de teste terá seu próprio commit, usando Conventional Commits com descrição em português. A criação inicial de pastas fica em um único commit, pois ainda não há classes.
-
 ## Executar as partes 1–3
 
 Na raiz do repositório, com Python 3.12 ou superior:
@@ -89,7 +83,7 @@ O ID acima é ilustrativo: a região precisa existir no banco. O pool pertence �
 
 - A seleção aceita região, GeoJSON ou ponto com raio geodésico; usa H3 6 e limita a seleção a 250.000 células. As frações dos biomas e da cobertura usam a área real das células selecionadas.
 - O calendário mensal usa o satélite definido pela data. Contagens observadas não recebem fator. Os valores estimados e os totais anuais preservam os cenários até calcular a mediana e P5–P95 por interpolação linear.
-- **Decisão de Rafael:** ao somar condições ou meses com conjuntos diferentes de cenários, usar a interseção dos anos de calibração. Nenhum fator ausente é inventado. Conjuntos disjuntos ou fatores ausentes para contagens positivas geram `CalendarError`.
+- A combinação dos cenários segue [a regra da harmonização](../docs/importacao-regioes.md#fórmula-do-calendário-para-refazer-a-partir-do-export-de-auditoria). Conjuntos disjuntos ou fatores ausentes para contagens positivas geram `CalendarError`.
 - As anomalias seguem a proposta atual de `docs/api.md`: anos completos disponíveis desde 2003, excluindo o próprio ano, independentemente do filtro de exibição. Essa regra ainda está em aberto para a equipe no contrato. Valores sem referência ou com denominador zero usam `None`; sazonalidade sem ano completo tem `n_years=0` e estatísticas `None`.
 - Os anos disponíveis para referência exigem cobertura temporal de todos os meses e de todos os biomas selecionados. Uma lacuna temporal no intervalo solicitado gera erro de dados, em vez de transformar ausência em zero. O formato HTTP desse erro pertence à parte 6.
 - `indicators.total_detections` segue a definição textual do contrato: soma dos valores centrais mensais. `years[].detections` é a mediana dos totais por cenário; essas duas contas podem diferir. A definição do indicador merece revisão da equipe se for necessário torná-las equivalentes.
@@ -97,15 +91,3 @@ O ID acima é ilustrativo: a região precisa existir no banco. O pool pertence �
 - O repositório lê agregados em lote e só consulta focos para identificar meses NRT, usando o filtro do índice parcial. Não há consulta SQL por mês. A validação foi feita com dados sintéticos; as metas de latência do contrato ainda precisam de benchmark com o histórico real.
 
 Referências das bibliotecas: [Python](https://docs.python.org/3/), [H3](https://uber.github.io/h3-py/), [Shapely](https://shapely.readthedocs.io/), [pyproj](https://pyproj4.github.io/pyproj/), [Psycopg](https://www.psycopg.org/psycopg3/docs/), [pytest](https://docs.pytest.org/).
-
-### Integração da main e organização para revisão
-
-A estrutura segue a arquitetura hexagonal da main: `application` depende de `domain` e `ports`; os adaptadores implementam os contratos. O pacote foi validado tanto na instalação editável quanto como wheel, fora do checkout.
-
-Os testes TDD de percentis, seleção de satélite, IDs H3 e calendário agora chamam as interfaces implementadas e não usam `xfail`. As especificações de intensidade, alerta e janelas recentes continuam marcadas como pendentes da parte 4. Os valores esperados da especificação original foram preservados.
-
-O CI instala as dependências do `pyproject.toml`, inicia PostGIS e executa integração junto com unidade e contrato. A cobertura mínima de linhas e ramos foi elevada para 94,2%. O workflow separado de backend foi consolidado no CI principal, evitando duas esteiras com instalações diferentes.
-
-O adaptador preserva `data_version` completo (inclusive hora, conforme o PR #23), aceita versões históricas contendo só a data e rejeita timestamps sem fuso horário. Assim, duas cargas no mesmo dia mantêm versões diferentes.
-
-Validação após integração: 76 testes aprovados, 13 especificações futuras em `xfail`, cobertura de linhas e ramos de 94,21%. Ruff e Vulture passaram. A instalação editável e a wheel foram verificadas. Os testes do pipeline e as migrations também passaram; as jornadas do frontend foram apenas listadas, sem execução de navegador.

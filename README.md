@@ -50,7 +50,7 @@ firesync/
 └── infra/                 deploy na VPS: docker-compose, servidor web, .env.example (frente C)
 ```
 
-Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/` e `frontend/` têm, por enquanto, os testes escritos antes do código (especificação TDD e jornadas). `infra/` ainda não tem arquivos de deploy. `data-pipeline/data/` tem os quatro ZIPs de teste:
+Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/` tem o serviço histórico e seus testes; as rotas HTTP ainda faltam. `frontend/` tem as jornadas de teste. `infra/` ainda não tem arquivos de deploy. `data-pipeline/data/` tem os quatro ZIPs de teste:
 
 | Arquivo | Conteúdo |
 | --- | --- |
@@ -109,7 +109,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `docs/banco.md`, `data-pipeline/migrations/001_inicial.sql` | Claude Code (Claude Opus 5.5) | Schema e documento de decisões gerados a partir dos docs do repo e de um benchmark local. Revisado pela equipe |
 | `docs/pipeline-dados.md` | Claude Code (Claude Opus 5.5) | Redação do relatório do que foi feito e dos achados da análise exploratória |
 | Código e testes em `backend/src/`, `backend/tests/`, configuração Python e CI do backend | OpenAI Codex | Implementação assistida das partes 1–3 e integração da main: domínio, portas, adaptadores PostgreSQL, análise histórica, reorganização de src e CI, conforme documentação da equipe |
-| Estrutura de pastas do `backend/` e documentação correspondente | OpenAI Codex | Organização das camadas e dos testes conforme as decisões do projeto e a escolha de Python por Rafael, sem implementação de código |
+| Estrutura e documentação do `backend/`, ajustes em `docs/arquitetura.md`, `docs/tarefas.md`, `docs/importacao-regioes.md` e `docs/api.md` | OpenAI Codex | Organização das camadas e revisão da documentação; decisões de método referenciadas nos registros da equipe |
 | `docs/prompt-frontend.md` | Claude Code (Claude Opus 5.5) | Prompt do front escrito a partir dos docs do repo. A equipe aprova antes de usar |
 | `docs/api.md`, `docs/api-exemplo.json` (issues #22 e #29) | Claude Code (Claude Opus 5.5) | Correções do contrato escritas a partir das issues da auditoria. Revisado pela equipe |
 | Limpeza dos `.md` (README, CLAUDE.md, `docs/`, READMEs das pastas) | Claude Code (Claude Opus 5.5) | Levantamento do que estava desatualizado, comparando os docs com o código da `main`, e correção dos trechos. Revisado pela equipe no PR |
