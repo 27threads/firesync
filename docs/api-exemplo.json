@@ -35,7 +35,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -47.2,
    "anomaly_pct": -0.346
   },
@@ -49,7 +48,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -0.3,
    "anomaly_pct": -0.005
   },
@@ -63,7 +61,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -35.8,
    "anomaly_pct": -0.494
   },
@@ -77,7 +74,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -9.5,
    "anomaly_pct": -0.145
   },
@@ -91,7 +87,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -23.1,
    "anomaly_pct": -0.154
   },
@@ -105,7 +100,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -105.0,
    "anomaly_pct": -0.344
   },
@@ -119,7 +113,6 @@
    "missing_days": 4,
    "incomplete": true,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 25.0,
    "anomaly_pct": 0.037
   },
@@ -133,7 +126,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -541.0,
    "anomaly_pct": -0.38
   },
@@ -147,7 +139,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -136.0,
    "anomaly_pct": -0.066
   },
@@ -161,7 +152,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -258.8,
    "anomaly_pct": -0.23
   },
@@ -175,7 +165,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -87.6,
    "anomaly_pct": -0.219
   },
@@ -189,7 +178,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -77.3,
    "anomaly_pct": -0.386
   },
@@ -203,7 +191,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -62.1,
    "anomaly_pct": -0.455
   },
@@ -217,7 +204,6 @@
    "missing_days": 4,
    "incomplete": true,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -31.9,
    "anomaly_pct": -0.541
   },
@@ -231,7 +217,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -7.2,
    "anomaly_pct": -0.099
   },
@@ -245,7 +230,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -2.0,
    "anomaly_pct": -0.031
   },
@@ -259,7 +243,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -75.5,
    "anomaly_pct": -0.504
   },
@@ -273,7 +256,6 @@
    "missing_days": 1,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -29.8,
    "anomaly_pct": -0.098
   },
@@ -287,7 +269,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -236.9,
    "anomaly_pct": -0.34
   },
@@ -301,7 +282,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 51.2,
    "anomaly_pct": 0.037
   },
@@ -315,7 +295,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 149.8,
    "anomaly_pct": 0.074
   },
@@ -329,7 +308,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -32.7,
    "anomaly_pct": -0.029
   },
@@ -343,7 +321,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 93.9,
    "anomaly_pct": 0.243
   },
@@ -357,7 +334,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 9.5,
    "anomaly_pct": 0.049
   },
@@ -371,7 +347,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 12.3,
    "anomaly_pct": 0.094
   },
@@ -385,7 +360,6 @@
    "missing_days": 1,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 22.4,
    "anomaly_pct": 0.381
   },
@@ -399,7 +373,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 22.8,
    "anomaly_pct": 0.321
   },
@@ -413,7 +386,6 @@
    "missing_days": 4,
    "incomplete": true,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 59.0,
    "anomaly_pct": 0.918
   },
@@ -427,7 +399,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 116.8,
    "anomaly_pct": 0.882
   },
@@ -441,7 +412,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 116.8,
    "anomaly_pct": 0.403
   },
@@ -455,7 +425,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 414.4,
    "anomaly_pct": 0.607
   },
@@ -469,7 +438,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 420.2,
    "anomaly_pct": 0.303
   },
@@ -483,7 +451,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 789.7,
    "anomaly_pct": 0.391
   },
@@ -497,7 +464,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 1241.3,
    "anomaly_pct": 1.159
   },
@@ -511,7 +477,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 490.5,
    "anomaly_pct": 1.269
   },
@@ -525,7 +490,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 148.2,
    "anomaly_pct": 0.767
   },
@@ -539,7 +503,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -7.6,
    "anomaly_pct": -0.056
   },
@@ -553,7 +516,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 8.9,
    "anomaly_pct": 0.15
   },
@@ -567,7 +529,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -7.2,
    "anomaly_pct": -0.099
   },
@@ -581,7 +542,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -2.0,
    "anomaly_pct": -0.031
   },
@@ -595,7 +555,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -44.9,
    "anomaly_pct": -0.3
   },
@@ -609,7 +568,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -135.0,
    "anomaly_pct": -0.442
   },
@@ -623,7 +581,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -4.2,
    "anomaly_pct": -0.006
   },
@@ -637,7 +594,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 128.9,
    "anomaly_pct": 0.093
   },
@@ -651,7 +607,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 21.8,
    "anomaly_pct": 0.011
   },
@@ -665,7 +620,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -317.7,
    "anomaly_pct": -0.283
   },
@@ -679,7 +633,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 21.3,
    "anomaly_pct": 0.055
   },
@@ -693,7 +646,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -29.3,
    "anomaly_pct": -0.147
   },
@@ -707,7 +659,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 161.0,
    "anomaly_pct": 1.225
   },
@@ -721,7 +672,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 35.9,
    "anomaly_pct": 0.611
   },
@@ -735,7 +685,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 55.5,
    "anomaly_pct": 0.782
   },
@@ -749,7 +698,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 36.5,
    "anomaly_pct": 0.569
   },
@@ -763,7 +711,6 @@
    "missing_days": 1,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 38.1,
    "anomaly_pct": 0.287
   },
@@ -777,7 +724,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 171.8,
    "anomaly_pct": 0.594
   },
@@ -791,7 +737,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 310.5,
    "anomaly_pct": 0.455
   },
@@ -805,7 +750,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 954.0,
    "anomaly_pct": 0.689
   },
@@ -819,7 +763,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 837.7,
    "anomaly_pct": 0.415
   },
@@ -833,7 +776,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 795.9,
    "anomaly_pct": 0.743
   },
@@ -847,7 +789,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 931.8,
    "anomaly_pct": 2.411
   },
@@ -861,7 +802,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 89.5,
    "anomaly_pct": 0.464
   },
@@ -875,7 +815,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -47.2,
    "anomaly_pct": -0.346
   },
@@ -889,7 +828,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -0.3,
    "anomaly_pct": -0.005
   },
@@ -903,7 +841,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 10.6,
    "anomaly_pct": 0.149
   },
@@ -917,7 +854,6 @@
    "missing_days": 1,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -17.0,
    "anomaly_pct": -0.26
   },
@@ -931,7 +867,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -44.9,
    "anomaly_pct": -0.3
   },
@@ -945,7 +880,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -39.8,
    "anomaly_pct": -0.13
   },
@@ -959,7 +893,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 466.3,
    "anomaly_pct": 0.683
   },
@@ -973,7 +906,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -65.3,
    "anomaly_pct": -0.046
   },
@@ -987,7 +919,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 69.8,
    "anomaly_pct": 0.035
   },
@@ -1001,7 +932,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -62.2,
    "anomaly_pct": -0.055
   },
@@ -1015,7 +945,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -132.3,
    "anomaly_pct": -0.33
   },
@@ -1029,7 +958,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -40.0,
    "anomaly_pct": -0.2
   },
@@ -1043,7 +971,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -52.2,
    "anomaly_pct": -0.383
   },
@@ -1057,7 +984,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -18.4,
    "anomaly_pct": -0.312
   },
@@ -1071,7 +997,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -19.5,
    "anomaly_pct": -0.269
   },
@@ -1085,7 +1010,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -13.2,
    "anomaly_pct": -0.202
   },
@@ -1099,7 +1023,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -79.9,
    "anomaly_pct": -0.534
   },
@@ -1113,7 +1036,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 61.5,
    "anomaly_pct": 0.213
   },
@@ -1127,7 +1049,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -321.4,
    "anomaly_pct": -0.461
   },
@@ -1141,7 +1062,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 158.0,
    "anomaly_pct": 0.114
   },
@@ -1155,7 +1075,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -527.9,
    "anomaly_pct": -0.255
   },
@@ -1169,7 +1088,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -448.8,
    "anomaly_pct": -0.399
   },
@@ -1183,7 +1101,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -121.1,
    "anomaly_pct": -0.302
   },
@@ -1197,7 +1114,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -82.7,
    "anomaly_pct": -0.413
   },
@@ -1211,7 +1127,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 71.8,
    "anomaly_pct": 0.546
   },
@@ -1225,7 +1140,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 63.1,
    "anomaly_pct": 1.071
   },
@@ -1239,7 +1153,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 14.7,
    "anomaly_pct": 0.207
   },
@@ -1253,7 +1166,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 17.8,
    "anomaly_pct": 0.278
   },
@@ -1267,7 +1179,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 313.4,
    "anomaly_pct": 2.368
   },
@@ -1281,7 +1192,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 86.6,
    "anomaly_pct": 0.299
   },
@@ -1295,7 +1205,6 @@
    "missing_days": 1,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 784.3,
    "anomaly_pct": 1.149
   },
@@ -1309,7 +1218,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 750.3,
    "anomaly_pct": 0.541
   },
@@ -1323,7 +1231,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 1485.6,
    "anomaly_pct": 0.736
   },
@@ -1337,7 +1244,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 1143.1,
    "anomaly_pct": 1.067
   },
@@ -1351,7 +1257,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 518.4,
    "anomaly_pct": 1.341
   },
@@ -1365,7 +1270,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 62.8,
    "anomaly_pct": 0.325
   },
@@ -1379,7 +1283,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 37.1,
    "anomaly_pct": 0.282
   },
@@ -1393,7 +1296,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 22.4,
    "anomaly_pct": 0.381
   },
@@ -1407,7 +1309,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 43.2,
    "anomaly_pct": 0.608
   },
@@ -1421,7 +1322,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 6.7,
    "anomaly_pct": 0.104
   },
@@ -1435,7 +1335,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 29.3,
    "anomaly_pct": 0.222
   },
@@ -1449,7 +1348,6 @@
    "missing_days": 1,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 76.6,
    "anomaly_pct": 0.265
   },
@@ -1463,7 +1361,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 407.9,
    "anomaly_pct": 0.598
   },
@@ -1477,7 +1374,6 @@
    "missing_days": 1,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 196.9,
    "anomaly_pct": 0.142
   },
@@ -1491,7 +1387,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -671.9,
    "anomaly_pct": -0.324
   },
@@ -1505,7 +1400,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 245.6,
    "anomaly_pct": 0.229
   },
@@ -1519,7 +1413,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": -115.5,
    "anomaly_pct": -0.288
   },
@@ -1533,7 +1426,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 1.5,
    "anomaly_pct": 0.007
   },
@@ -1547,7 +1439,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": null,
    "anomaly": 7.4,
    "anomaly_pct": 0.056
   },
@@ -1561,7 +1452,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 437.7,
    "anomaly": 11.1,
    "anomaly_pct": 0.189
   },
@@ -1575,7 +1465,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 429.6,
    "anomaly": -3.5,
    "anomaly_pct": -0.048
   },
@@ -1589,7 +1478,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 307.6,
    "anomaly": 0.2,
    "anomaly_pct": 0.004
   },
@@ -1603,7 +1491,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 464.4,
    "anomaly": -71.8,
    "anomaly_pct": -0.479
   },
@@ -1617,7 +1504,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1425.7,
    "anomaly": -81.5,
    "anomaly_pct": -0.267
   },
@@ -1631,7 +1517,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 2307.8,
    "anomaly": -247.8,
    "anomaly_pct": -0.355
   },
@@ -1645,7 +1530,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 6038.2,
    "anomaly": -390.4,
    "anomaly_pct": -0.274
   },
@@ -1659,7 +1543,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 11306.8,
    "anomaly": -91.6,
    "anomaly_pct": -0.044
   },
@@ -1673,7 +1556,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 4945.4,
    "anomaly": -131.5,
    "anomaly_pct": -0.117
   },
@@ -1687,7 +1569,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 2036.5,
    "anomaly": -51.4,
    "anomaly_pct": -0.128
   },
@@ -1701,7 +1582,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1240.8,
    "anomaly": -14.0,
    "anomaly_pct": -0.07
   },
@@ -1715,7 +1595,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 615.2,
    "anomaly": -12.4,
    "anomaly_pct": -0.091
   },
@@ -1729,7 +1608,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 257.7,
    "anomaly": -4.0,
    "anomaly_pct": -0.068
   },
@@ -1743,7 +1621,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 366.2,
    "anomaly": -10.5,
    "anomaly_pct": -0.145
   },
@@ -1757,7 +1634,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 423.9,
    "anomaly": 8.8,
    "anomaly_pct": 0.136
   },
@@ -1771,7 +1647,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 788.2,
    "anomaly": -36.8,
    "anomaly_pct": -0.246
   },
@@ -1785,7 +1660,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1193.8,
    "anomaly": -117.5,
    "anomaly_pct": -0.385
   },
@@ -1799,7 +1673,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 2003.4,
    "anomaly": -291.8,
    "anomaly_pct": -0.418
   },
@@ -1813,7 +1686,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 6206.2,
    "anomaly": -202.4,
    "anomaly_pct": -0.142
   },
@@ -1827,7 +1699,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 14725.3,
    "anomaly": 350.2,
    "anomaly_pct": 0.174
   },
@@ -1841,7 +1712,6 @@
    "missing_days": 1,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 6486.3,
    "anomaly": 94.9,
    "anomaly_pct": 0.089
   },
@@ -1855,7 +1725,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 2843.3,
    "anomaly": 46.5,
    "anomaly_pct": 0.12
   },
@@ -1869,7 +1738,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 657.9,
    "anomaly": -74.0,
    "anomaly_pct": -0.37
   },
@@ -1883,7 +1751,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 363.4,
    "anomaly": -57.4,
    "anomaly_pct": -0.421
   },
@@ -1897,7 +1764,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 179.7,
    "anomaly": -21.0,
    "anomaly_pct": -0.356
   },
@@ -1911,7 +1777,6 @@
    "missing_days": 4,
    "incomplete": true,
    "provisional": false,
-   "frp_sum": 469.7,
    "anomaly": 5.0,
    "anomaly_pct": 0.07
   },
@@ -1925,7 +1790,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 332.7,
    "anomaly": -16.5,
    "anomaly_pct": -0.252
   },
@@ -1939,7 +1803,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 326.6,
    "anomaly": -92.8,
    "anomaly_pct": -0.62
   },
@@ -1953,7 +1816,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 747.2,
    "anomaly": -184.5,
    "anomaly_pct": -0.604
   },
@@ -1967,7 +1829,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 2605.1,
    "anomaly": -198.8,
    "anomaly_pct": -0.285
   },
@@ -1981,7 +1842,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 4819.8,
    "anomaly": -516.4,
    "anomaly_pct": -0.363
   },
@@ -1995,7 +1855,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 11633.4,
    "anomaly": -402.6,
    "anomaly_pct": -0.194
   },
@@ -2009,7 +1868,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 3885.7,
    "anomaly": -341.5,
    "anomaly_pct": -0.304
   },
@@ -2023,7 +1881,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1395.2,
    "anomaly": -182.4,
    "anomaly_pct": -0.456
   },
@@ -2037,7 +1894,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 503.6,
    "anomaly": -110.0,
    "anomaly_pct": -0.55
   },
@@ -2051,7 +1907,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 870.3,
    "anomaly": 16.6,
    "anomaly_pct": 0.126
   },
@@ -2065,7 +1920,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 769.9,
    "anomaly": 58.1,
    "anomaly_pct": 0.988
   },
@@ -2079,7 +1933,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 435.4,
    "anomaly": 13.0,
    "anomaly_pct": 0.183
   },
@@ -2093,7 +1946,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 449.1,
    "anomaly": 1.8,
    "anomaly_pct": 0.027
   },
@@ -2107,7 +1959,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 903.2,
    "anomaly": 41.7,
    "anomaly_pct": 0.315
   },
@@ -2121,7 +1972,6 @@
    "missing_days": 1,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 2405.8,
    "anomaly": 127.6,
    "anomaly_pct": 0.441
   },
@@ -2135,7 +1985,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 6092.7,
    "anomaly": 338.5,
    "anomaly_pct": 0.496
   },
@@ -2149,7 +1998,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 7861.3,
    "anomaly": -87.4,
    "anomaly_pct": -0.061
   },
@@ -2163,7 +2011,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 13005.8,
    "anomaly": 598.2,
    "anomaly_pct": 0.296
   },
@@ -2177,7 +2024,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 11242.3,
    "anomaly": 674.9,
    "anomaly_pct": 0.63
   },
@@ -2191,7 +2037,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 5795.8,
    "anomaly": 554.5,
    "anomaly_pct": 1.435
   },
@@ -2205,7 +2050,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1505.8,
    "anomaly": 58.8,
    "anomaly_pct": 0.305
   },
@@ -2219,7 +2063,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 662.8,
    "anomaly": -28.4,
    "anomaly_pct": -0.208
   },
@@ -2233,7 +2076,6 @@
    "missing_days": 1,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 229.9,
    "anomaly": -16.0,
    "anomaly_pct": -0.271
   },
@@ -2247,7 +2089,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 484.1,
    "anomaly": 2.0,
    "anomaly_pct": 0.028
   },
@@ -2261,7 +2102,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 466.0,
    "anomaly": 9.8,
    "anomaly_pct": 0.152
   },
@@ -2275,7 +2115,6 @@
    "missing_days": 4,
    "incomplete": true,
    "provisional": false,
-   "frp_sum": 1489.9,
    "anomaly": 101.7,
    "anomaly_pct": 0.768
   },
@@ -2289,7 +2128,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1490.0,
    "anomaly": -82.5,
    "anomaly_pct": -0.27
   },
@@ -2303,7 +2141,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 2450.6,
    "anomaly": -166.8,
    "anomaly_pct": -0.239
   },
@@ -2317,7 +2154,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 7359.1,
    "anomaly": 127.5,
    "anomaly_pct": 0.092
   },
@@ -2331,7 +2167,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 8756.6,
    "anomaly": -293.6,
    "anomaly_pct": -0.142
   },
@@ -2345,7 +2180,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 5076.4,
    "anomaly": -78.5,
    "anomaly_pct": -0.07
   },
@@ -2359,7 +2193,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1777.7,
    "anomaly": -0.9,
    "anomaly_pct": -0.002
   },
@@ -2373,7 +2206,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1013.8,
    "anomaly": -11.0,
    "anomaly_pct": -0.055
   },
@@ -2387,7 +2219,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 624.8,
    "anomaly": -11.4,
    "anomaly_pct": -0.084
   },
@@ -2401,7 +2232,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 349.9,
    "anomaly": 0.1,
    "anomaly_pct": 0.003
   },
@@ -2415,7 +2245,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 447.4,
    "anomaly": 0.5,
    "anomaly_pct": 0.007
   },
@@ -2429,7 +2258,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 419.2,
    "anomaly": 8.8,
    "anomaly_pct": 0.136
   },
@@ -2443,7 +2271,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 998.9,
    "anomaly": 33.7,
    "anomaly_pct": 0.254
   },
@@ -2457,7 +2284,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1356.6,
    "anomaly": -86.5,
    "anomaly_pct": -0.283
   },
@@ -2471,7 +2297,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 5226.8,
    "anomaly": 178.5,
    "anomaly_pct": 0.262
   },
@@ -2485,7 +2310,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 13108.8,
    "anomaly": 954.5,
    "anomaly_pct": 0.689
   },
@@ -2499,7 +2323,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 11638.3,
    "anomaly": 204.2,
    "anomaly_pct": 0.101
   },
@@ -2513,7 +2336,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 7375.0,
    "anomaly": 189.9,
    "anomaly_pct": 0.177
   },
@@ -2527,7 +2349,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 4616.5,
    "anomaly": 315.5,
    "anomaly_pct": 0.816
   },
@@ -2541,7 +2362,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 703.8,
    "anomaly": -92.0,
    "anomaly_pct": -0.46
   },
@@ -2555,7 +2375,6 @@
    "missing_days": 1,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1653.4,
    "anomaly": 107.6,
    "anomaly_pct": 0.819
   },
@@ -2569,7 +2388,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 380.9,
    "anomaly": 25.1,
    "anomaly_pct": 0.427
   },
@@ -2583,7 +2401,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 432.7,
    "anomaly": -2.5,
    "anomaly_pct": -0.034
   },
@@ -2597,7 +2414,6 @@
    "missing_days": 1,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 400.8,
    "anomaly": 19.8,
    "anomaly_pct": 0.307
   },
@@ -2611,7 +2427,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1005.6,
    "anomaly": 66.7,
    "anomaly_pct": 0.504
   },
@@ -2625,7 +2440,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1702.2,
    "anomaly": 61.6,
    "anomaly_pct": 0.213
   },
@@ -2639,7 +2453,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 4259.2,
    "anomaly": 215.5,
    "anomaly_pct": 0.316
   },
@@ -2653,7 +2466,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 9693.3,
    "anomaly": 14.1,
    "anomaly_pct": 0.01
   },
@@ -2667,7 +2479,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 9900.5,
    "anomaly": -283.6,
    "anomaly_pct": -0.137
   },
@@ -2681,7 +2492,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 5695.6,
    "anomaly": -295.5,
    "anomaly_pct": -0.263
   },
@@ -2695,7 +2505,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 2386.1,
    "anomaly": -53.4,
    "anomaly_pct": -0.133
   },
@@ -2709,7 +2518,6 @@
    "missing_days": 1,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1316.8,
    "anomaly": 50.8,
    "anomaly_pct": 0.263
   },
@@ -2723,7 +2531,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 653.2,
    "anomaly": -27.4,
    "anomaly_pct": -0.201
   },
@@ -2737,7 +2544,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 238.2,
    "anomaly": -8.0,
    "anomaly_pct": -0.136
   },
@@ -2751,7 +2557,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 440.5,
    "anomaly": -6.5,
    "anomaly_pct": -0.09
   },
@@ -2765,7 +2570,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 238.9,
    "anomaly": -12.5,
    "anomaly_pct": -0.191
   },
@@ -2779,7 +2583,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 707.5,
    "anomaly": -6.2,
    "anomaly_pct": -0.043
   },
@@ -2793,7 +2596,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 689.6,
    "anomaly": -153.5,
    "anomaly_pct": -0.502
   },
@@ -2807,7 +2609,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 3341.4,
    "anomaly": -20.8,
    "anomaly_pct": -0.03
   },
@@ -2821,7 +2622,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 8513.9,
    "anomaly": -103.4,
    "anomaly_pct": -0.073
   },
@@ -2835,7 +2635,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 11908.2,
    "anomaly": -336.6,
    "anomaly_pct": -0.162
   },
@@ -2849,7 +2648,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 9377.0,
    "anomaly": 285.9,
    "anomaly_pct": 0.267
   },
@@ -2863,7 +2661,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1740.3,
    "anomaly": -120.4,
    "anomaly_pct": -0.301
   },
@@ -2877,7 +2674,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 775.8,
    "anomaly": -35.0,
    "anomaly_pct": -0.175
   },
@@ -2891,7 +2687,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 711.9,
    "anomaly": 0.2,
    "anomaly_pct": 0.001
   },
@@ -2905,7 +2700,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 519.1,
    "anomaly": 24.1,
    "anomaly_pct": 0.41
   },
@@ -2919,7 +2713,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 850.8,
    "anomaly": 64.0,
    "anomaly_pct": 0.901
   },
@@ -2933,7 +2726,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 374.3,
    "anomaly": 5.8,
    "anomaly_pct": 0.089
   },
@@ -2947,7 +2739,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 940.8,
    "anomaly": 36.7,
    "anomaly_pct": 0.277
   },
@@ -2961,7 +2752,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 2668.5,
    "anomaly": 102.6,
    "anomaly_pct": 0.355
   },
@@ -2975,7 +2765,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 8985.0,
    "anomaly": 823.5,
    "anomaly_pct": 1.207
   },
@@ -2989,7 +2778,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 10768.0,
    "anomaly": 614.5,
    "anomaly_pct": 0.443
   },
@@ -3003,7 +2791,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 21952.1,
    "anomaly": 1465.2,
    "anomaly_pct": 0.726
   },
@@ -3017,7 +2804,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 7849.3,
    "anomaly": 206.9,
    "anomaly_pct": 0.193
   },
@@ -3031,7 +2817,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 2904.5,
    "anomaly": 149.5,
    "anomaly_pct": 0.387
   },
@@ -3045,7 +2830,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 2261.6,
    "anomaly": 148.8,
    "anomaly_pct": 0.771
   },
@@ -3059,7 +2843,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1013.6,
    "anomaly": 30.6,
    "anomaly_pct": 0.233
   },
@@ -3073,7 +2856,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 393.8,
    "anomaly": 0.1,
    "anomaly_pct": 0.003
   },
@@ -3087,7 +2869,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 425.8,
    "anomaly": -2.5,
    "anomaly_pct": -0.034
   },
@@ -3101,7 +2882,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 293.0,
    "anomaly": -11.5,
    "anomaly_pct": -0.176
   },
@@ -3115,7 +2895,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 966.0,
    "anomaly": 72.7,
    "anomaly_pct": 0.549
   },
@@ -3129,7 +2908,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1926.5,
    "anomaly": 23.6,
    "anomaly_pct": 0.082
   },
@@ -3143,7 +2921,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 4228.4,
    "anomaly": -35.8,
    "anomaly_pct": -0.051
   },
@@ -3157,7 +2934,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 6822.0,
    "anomaly": -323.4,
    "anomaly_pct": -0.227
   },
@@ -3171,7 +2947,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 10828.1,
    "anomaly": -98.6,
    "anomaly_pct": -0.048
   },
@@ -3185,7 +2960,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 5968.3,
    "anomaly": 115.9,
    "anomaly_pct": 0.108
   },
@@ -3199,7 +2973,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1717.3,
    "anomaly": -20.4,
    "anomaly_pct": -0.051
   },
@@ -3213,7 +2986,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1427.1,
    "anomaly": 34.8,
    "anomaly_pct": 0.18
   },
@@ -3227,7 +2999,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1085.4,
    "anomaly": 41.6,
    "anomaly_pct": 0.317
   },
@@ -3241,7 +3012,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 308.1,
    "anomaly": -1.0,
    "anomaly_pct": -0.017
   },
@@ -3255,7 +3025,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 571.2,
    "anomaly": 13.0,
    "anomaly_pct": 0.183
   },
@@ -3269,7 +3038,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 252.5,
    "anomaly": -19.5,
    "anomaly_pct": -0.298
   },
@@ -3283,7 +3051,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 521.6,
    "anomaly": -43.8,
    "anomaly_pct": -0.293
   },
@@ -3297,7 +3064,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1630.3,
    "anomaly": -64.5,
    "anomaly_pct": -0.211
   },
@@ -3311,7 +3077,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 3098.8,
    "anomaly": -223.8,
    "anomaly_pct": -0.321
   },
@@ -3325,7 +3090,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 6948.9,
    "anomaly": -267.4,
    "anomaly_pct": -0.188
   },
@@ -3339,7 +3103,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 16016.0,
    "anomaly": 472.2,
    "anomaly_pct": 0.234
   },
@@ -3353,7 +3116,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 5678.5,
    "anomaly": -113.5,
    "anomaly_pct": -0.101
   },
@@ -3367,7 +3129,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 3867.1,
    "anomaly": 251.5,
    "anomaly_pct": 0.651
   },
@@ -3381,7 +3142,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1279.8,
    "anomaly": 80.8,
    "anomaly_pct": 0.419
   },
@@ -3395,7 +3155,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 554.0,
    "anomaly": -31.4,
    "anomaly_pct": -0.23
   },
@@ -3409,7 +3168,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 267.4,
    "anomaly": -2.0,
    "anomaly_pct": -0.034
   },
@@ -3423,7 +3181,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 376.7,
    "anomaly": -8.5,
    "anomaly_pct": -0.117
   },
@@ -3437,7 +3194,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 275.8,
    "anomaly": -13.5,
    "anomaly_pct": -0.206
   },
@@ -3451,7 +3207,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 547.3,
    "anomaly": -34.8,
    "anomaly_pct": -0.233
   },
@@ -3465,7 +3220,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1745.7,
    "anomaly": 11.1,
    "anomaly_pct": 0.038
   },
@@ -3479,7 +3233,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 2709.7,
    "anomaly": -213.8,
    "anomaly_pct": -0.306
   },
@@ -3493,7 +3246,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 6759.0,
    "anomaly": -126.4,
    "anomaly_pct": -0.089
   },
@@ -3507,7 +3259,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 10674.1,
    "anomaly": -422.6,
    "anomaly_pct": -0.204
   },
@@ -3521,7 +3272,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 6573.9,
    "anomaly": -62.5,
    "anomaly_pct": -0.056
   },
@@ -3535,7 +3285,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1975.6,
    "anomaly": -108.4,
    "anomaly_pct": -0.271
   },
@@ -3549,7 +3298,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1077.5,
    "anomaly": 28.8,
    "anomaly_pct": 0.149
   },
@@ -3563,7 +3311,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 2677.3,
    "anomaly": 360.6,
    "anomaly_pct": 2.744
   },
@@ -3577,7 +3324,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1211.6,
    "anomaly": 136.2,
    "anomaly_pct": 2.314
   },
@@ -3591,7 +3337,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 713.4,
    "anomaly": 61.0,
    "anomaly_pct": 0.859
   },
@@ -3605,7 +3350,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 817.4,
    "anomaly": 54.8,
    "anomaly_pct": 0.852
   },
@@ -3619,7 +3363,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1187.3,
    "anomaly": 120.7,
    "anomaly_pct": 0.912
   },
@@ -3633,7 +3376,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 2057.0,
    "anomaly": 88.6,
    "anomaly_pct": 0.306
   },
@@ -3647,7 +3389,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 13112.8,
    "anomaly": 1661.5,
    "anomaly_pct": 2.434
   },
@@ -3661,7 +3402,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 13987.0,
    "anomaly": 1107.5,
    "anomaly_pct": 0.799
   },
@@ -3675,7 +3415,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 15468.7,
    "anomaly": 633.2,
    "anomaly_pct": 0.314
   },
@@ -3689,7 +3428,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 9315.1,
    "anomaly": 342.9,
    "anomaly_pct": 0.32
   },
@@ -3703,7 +3441,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 7162.0,
    "anomaly": 926.5,
    "anomaly_pct": 2.397
   },
@@ -3717,7 +3454,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 3524.7,
    "anomaly": 348.9,
    "anomaly_pct": 1.806
   },
@@ -3731,7 +3467,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 784.8,
    "anomaly": 33.6,
    "anomaly_pct": 0.256
   },
@@ -3745,7 +3480,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 230.0,
    "anomaly": -25.0,
    "anomaly_pct": -0.424
   },
@@ -3759,7 +3493,6 @@
    "missing_days": 1,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 197.1,
    "anomaly": -33.5,
    "anomaly_pct": -0.462
   },
@@ -3773,7 +3506,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 227.0,
    "anomaly": -16.5,
    "anomaly_pct": -0.252
   },
@@ -3787,7 +3519,6 @@
    "missing_days": 4,
    "incomplete": true,
    "provisional": false,
-   "frp_sum": 554.6,
    "anomaly": -47.8,
    "anomaly_pct": -0.319
   },
@@ -3801,7 +3532,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1492.0,
    "anomaly": 18.6,
    "anomaly_pct": 0.064
   },
@@ -3815,7 +3545,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1439.6,
    "anomaly": -400.8,
    "anomaly_pct": -0.574
   },
@@ -3829,7 +3558,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 6168.6,
    "anomaly": -111.4,
    "anomaly_pct": -0.078
   },
@@ -3843,7 +3571,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 5111.3,
    "anomaly": -1262.6,
    "anomaly_pct": -0.609
   },
@@ -3857,7 +3584,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 4601.5,
    "anomaly": -247.5,
    "anomaly_pct": -0.22
   },
@@ -3871,7 +3597,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1438.9,
    "anomaly": -145.4,
    "anomaly_pct": -0.363
   },
@@ -3885,7 +3610,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 811.7,
    "anomaly": -41.0,
    "anomaly_pct": -0.205
   },
@@ -3899,7 +3623,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 634.6,
    "anomaly": -31.0,
    "anomaly_pct": -0.231
   },
@@ -3913,7 +3636,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 230.0,
    "anomaly": -26.0,
    "anomaly_pct": -0.441
   },
@@ -3927,7 +3649,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 304.5,
    "anomaly": -22.0,
    "anomaly_pct": -0.306
   },
@@ -3941,7 +3662,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 244.3,
    "anomaly": -27.0,
    "anomaly_pct": -0.415
   },
@@ -3955,7 +3675,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 662.7,
    "anomaly": -25.0,
    "anomaly_pct": -0.181
   },
@@ -3969,7 +3688,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 1290.8,
    "anomaly": -75.0,
    "anomaly_pct": -0.248
   },
@@ -3983,7 +3701,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": false,
-   "frp_sum": 2831.9,
    "anomaly": -80.0,
    "anomaly_pct": -0.116
   },
@@ -3997,7 +3714,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": true,
-   "frp_sum": 6112.2,
    "anomaly": -86.0,
    "anomaly_pct": -0.061
   },
@@ -4011,7 +3727,6 @@
    "missing_days": 4,
    "incomplete": true,
    "provisional": true,
-   "frp_sum": 12488.4,
    "anomaly": 76.4,
    "anomaly_pct": 0.037
   },
@@ -4025,7 +3740,6 @@
    "missing_days": 0,
    "incomplete": false,
    "provisional": true,
-   "frp_sum": 2890.3,
    "anomaly": -544.9,
    "anomaly_pct": -0.504
   },
@@ -4039,7 +3753,6 @@
    "missing_days": 0,
    "incomplete": true,
    "provisional": true,
-   "frp_sum": 981.7,
    "anomaly": null,
    "anomaly_pct": null
   }
@@ -4371,7 +4084,8 @@
    "typical_p75": 45.5,
    "difference": 21.5,
    "difference_pct": 0.544,
-   "n_years": 14
+   "n_years": 14,
+   "n_windows": 350
   },
   "month_to_date": {
    "start": "2026-11-01",
@@ -4382,7 +4096,8 @@
    "typical_p75": 142.5,
    "difference": 23.5,
    "difference_pct": 0.192,
-   "n_years": 14
+   "n_years": 14,
+   "n_windows": 350
   }
  },
  "indicators": {

@@ -14,6 +14,7 @@ Mudar este contrato exige avisar a equipe antes e atualizar este documento no me
 - **IDs H3, quando aparecem, são texto.** Um ID da resolução 6 passa de 2⁵³, e o `JSON.parse` do navegador o arredonda sem erro. Ver "H3 IDs" abaixo.
 - **Zero, sem dados e fora da cobertura são coisas diferentes**, e a resposta sempre diz qual é o caso.
 - **A faixa de incerteza é calculada depois de somar.** Totais por ano, sazonalidade e anomalias são calculados por cenário, e só no fim saem a mediana e o P10–P90. A soma dos P10 não é o P10 da soma.
+- **O FRP (potência do fogo em MW) não aparece na tela.** Os fogos mais fortes saturam o VIIRS: 7% das detecções saturadas respondem por 22% da energia, e isso piora no pico da temporada. A soma em MW engana como indicador de gravidade. O FRP continua no pacote de auditoria (`counts.csv` e `detections.csv`).
 - **O número mostrado se chama `detections`** (detecções de fogo), a convenção do FIRMS. Um fogo grande ocupa vários pixels, então não é "número de incêndios".
 - **O papel do sistema:** o FIRMS mostra onde o fogo está agora. O firesync diz se isso é normal para esse lugar e essa época do ano. O público inclui equipes de alerta precoce e de resposta a emergências (RD07), então o indicador principal é a **janela recente** (últimos 7 dias), e não o mês inteiro.
 
@@ -124,7 +125,6 @@ Um item por mês do intervalo, sem buracos. Mês sem focos vem com `detections: 
 | `missing_days` | inteiro | Dias do mês sem dado do satélite daquele mês (tabela `dias_sem_dados`) |
 | `incomplete` | booleano | `true` se `missing_days >= 3`, ou se o mês é o atual e ainda não acabou |
 | `provisional` | booleano | `true` se o mês tem dados NRT (ainda não substituídos pelos SP) |
-| `frp_sum` | número ou `null` | Soma do FRP em MW. `null` quando `source = estimated_modis`, porque o FRP do MODIS não é comparável |
 | `anomaly` | número ou `null` | `detections − mediana do mesmo mês nos anos de referência` (RF12). `null` no mês atual, que ainda não acabou (a comparação dele fica em `recent.month_to_date`) |
 | `anomaly_pct` | número ou `null` | `detections / mediana − 1`. `null` quando a mediana é zero ou no mês atual |
 
@@ -157,7 +157,7 @@ Doze itens, de janeiro a dezembro, usando **só os anos completos** do intervalo
 
 ### `recent`: o agora contra o normal da época (RF11)
 
-Sempre calculado até o último dia com dado (`data_through`), **independente do intervalo pedido**. Compara sempre **os mesmos dias do calendário** nos anos de referência. Não usa proporção: o fogo não se distribui igual dentro do mês, e na temporada ele cresce ao longo do mês. Uma proporção mostraria queda justamente quando a situação piora.
+Sempre calculado até o último dia com dado (`data_through`), **independente do intervalo pedido**. Compara a janela atual com **todas as janelas de mesmo tamanho num raio de ±15 dias da mesma data**, em cada ano de referência (cerca de 25 janelas por ano, umas 350 no total). Assim o normal fica estável e tolera a estação que adianta ou atrasa umas semanas de um ano para o outro. Não usa proporção: o fogo não se distribui igual dentro do mês, e na temporada ele cresce ao longo do mês. Uma proporção mostraria queda justamente quando a situação piora.
 
 | Campo | Tipo | Significado |
 | --- | --- | --- |
@@ -171,15 +171,16 @@ Os dois objetos têm o mesmo formato:
 | --- | --- | --- |
 | `start`, `end` | data | Janela comparada |
 | `detections` | número | Detecções na janela, agora |
-| `typical_median` | número | Mediana das detecções nos **mesmos dias do calendário** dos anos de referência |
-| `typical_p25`, `typical_p75` | número | Faixa do normal (25% e 75% dos anos), para a tela dizer "dentro do normal" ou "acima do normal" |
+| `typical_median` | número | Mediana das detecções nas janelas de referência (±15 dias da mesma data, em cada ano) |
+| `typical_p25`, `typical_p75` | número | Faixa do normal (25% e 75% das janelas), para a tela dizer "dentro do normal" ou "acima do normal" |
 | `difference` | número | `detections − typical_median` |
 | `difference_pct` | número ou `null` | `detections / typical_median − 1`. `null` quando a mediana é zero |
 | `n_years` | inteiro | Quantos anos entraram no normal |
+| `n_windows` | inteiro | Quantas janelas entraram no normal |
 
 Os dias recentes são sempre VIIRS observado, então não há fator nem faixa de incerteza. O normal usa só anos com VIIRS (2012 em diante), porque não existe fator diário para o Aqua.
 
-Depende de duas coisas que ainda não existem (ver "Em aberto"): a tabela de **contagens diárias** e o **job NRT**.
+Depende de duas coisas que ainda não existem: a tabela de **contagens diárias** (issue #8) e o **job NRT** (issue #5).
 
 ### `indicators` (RD06)
 
@@ -198,11 +199,12 @@ A fórmula é a de [importacao-regioes.md](importacao-regioes.md). Resumo do que
 1. Converte a área em células (ou lê as células da região pronta).
 2. Busca em `agregados` a contagem bruta da área por `regiao_id × ano × mes × satelite × periodo` ([consulta em banco.md](banco.md)).
 3. Para cada mês:
-   - **`observed_viirs`:** `detections = soma das contagens brutas`. Sem faixa.
+   - **`observed_viirs`:** `detections = soma das contagens brutas`. Sem faixa. De 2012-02 a 2026-10 é o S-NPP. De 2026-11 em diante é o NOAA-20, também somado **sem fator** (fator 1, decisão da frente B).
    - **`estimated_modis`:** para cada cenário `c` (ano de calibração), `detections_c = Σ bruto[bioma, periodo] × fator[bioma, Aqua→S-NPP, mes, periodo, c]`.
-4. Totais por ano, sazonalidade e anomalias são calculados **por cenário**. Só no fim: valor central = mediana dos cenários, faixa = P10 e P90.
+4. Totais por ano, sazonalidade e anomalias são calculados **por cenário**. Só no fim: valor central = mediana dos cenários, faixa = P10 e P90 por **interpolação linear** (o padrão do `numpy.percentile`). Com 10 ou 13 cenários, o método muda o número, então ele vai escrito também no `metadata.json`.
+   - **O número de cenários não é fixo.** A API usa os anos de calibração que existem em `fatores_harmonizacao` (10 ou 13, conforme a validação, e janeiro tem um a menos). Nada no código assume uma quantidade.
 5. Preenche com zero os meses sem linha e junta os dias sem dado.
-6. Para `recent`, soma as contagens diárias da área na janela atual e na mesma janela de cada ano de referência, e tira a mediana e o P25–P75 entre os anos.
+6. Para `recent`, soma as contagens diárias da área na janela atual e em todas as janelas de mesmo tamanho num raio de ±15 dias da mesma data, em cada ano de referência, e tira a mediana e o P25–P75 entre essas janelas.
 
 Os fatores ficam na memória da API (a tabela inteira tem poucos milhares de linhas) e são recarregados quando `data_version` muda.
 
@@ -215,7 +217,7 @@ Devolve `application/zip` com o pacote de auditoria. Com `counts.csv` × `factor
 | `result.csv` | Os itens de `months[]`, uma linha por mês |
 | `counts.csv` | `region_id, biome, year, month, satellite, daynight, raw_count, frp_sum` |
 | `factors.csv` | Os fatores usados: `region_id, source_satellite, target_satellite, month, daynight, calibration_year, factor` |
-| `metadata.json` | O pedido, `meta`, a fórmula, os filtros (`type = 0`, confiança nominal e alta, duplicatas), as fontes do FIRMS e a data da exportação |
+| `metadata.json` | O pedido, `meta`, a fórmula, o método do percentil (interpolação linear), os anos de calibração usados, os filtros (`type = 0`, confiança nominal e alta, duplicatas), as fontes do FIRMS e a data da exportação |
 | `detections.csv` | Focos brutos da área no intervalo, até **500.000 linhas**: `satellite, latitude, longitude, acquired_utc, confidence, frp, daynight, quality, source_file` |
 
 Os valores também vão em inglês: `confidence` = `low`/`nominal`/`high`, `daynight` = `D`/`N` (como no FIRMS), `quality` = `SP`/`NRT`.
@@ -297,7 +299,7 @@ Sempre GeoJSON, que o Leaflet desenha direto, sem precisar da biblioteca H3 no f
   "total_detections": 3833,
   "features": [
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-60.21, -3.12] },
-      "properties": { "satellite": "N20", "acquired_utc": "2026-11-14T05:42:00Z", "confidence": "nominal", "frp": 12.4, "daynight": "N" } }
+      "properties": { "satellite": "N20", "acquired_utc": "2026-11-14T05:42:00Z", "confidence": "nominal", "daynight": "N" } }
   ]
 }
 ```
@@ -395,12 +397,11 @@ A resposta também leva `ETag` com `updated_at`, para o navegador reaproveitar.
 
 ## Em aberto
 
-| # | Ponto | Proposta | Quem decide |
+| # | Ponto | Situação ou proposta | Quem decide |
 | --- | --- | --- | --- |
-| 1 | NOAA-20 → S-NPP: aplicar fator ou tratar como iguais | Pergunta feita no PR #3 | Frente B |
-| 2 | Job NRT mínimo (volta o X1 do `tarefas.md`) | A cada 3 h, focos NRT das últimas 48 h pela API do FIRMS, upsert e recálculo só dos dias e do mês atuais. Container com cron na VPS. A recarga SP (X2) continua cortada. Sem isso, `recent` não é verdade e o sistema não é "atualizado" (RNF03) | Equipe, frente A |
-| 2b | Tabela de contagens diárias | `agregados_diarios (h3, data, satelite, periodo, focos_brutos)`, só dias com foco, VIIRS de 2012 em diante. Estimativa: ~15 milhões de linhas no Brasil, cabe na VPS | Frente A |
-| 2c | Camada de focos recentes no mapa | Detecções das últimas 24 h ou 7 dias por cima do mapa, pela camada do FIRMS no GIBS (sem chave). É o que a equipe de resposta olha primeiro | Frente D |
-| 3 | Anos de referência da anomalia (RF12) | Todos os anos completos menos o próprio ano, fixo, independente do intervalo pedido | Equipe |
-| 4 | Medida da anomalia | Diferença absoluta e percentual contra a mediana. O RD06 pede "média de vários anos", então `indicators` usa a média | Equipe |
-| 5 | Linguagem e framework da API | Python, pela biblioteca `h3` e pelo código de consulta do [banco.md](banco.md) | Equipe (arquitetura, ponto 4) |
+| 1 | Job NRT mínimo e horário da última atualização | A cada 3 h, focos NRT das últimas 48 h, upsert e recálculo só dos dias e do mês atuais. Sem isso, `recent` não é verdade e o sistema não é "atualizado" (RNF03). Em andamento na issue #5 | Frente A |
+| 2 | Tabela de contagens diárias | `agregados_diarios`, para o normal de ±15 dias e para o alerta. Pedida na issue #8 | Frente A |
+| 3 | Nível de alerta (Normal / Atenção / Crítico) | Regra num `alert_rules.json` versionado, lido pela API. Validação com área queimada da NASA na issue #9 | Equipe, frentes B e C |
+| 4 | Anos de referência da anomalia (RF12) | Todos os anos completos menos o próprio ano, fixo, independente do intervalo pedido | Equipe |
+| 5 | Medida da anomalia | Diferença absoluta e percentual contra a mediana. O RD06 pede "média de vários anos", então `indicators` usa a média | Equipe |
+| 6 | Linguagem e framework da API | Python, pela biblioteca `h3` e pelo código de consulta do [banco.md](banco.md) | Equipe (arquitetura, ponto 4) |
