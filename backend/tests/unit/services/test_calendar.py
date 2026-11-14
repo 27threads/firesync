@@ -7,7 +7,7 @@ from backend.domain.models.error import CalendarError
 from backend.domain.models.month import Month
 from backend.domain.models.snapshot import HistorySnapshot
 from backend.domain.calculations.history import aligned, annual_results, month_scenarios, seasonality_results, total
-from backend.services.calendar import CalendarService
+from backend.application.calendar import CalendarService
 from tests.fakes.history import FakeHistoryRepository
 
 

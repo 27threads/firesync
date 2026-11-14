@@ -5,7 +5,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, dev-backend-rafael]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -85,23 +85,33 @@ jobs:
           coverage report
 
   backend:
-    name: API · contrato e especificação TDD
+    name: API · contrato, domínio e integração com PostGIS
     runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: firesync_backend_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d firesync_backend_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://postgres@localhost:5432/firesync_backend_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: backend/requirements-dev.txt
-      - run: pip install -r backend/requirements-dev.txt
-      - name: Contrato (api-exemplo.json, alert_rules.json) e núcleo do domínio
-        if: ${{ hashFiles('backend/src/**/*.py') == '' }}
-        run: pytest backend/tests -v -rxX
-      - name: Contrato, domínio e cobertura de linhas e ramos (mínimo 90%)
-        if: ${{ hashFiles('backend/src/**/*.py') != '' }}
-        run: |
-          pytest backend/tests -v -rxX --cov=backend/src --cov-branch --cov-report=term-missing --cov-fail-under=90
+          cache-dependency-path: |
+            backend/requirements-dev.txt
+            backend/pyproject.toml
+      - run: python -m pip install -r backend/requirements-dev.txt
+      - run: python -m pip check
+      - name: Contrato, domínio e integração (linhas e ramos)
+        run: python -m pytest backend/tests -v -rxX --cov=backend/src --cov-branch --cov-report=term-missing --cov-fail-under=94
 
   jornadas:
     name: Front · jornadas de usuário (E2E)

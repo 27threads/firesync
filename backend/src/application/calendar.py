@@ -9,7 +9,7 @@ from backend.domain.calculations.history import (
 from backend.domain.calculations.statistics import percentile, summarize
 from backend.domain.models.error import CalendarError
 from backend.domain.models.month import Month
-from backend.repositories.interfaces.history import HistoryRepository
+from backend.ports.history import HistoryRepository
 
 
 class CalendarService:

@@ -58,7 +58,7 @@ Cada jornada roda no desktop e no celular. Os seletores usam papéis e textos ac
 | Parte | Medida | Mínimo | Onde fica o mínimo |
 | --- | --- | --- | --- |
 | `data-pipeline/` | Linhas e ramos, juntando unidade e integração | 35% hoje (unidade sozinha: 36%). Sobe para o valor medido na esteira | `data-pipeline/.coveragerc` |
-| `backend/src/` | Linhas e ramos | **90%**, a partir do primeiro código | `.github/workflows/ci.yml` |
+| `backend/src/` | Linhas e ramos | **94%**, após a integração do backend | `.github/workflows/ci.yml` |
 
 O `eda.py` (análise exploratória) fica fora da cobertura. Download, `stage`, `clean` e `cadastrar` dependem do FIRMS e do IBGE, e são as próximas partes a ganhar teste.
 
@@ -70,7 +70,7 @@ Arquivo: `.github/workflows/ci.yml`. Roda em todo PR e em todo push na `main`.
 | --- | --- |
 | **Pipeline · unidade** | `test_pipeline.py` |
 | **Pipeline · integração com PostGIS** | Migrations aplicadas duas vezes (precisam rodar de novo sem erro), `test_banco.py`, job NRT com o FIRMS simulado e o relatório de cobertura, que aparece no resumo do job |
-| **API · contrato e especificação TDD** | Contrato do `api-exemplo.json` e do `alert_rules.json`, mais a especificação do domínio. Com código em `backend/src/`, também a cobertura de 90% |
+| **API · contrato e especificação TDD** | Contrato do `api-exemplo.json` e do `alert_rules.json`, mais a especificação do domínio. As especificações já implementadas não usam `xfail`. Com código em `backend/src/`, também a cobertura mínima de 94% com PostGIS |
 | **Front · jornadas de usuário** | As jornadas compilam. Com o front criado (`frontend/package.json`), sobe o site e roda as jornadas no Chromium |
 
 ## Como rodar no seu computador
@@ -90,8 +90,9 @@ cd data-pipeline && TEST_DATABASE_URL=postgresql://postgres:teste@localhost:5434
 ```
 
 ```bash
-# API: contrato e especificação TDD
-pip install -r backend/requirements-dev.txt && pytest backend/tests -rxX
+# API: unidade e contrato; integração exige um PostGIS descartável
+pip install -r backend/requirements-dev.txt
+TEST_DATABASE_URL=postgresql://usuario@localhost/banco_descartavel python -m pytest backend/tests -rxX --cov=backend/src --cov-branch --cov-fail-under=94
 ```
 
 ```bash

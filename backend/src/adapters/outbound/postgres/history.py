@@ -30,8 +30,12 @@ class PostgresHistoryRepository:
         config = {r['chave']: r['valor'] for r in cursor.fetchall()}
         try:
             resolution = int(config['h3_resolucao'])
-            date.fromisoformat(config['data_version'])
-            timestamp = datetime.fromisoformat(config['updated_at'].replace('Z', '+00:00'))
+            version = config['data_version']
+            if len(version) == 10:  # Historical snapshots used date-only versions.
+                date.fromisoformat(version)
+            elif datetime.fromisoformat(version.replace('Z', '+00:00')).utcoffset() is None:
+                raise ValueError
+            timestamp = datetime.fromisoformat(config['atualizado_em'].replace('Z', '+00:00'))
             if timestamp.utcoffset() is None or resolution != 6:
                 raise ValueError
         except (KeyError, ValueError):
@@ -44,7 +48,7 @@ class PostgresHistoryRepository:
         last_day = cursor.fetchone()['last_day']
         if last_day is None:
             raise CalendarError('invalid_data', 'No dataset coverage is available.')
-        meta = {'data_version': config['data_version'], 'updated_at': config['updated_at'],
+        meta = {'data_version': config['data_version'], 'updated_at': config['atualizado_em'],
                 'h3_resolution': resolution, 'last_month': last_day.strftime('%Y-%m'), 'scale': 'VIIRS'}
         if area.type == 'region':
             cursor.execute('SELECT id FROM regioes WHERE id = %s', (area.region_id,))

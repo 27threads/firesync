@@ -123,3 +123,5 @@ Branch `dev-backend-rafael`. Critério principal: Validity.
 | 3. Análise histórica | feito | Calendário, cenários, ranking, sazonalidade, anomalias e teste integrado com PostGIS |
 
 Endpoints HTTP, monitoramento recente e exportação ficam para entregas seguintes. C3–C5 ainda exigem a composição HTTP e a integração com os dados reais para cumprir integralmente os critérios originais. Políticas e comandos em `backend/README.md`.
+
+Integração da main (PRs #21, #23 e #24): feita na branch de Rafael. Código diretamente em `backend/src/`, alinhado às camadas hexagonais; testes TDD implementados ativados; esteira de backend consolidada com PostGIS.
