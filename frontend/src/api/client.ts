@@ -1,7 +1,13 @@
 import { buildCalendarRequest } from '../controls/areaPeriodModel';
+import { defaultAuditFilenameUtc, parseContentDispositionFilename } from '../export/exportModel';
 import type { CalendarApiResult, CalendarRequest, HealthResponse, RegionOption } from './types';
 
 export { buildCalendarRequest };
+
+export interface AuditPackageDownload {
+  blob: Blob;
+  filename: string;
+}
 
 /** Typed API error carrying contract code, HTTP status, and Retry-After seconds when present. */
 export class ApiClientError extends Error {
@@ -86,4 +92,24 @@ export function fetchCalendar(request: CalendarRequest, signal?: AbortSignal): P
     body: JSON.stringify(request),
     signal,
   });
+}
+
+/** Fetches the audit package ZIP (POST /api/v1/export) for a requested area and period. */
+export async function fetchAuditPackage(
+  request: CalendarRequest,
+  signal?: AbortSignal,
+): Promise<AuditPackageDownload> {
+  const response = await fetch(`${getApiBaseUrl()}/api/v1/export`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+    signal,
+  });
+  if (!response.ok) {
+    throw await parseErrorResponse(response);
+  }
+  const filename =
+    parseContentDispositionFilename(response.headers.get('content-disposition')) ?? defaultAuditFilenameUtc();
+  const blob = await response.blob();
+  return { blob, filename };
 }

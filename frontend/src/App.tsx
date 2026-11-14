@@ -4,7 +4,8 @@ import { ApiClientError, fetchCalendar, fetchHealth, fetchRegions } from './api/
 import type { AreaInput, CalendarApiResult, CalendarRequest, CalendarResponse, RegionOption } from './api/types';
 import { FireCalendar } from './calendar/FireCalendar';
 import { AreaPeriodControls } from './controls/AreaPeriodControls';
-import { DEFAULT_END_MONTH, isDataStale } from './controls/areaPeriodModel';
+import { buildCalendarRequest, DEFAULT_END_MONTH, DEFAULT_START_MONTH, isDataStale } from './controls/areaPeriodModel';
+import { ExportPanel } from './export/ExportPanel';
 import { KeyIndicators } from './summary/KeyIndicators';
 import { RecentPanel } from './summary/RecentPanel';
 import { SeasonalPattern } from './summary/SeasonalPattern';
@@ -29,6 +30,9 @@ export function App() {
   const [regions, setRegions] = useState<RegionOption[]>([]);
   const [lastMonth, setLastMonth] = useState<string>(exampleData.meta.last_month || DEFAULT_END_MONTH);
   const [activeArea, setActiveArea] = useState<AreaInput | null>(null);
+  const [activeRequest, setActiveRequest] = useState<CalendarRequest>(() =>
+    buildCalendarRequest({ type: 'region', region_id: 1 }, { start: DEFAULT_START_MONTH, end: exampleData.meta.last_month || DEFAULT_END_MONTH }),
+  );
   const [apiResult, setApiResult] = useState<CalendarApiResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [requestError, setRequestError] = useState<string | null>(null);
@@ -62,6 +66,7 @@ export function App() {
     requestAbortRef.current = controller;
 
     setActiveArea(request.area);
+    setActiveRequest(request);
     setIsLoading(true);
     setRequestError(null);
     setApiUnavailableFallback(false);
@@ -128,9 +133,12 @@ export function App() {
       )}
 
       {noCoverage ? (
-        <p className="coverage-notice" role="status">
-          {apiResult.coverage?.message ?? 'No data for this area yet.'}
-        </p>
+        <>
+          <p className="coverage-notice" role="status">
+            {apiResult.coverage?.message ?? 'No data for this area yet.'}
+          </p>
+          <ExportPanel data={data} request={activeRequest} isDemo={isDemo} disabled={true} />
+        </>
       ) : (
         <>
           {!isDemo && apiResult.coverage?.status === 'partial' && apiResult.coverage.message && (
@@ -145,6 +153,7 @@ export function App() {
             <SeasonalPattern seasonality={data.seasonality} includesEstimatedYears={includesEstimatedYears} />
             <YearRanking years={data.years} />
           </div>
+          <ExportPanel data={data} request={activeRequest} isDemo={isDemo} disabled={false} />
         </>
       )}
     </section>

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import example from '../../../docs/api-exemplo.json';
-import { ApiClientError, fetchCalendar, fetchHealth, fetchRegions } from './client';
+import { ApiClientError, fetchAuditPackage, fetchCalendar, fetchHealth, fetchRegions } from './client';
 import type { CalendarResponse, NoCoverageResponse } from './types';
 
 function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
@@ -130,5 +130,75 @@ describe('API client', () => {
       expect(caught).toBeInstanceOf(ApiClientError);
       expect(caught).toMatchObject({ status, code, message });
     }
+  });
+
+  it('posts /api/v1/export with exact request JSON and preserves Content-Disposition filename', async () => {
+    vi.stubEnv('VITE_API_URL', '');
+    const zipBytes = new Uint8Array([0x50, 0x4b]);
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(zipBytes, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/zip',
+          'Content-Disposition': 'attachment; filename="firesync-2026-11-14.zip"',
+        },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const payload = { area: { type: 'region' as const, region_id: 1 }, start: '2003-01', end: '2026-11' };
+    const result = await fetchAuditPackage(payload);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/export',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }),
+    );
+    expect(result.filename).toBe('firesync-2026-11-14.zip');
+    expect(result.blob.size).toBe(2);
+  });
+
+  it('falls back to UTC firesync-YYYY-MM-DD.zip when Content-Disposition header is absent on /api/v1/export', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-14T23:30:00-03:00')); // 2026-11-15 UTC
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(new Uint8Array([0x50, 0x4b]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/zip' },
+        }),
+      ),
+    );
+
+    const result = await fetchAuditPackage({ area: { type: 'region', region_id: 1 }, start: '2003-01', end: '2026-11' });
+    expect(result.filename).toBe('firesync-2026-11-15.zip');
+    vi.useRealTimers();
+  });
+
+  it('handles 429 rate_limited and contract errors on /api/v1/export identically to /api/v1/calendar', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse(
+          { error: { code: 'rate_limited', message: 'Too many requests.' } },
+          429,
+          { 'Retry-After': '45' },
+        ),
+      ),
+    );
+
+    await expect(
+      fetchAuditPackage({ area: { type: 'region', region_id: 1 }, start: '2003-01', end: '2026-11' }),
+    ).rejects.toMatchObject({
+      name: 'ApiClientError',
+      status: 429,
+      code: 'rate_limited',
+      retryAfter: 45,
+      message: expect.stringMatching(/45 seconds/i),
+    });
   });
 });

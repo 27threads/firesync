@@ -5,8 +5,7 @@
  * A API é simulada com o docs/api-exemplo.json, então as jornadas testam o front sozinho. Quando a API
  * existir, rodem também com FRONTEND_URL apontando para o site completo (sem a simulação).
  *
- * O front ainda não existe: cada jornada começa com `test.fixme`. Quem implementar a tela tira o fixme
- * da jornada dela (TDD: a jornada é escrita antes da tela). Os seletores usam papéis e textos acessíveis
+ * As 9 jornadas (J1–J9) rodam no desktop e no celular. Os seletores usam papéis e textos acessíveis
  * (getByRole, getByText), que também validam a acessibilidade pedida no RD04 e no RNF05.
  */
 import { expect, Page, test } from '@playwright/test';
@@ -14,7 +13,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const exemplo = JSON.parse(readFileSync(join(__dirname, '..', '..', 'docs', 'api-exemplo.json'), 'utf-8'));
-const AINDA_NAO = 'front ainda não existe: tire o fixme quando a tela estiver pronta';
 
 async function simularApi(page: Page, calendar: object = exemplo) {
   await page.route('**/api/v1/health', (r) =>
@@ -97,7 +95,6 @@ test.describe('Jornadas do usuário', () => {
   });
 
   test('J7: baixa o pacote de auditoria (RF13)', async ({ page }) => {
-    test.fixme(true, AINDA_NAO);
     await simularApi(page);
     await page.route('**/api/v1/export', (r) =>
       r.fulfill({ status: 200, contentType: 'application/zip', body: Buffer.from('PK'), headers: { 'content-disposition': 'attachment; filename="firesync-2026-11-14.zip"' } }));

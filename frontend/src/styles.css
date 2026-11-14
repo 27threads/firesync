@@ -368,6 +368,11 @@ p, li { max-width: var(--measure); }
   border-color: var(--text-muted);
 }
 
+.map-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .map-btn--active {
   border-color: var(--thermal);
   background: #2b2112;
@@ -487,4 +492,23 @@ p, li { max-width: var(--measure); }
   .area-map__viewport {
     height: 280px;
   }
+}
+
+/* Exportação e pacote de auditoria (D6) */
+.export-panel {
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+
+.export-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  margin-top: 16px;
+}
+
+.export-panel__details {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
 }
