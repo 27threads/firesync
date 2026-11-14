@@ -98,23 +98,77 @@ Implementados conforme as especificações de filtro do time de dados.
 | **Arquivo principal** | **205.568** | **853.173** |
 | Arquivo de baixa confiança | 14.315 | 63.983 |
 
-### Por satélite (antes dos filtros)
+### Histórico completo após o `clean`
 
-Parcial, com S-NPP até 2023. Atualizar quando a análise completa rodar.
+| | MODIS (Terra + Aqua) | VIIRS (S-NPP + NOAA-20 + NOAA-21) |
+| --- | --- | --- |
+| Dentro das regiões | 5.274.745 | 18.039.745 |
+| `type ≠ 0` removidos | 79.984 | 73.666 |
+| `frp ≤ 0` removidos | 425 | 6.129 |
+| Duplicatas exatas | 0 | 7 |
+| `l` à noite | — | 0 |
+| **Principal** | **4.890.798** | **16.811.011** |
+| Baixa confiança | 303.538 | 1.148.932 |
 
-| Satélite | Focos | % noite | FRP mediana | Pixel (`scan`) mediano |
-| --- | --- | --- | --- | --- |
-| MODIS Terra (2000–2025) | 1,90 mi | 46% | 17 MW | 1,30 km |
-| MODIS Aqua (2002–2025) | 3,27 mi | 11% | 26 MW | 1,30 km |
-| VIIRS S-NPP (2012–2023) | 7,96 mi | 34% | 5,6 MW | 0,44 km |
+### Por satélite (antes dos filtros, Amazônia + Pantanal)
+
+| Satélite | Período | Focos | % noite | % NRT sem `type` | FRP mediana | Pixel (`scan`) mediano |
+| --- | --- | --- | --- | --- | --- | --- |
+| MODIS Terra | 2000-11 → 2026-11 | 1,94 mi | 46% | 1,5% | 17 MW | 1,30 km |
+| MODIS Aqua | 2002-07 → 2026-11 | 3,33 mi | 11% | 1,3% | 26 MW | 1,30 km |
+| VIIRS S-NPP | 2012-01 → 2026-11-02 | 9,67 mi | 35% | 3,0% | 5,5 MW | 0,44 km |
+| VIIRS NOAA-20 | 2018-04 → 2026-11 | 5,90 mi | 37% | 5,6% | 5,5 MW | 0,44 km |
+| VIIRS NOAA-21 | 2023-03 → 2026-11 | 2,47 mi | 41% | 13% | 6,0 MW | 0,44 km |
+
+### Razões anuais entre satélites (Amazônia)
+
+| Ano | S-NPP / Aqua | NOAA-20 / S-NPP | NOAA-21 / NOAA-20 |
+| --- | --- | --- | --- |
+| 2012 | 6,0 | | |
+| 2013 | 5,4 | | |
+| 2014 | 5,8 | | |
+| 2015 | 6,7 | | |
+| 2016 | 5,9 | | |
+| 2017 | 6,2 | | |
+| 2018 | 5,8 | 0,91 (desde abril) | |
+| 2019 | 6,2 | 0,98 | |
+| 2020 | 7,0 | 0,99 | |
+| 2021 | 5,9 | 0,99 | |
+| 2022 | 5,9 | 1,04 | |
+| 2023 | 6,1 | 1,00 | 0,99 (desde março) |
+| 2024 | 6,2 | 1,03 | 0,99 |
+| 2025 | **4,8** | 0,99 | 0,97 |
+| 2026 (parcial) | 5,4 | 1,12 (S-NPP parou em 02/11) | 0,98 |
+
+### Aqua × Terra como referência (Amazônia, 2012–2023)
+
+| | contra o Aqua | contra o Terra |
+| --- | --- | --- |
+| Razão anual S-NPP/MODIS | 5,4 a 7,0 | 9,9 a 13,7 |
+| Variação da razão mensal (desvio/média) | **0,20** | **0,44** |
+| Correlação mensal com o S-NPP | 0,99 | 0,987 |
+
+A série mensal do Terra tem correlação de 0,977 com a do Aqua (2003–2025).
+
+### Tamanho da grade H3 (Aqua, 2002–2025)
+
+| Resolução | Hexágono | Células com fogo | Linhas célula × mês |
+| --- | --- | --- | --- |
+| 4 | ~1.770 km² | 2.243 | 190 mil |
+| 5 | ~253 km² | 11.305 | 508 mil |
+| 6 | ~36 km² | 57.517 | 1,05 mi |
+| 7 | ~5 km² | 294.237 | 1,85 mi |
 
 Achados:
 
-1. **`l` à noite = 0** em todo o S-NPP SP. O arquivo SP já vem sem esses pontos, então esse filtro só age no NRT.
+1. **`l` à noite = 0** em todos os satélites, inclusive no NRT recortado nas regiões. Esse filtro não muda nada aqui. Fica no código para regiões onde ele agir.
 2. **Os filtros removem menos de 1%** dos focos. Duplicatas exatas e `frp ≤ 0` são praticamente zero.
 3. **Terra e Aqua são bem diferentes.** Os horários de passagem não são os mesmos (Terra ~10:30/22:30 e Aqua ~13:30/01:30 no horário local), e por isso o Terra tem 46% dos focos à noite e o Aqua só 11%.
 4. **A FRP mediana do VIIRS é ~5× menor que a do MODIS.** O VIIRS conta muitos fogos fracos que o MODIS não vê.
 5. **A razão S-NPP/Aqua muda mês a mês.** Na Amazônia em 2020 foi de 3,7× (abril) a 9,5× (agosto). Tabela completa em `reports/razao_snpp_aqua.csv`. É o dado de entrada da harmonização (frente B).
+7. **Os três VIIRS são equivalentes:** NOAA-20/S-NPP e NOAA-21/NOAA-20 ficam entre 0,97 e 1,04 nos anos completos. Isso confirma a regra "um VIIRS por período".
+8. **Calibrar contra o Aqua é duas vezes mais estável que contra o Terra** (variação mensal de 0,20 contra 0,44), e o Terra repete a série do Aqua (correlação de 0,977).
+9. **S-NPP/Aqua caiu para 4,8 em 2025**, contra ~6 nos anos anteriores. Pode ser efeito da deriva da órbita do Aqua (saiu do A-Train em 2022) ou só um ano de fogo diferente. Precisa ser investigado antes de congelar o fator.
 6. No MODIS, **8.331 pares (4%)** de focos na mesma passagem ficam a menos de ~1 km um do outro. Pode ser o efeito "bow-tie" na borda da faixa ou fogos vizinhos de verdade. Não foram removidos.
 
 ## Como rodar
@@ -144,7 +198,9 @@ Para adicionar uma região: acrescente uma entrada em `regioes.json` e rode `sta
 ## Pendências e decisões em aberto
 
 - [ ] Decidir se o Terra entra (fator próprio) ou fica fora (só Aqua, a partir de 2003)
-- [ ] Banco de dados (arquitetura, ponto 2) e resolução H3 (ponto 3)
+- [x] Banco de dados: PostgreSQL
+- [ ] Resolução H3 (ponto 3), combinada com a frente C. Sugestão: res 6
+- [ ] Investigar a queda de S-NPP/Aqua em 2025
 - [ ] Baixar a série mensal do INPE (A2)
-- [ ] Rodar `stage`, `eda` e `clean` no histórico completo e atualizar os números acima
+- [x] Rodar `stage`, `eda` e `clean` no histórico completo
 - [ ] Importador para o banco (A4–A7), reaproveitando `normalize` e os filtros daqui
