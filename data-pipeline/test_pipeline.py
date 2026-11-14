@@ -113,9 +113,15 @@ assert meses_da_janela(date(2026, 11, 14)) == (date(2026, 11, 1), date(2026, 12,
 assert meses_da_janela(date(2026, 12, 1)) == (date(2026, 11, 1), date(2027, 1, 1))   # janela cruza o mês
 # INPE (A2): histórico mensal por estado × bioma -> bioma × ano × mês (soma os estados; mês vazio sai)
 from pipeline import inpe_mensal  # noqa: E402
-js = {"historico_mensal": [
+js = {"meta": {"data_limite": "2020-02-13", "faixas_de_satelite": [
+          {"satelite": "NOAA-12", "inicio": "1998-05-01", "fim": "2002-07-03"},
+          {"satelite": "AQUA_M-T", "inicio": "2002-07-04", "fim": "2020-02-13"}]},
+      "historico_mensal": [
     {"ano": 2020, "bioma": {"nome_bioma": "Amazônia"}, "meses": {"1": 10, "2": None}},
     {"ano": 2020, "bioma": {"nome_bioma": "Amazônia"}, "meses": {"1": 5, "2": 7}},
     {"ano": 2020, "bioma": {"nome_bioma": "Cerrado"}, "meses": {"1": 1, "2": None}}]}
-assert inpe_mensal(js).values.tolist() == [["Amazônia", 2020, 1, 15], ["Amazônia", 2020, 2, 7], ["Cerrado", 2020, 1, 1]]
+r = inpe_mensal(js)
+assert r[["bioma", "ano", "mes", "focos"]].values.tolist() == [["Amazônia", 2020, 1, 15], ["Amazônia", 2020, 2, 7], ["Cerrado", 2020, 1, 1]]
+assert r.satelite.tolist() == ["AQUA_M-T"] * 3
+assert r.parcial.tolist() == [False, True, False]   # fevereiro só até o dia 13
 print("ok")

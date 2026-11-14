@@ -6,9 +6,9 @@ Uso:
 Cada rodada:
     1. baixa as últimas 48 h de VIIRS_NOAA20_NRT e VIIRS_NOAA21_NRT no bbox da cobertura;
     2. importa (upsert em `focos`, cobertura e SP substituindo NRT, ver pipeline.importar);
-    3. refaz `agregados` só dos meses da janela;
-    4. atualiza `dias_sem_dados`;
-    5. grava `config.atualizado_em` (UTC, ISO 8601 com Z, como o `updated_at` do api.md) para a API mostrar quão fresco é o dado.
+    3. atualiza `dias_sem_dados`;
+    4. refaz `agregados` e `agregados_diarios` dos meses da janela e grava `config.atualizado_em` (UTC, ISO 8601
+       com Z, o `updated_at` do api.md) na mesma transação (issue #15).
 Uma rodada que falha no meio não grava `atualizado_em`, então a API continua mostrando a última que deu certo.
 """
 import sys
@@ -47,13 +47,12 @@ def rodada():
         p.curl(f"{p.API}/area/csv/{key}/{fonte}/{bbox}/{DIAS}", dest)
         arquivos.append(dest)
     p.importar(arquivos)
-    agregar.agregar(*meses_da_janela(agora.date()))
     p.sem_dados()
-    conn.execute("""INSERT INTO config (chave, valor) VALUES ('atualizado_em', %s)
-                    ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor""", (agora.strftime("%Y-%m-%dT%H:%M:%SZ"),))
+    # por último: o commit da agregação leva a versão nova junto com os dados (issue #15)
+    versao = agregar.agregar(*meses_da_janela(agora.date()))
     for a in arquivos:  # já está no banco; dá para baixar de novo se precisar
         a.unlink()
-    print(f"job_nrt: ok, atualizado_em = {agora:%Y-%m-%dT%H:%M:%S}Z", flush=True)
+    print(f"job_nrt: ok, atualizado_em = {versao}", flush=True)
 
 
 if __name__ == "__main__":

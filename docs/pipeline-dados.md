@@ -119,7 +119,7 @@ Na VPS, reservar ~30 GB livres para o banco.
 
 ## Série do INPE (`pipeline.py inpe`, tarefa A2)
 
-Baixa o histórico mensal de focos do INPE (Programa Queimadas) e soma por **bioma × ano × mês** em [`data-pipeline/referencia/inpe_mensal_biomas.csv`](../data-pipeline/referencia/inpe_mensal_biomas.csv) (versionado, 45 KB, 6 biomas, 1998 até a véspera). É o JSON que a página `data.inpe.br/queimadas/estatisticas` carrega. O satélite de referência do INPE é o **AQUA_M-T desde 04/07/2002** (NOAA-12 antes), o mesmo que a gente usa.
+Baixa o histórico mensal de focos do INPE (Programa Queimadas) e soma por **bioma × ano × mês**, com o satélite de referência de cada mês (`satelite`: NOAA-12 até jun/2002, AQUA_M-T depois; comparar só dentro do mesmo satélite) e `parcial` no mês que ainda não acabou, em [`data-pipeline/referencia/inpe_mensal_biomas.csv`](../data-pipeline/referencia/inpe_mensal_biomas.csv) (versionado, 45 KB, 6 biomas, 1998 até a véspera). É o JSON que a página `data.inpe.br/queimadas/estatisticas` carrega. O satélite de referência do INPE é o **AQUA_M-T desde 04/07/2002** (NOAA-12 antes), o mesmo que a gente usa.
 
 Conferência com o nosso Aqua na Amazônia (2003–2025, mesmos filtros dos `agregados`):
 
@@ -165,7 +165,7 @@ Monta `agregados` a partir de `focos`, em SQL, dentro do banco. É a contagem **
 | Mês sem focos | não tem linha (a API preenche zero) |
 | Antes de 2003 | não entra (Terra fora) |
 
-Cada execução apaga os meses do intervalo e grava de novo numa transação, então rodar duas vezes dá o mesmo resultado. As mesmas regras de limpeza existem em pandas no `clean`: mudou uma, mude a outra.
+Cada execução apaga os meses do intervalo e grava de novo numa transação, então rodar duas vezes dá o mesmo resultado. Na mesma transação ela refaz `agregados_diarios` (só VIIRS, por dia, issue #8) e grava a versão em `config` (issue #15, ver [banco.md](banco.md)). As mesmas regras de limpeza existem em pandas no `clean`: mudou uma, mude a outra.
 
 Resultado no histórico completo: 4,68 milhões de linhas (553 MB) em 2,5 min. A soma de `focos_brutos` bate exatamente com os focos filtrados de cada satélite: Aqua 2.711.134, S-NPP 17.883.306, NOAA-20 60.062.
 

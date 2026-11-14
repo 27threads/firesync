@@ -80,7 +80,12 @@ Duas colunas extras, pedidas no PR #3: `n_focos_origem` (quantos focos do Aqua s
 - **só o satélite que vale no mês:** Aqua até janeiro de 2012, VIIRS de fevereiro de 2012 em diante (um VIIRS por período: S-NPP até 02/11/2026, NOAA-20 depois). Isso deixa a tabela com cerca de metade das linhas;
 - **só confiança nominal e alta** (o arquivo `lowconf` do `clean` não entra).
 
-**`config.data_version`** (texto `YYYY-MM-DD`): gravado pelo `agregar.py` quando ele refaz a tabela inteira. É o `meta.data_version` da API, e quando ele muda a API recarrega os fatores.
+**`agregados_diarios`** (migration 004, issue #8): a mesma contagem bruta de `agregados`, **por dia**, para o "normal da época" de ±15 dias e o alerta. Só VIIRS (fev/2012 em diante, o satélite do mês), só dias com foco, chave `(h3, data, satelite, periodo)`. No banco de teste: 6,69 milhões de linhas (721 MB). A soma de cada satélite bate com `agregados` (S-NPP 17.883.306, NOAA-20 60.063). O normal de ±15 dias × 14 anos leva 7–40 ms numa área de 100 × 100 km e ~0,5 s na Amazônia inteira.
+
+**Versão dos dados (issue #15):** o `agregar.py` refaz `agregados` e `agregados_diarios` e grava a versão **na mesma transação**, então quem lê vê os dados e a versão novos juntos, ou os antigos juntos.
+
+- **`config.atualizado_em`** (`2026-11-14T19:59:48Z`): muda a cada escrita, inclusive a do job NRT. É o `meta.updated_at` e a chave do cache da API.
+- **`config.data_version`** (`2026-11-14T19:48:30Z`): muda só na carga completa. É o `meta.data_version`, e quando muda a API recarrega os fatores. É data **e hora**, para duas cargas no mesmo dia não terem a mesma versão.
 
 **`dias_sem_dados`**: dias em que o FIRMS informa falha de um satélite (`missing_data`). Vale para o mundo todo. A API devolve quantos dias sem dado cada mês teve, e o front marca o mês a partir de 3 dias. A resposta diferencia três casos: zero focos, mês com falha de satélite e área fora da cobertura. Uma falha da coluna NRT do FIRMS só entra se for **depois** do último dia SP daquele satélite (regra do próprio FIRMS: antes disso o SP tem o dado). Conferido com os focos de 2024: nenhum dia marcado tem foco daquele satélite. Hoje são 169 dias × satélite (2001–2026). O `sem_dados` substitui a tabela inteira a cada execução.
 
@@ -157,7 +162,7 @@ volumes:
 - O `docker-entrypoint-initdb.d` só roda com o volume vazio. Migrations novas (`002_...sql`) precisam ser aplicadas à mão ou por um passo de deploy.
 - A API deve esperar o `healthcheck` (`depends_on: db: condition: service_healthy`).
 - O `job-nrt` roda `job_nrt.py` a cada 3 h: baixa as últimas 48 h de `VIIRS_NOAA20_NRT` e `VIIRS_NOAA21_NRT`, importa, refaz `agregados` dos meses da janela, atualiza `dias_sem_dados` e grava `config.atualizado_em`. Tem trava no banco (`pg_try_advisory_lock`), então duas rodadas nunca correm juntas. Uma rodada que falha não grava `atualizado_em`, e a próxima tenta de novo.
-- **`config.atualizado_em`** (texto ISO 8601 em UTC, ex.: `2026-11-14T18:43:16Z`, igual ao `updated_at` do `api.md`) é a hora da última rodada que deu certo: é o `meta.updated_at` da API.
+- **`config.atualizado_em`** (texto ISO 8601 em UTC, ex.: `2026-11-14T18:43:16Z`, igual ao `updated_at` do `api.md`) é gravada pelo `agregar.py` no mesmo commit dos dados: é o `meta.updated_at` da API.
 
 ## Carga na VPS (roteiro)
 
