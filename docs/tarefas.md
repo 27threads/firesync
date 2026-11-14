@@ -111,3 +111,7 @@ D1 a D5 começam com o JSON de exemplo do `api.md`, sem esperar a API.
 | X1 | Job de atualização NRT pela API do FIRMS | Voltou pela issue #5 e foi feito: `data-pipeline/job_nrt.py` + `Dockerfile` (a cada 3 h) |
 | X2 | Recarga SP mensal | Depende do X1 |
 | X3 | Região da Califórnia | Precisa de pedido novo no FIRMS |
+
+## Backend de Rafael — partes 1 a 3
+
+Branch `dev-backend-rafael`. Domínio e contratos, repositórios PostgreSQL e análise histórica: **fazendo**. Endpoints HTTP, monitoramento recente e exportação ficam para entregas seguintes. Critério principal: Validity.
