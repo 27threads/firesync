@@ -227,13 +227,17 @@ Quando o gradient boosting diz 11%, o MODIS viu 11,5% desses fogos; quando diz 4
 
 **O que a calibração afeta:** a calibração é um teste do modelo já treinado, e não muda o treino. Ela não afeta a curva de detecção (que sai das taxas observadas nos dados) nem o AUC (que só olha a ordem das chances). Ela só importa para a prova cruzada, que soma as chances previstas. Como a calibração está boa, a falha da prova cruzada (abaixo) **não vem de chances mal calibradas**.
 
-**Prova cruzada: NÃO confirma o fator por contagens, e isso precisa ser declarado.** A razão entre o fator do modelo e o fator por contagens, nos blocos de teste:
+**Prova cruzada: como foi definida, ela NÃO é um teste do fator por contagens, e não deve ser apresentada como confirmação.** A razão entre o fator do modelo e o fator por contagens, nos blocos de teste:
 
-- **De dia, concorda em três biomas:** Amazônia 0,91, Mata Atlântica 1,05 e Cerrado 0,76.
-- **De noite, não concorda em nenhum:** de 0,29 a 0,44. O fator do modelo fica em 2 a 3, e o por contagens em 7 a 10.
-- Pantanal (0,46 de dia) e Caatinga (1,96 de dia) também ficam fora.
+- **De dia, a razão fica perto de 1 em três biomas:** Amazônia 0,91, Mata Atlântica 1,05 e Cerrado 0,76.
+- **De noite, fica entre 0,29 e 0,44 em todos:** o fator do modelo fica em 2 a 3, e o por contagens em 7 a 10.
+- Pantanal (0,46 de dia) e Caatinga (1,96 de dia) também ficam longe de 1.
 
-A causa conhecida é o **viés da regra dos 50 km**: ela só inclui fogos em áreas onde o Aqua viu algum fogo, e descarta as áreas onde o VIIRS viu fogo fraco e o MODIS nada. De noite, a maior parte dos fogos fracos está nessas áreas descartadas, então a chance de detecção sai alta demais e o fator implícito sai baixo demais. Há também uma diferença de conceito: um pixel do MODIS (1 km²) pode cobrir vários pixels do VIIRS, então "fogos do VIIRS vistos" não é o mesmo que "fogos do MODIS". **O que pode ser dito:** a curva é válida para áreas que o MODIS estava olhando; a prova cruzada, como definida, **não** valida o fator por contagens. O que valida o fator é a validação deixando um ano de fora (seção 4).
+**Por que a comparação não vale como teste (diferença de unidade, verificada nos dados).** O fator do modelo soma as chances previstas, e com a calibração boa essa soma é o número de **fogos do VIIRS cobertos por algum pixel do MODIS**. O fator por contagens usa o número de **fogos do Aqua**. Um pixel do MODIS (1 km²) pode cobrir vários fogos do VIIRS (375 m). Nos blocos de teste, **cada fogo do Aqua cobre em média 1,2 fogo do VIIRS de dia e 3,2 de noite**. Isso basta, sozinho, para a razão sair perto de 0,85 de dia e 0,31 de noite, sem nenhum defeito no fator por contagens nem no modelo. A razão que o modelo-e-contagens deveria ter é 1 só se cada foco do Aqua cobrisse exatamente um fogo do VIIRS.
+
+**Segunda causa provável, não testada:** o viés da regra dos 50 km, que só inclui fogos em áreas onde o Aqua viu algum fogo e descarta as áreas onde o VIIRS viu fogo fraco e o MODIS nada. Ele inflaria a chance de detecção, mais ainda de noite. Não foi medido o quanto ele pesa.
+
+**O que pode ser dito:** a curva é válida para áreas que o MODIS estava olhando; a prova cruzada, como foi definida, **compara unidades diferentes**, então ela não confirma nem desmente o fator por contagens. O que valida o fator é a validação deixando um ano de fora (seção 4). Para virar um teste de verdade, ela precisaria converter "fogos do VIIRS cobertos" em "fogos do MODIS" pelo número médio de fogos do VIIRS por pixel do MODIS, e comparar na mesma população de fogos (melhoria possível, não feita).
 
 ## 6. Limites a declarar no método
 
