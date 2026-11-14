@@ -71,7 +71,7 @@ Um ID da resolução 6 vale cerca de 6 × 10¹⁷, e o JavaScript só representa
 
 ## Fatores e agregados
 
-**`fatores_harmonizacao`**: uma linha por `regiao_id × satelite_origem × satelite_destino × mes × periodo (D/N) × ano_calibracao`. Cada ano da sobreposição é um cenário. O fator central é a mediana dos anos, e a faixa é o P10–P90.
+**`fatores_harmonizacao`**: uma linha por `regiao_id × satelite_origem × satelite_destino × mes × periodo (D/N) × ano_calibracao`. Cada ano da sobreposição é um cenário. O fator central é a mediana dos anos, e a faixa é o P5–P95.
 
 Duas colunas extras, pedidas no PR #3: `n_focos_origem` (quantos focos do Aqua sustentam o fator) e `fusao_com` (condição vizinha usada quando o mínimo de focos não é atingido).
 
@@ -84,7 +84,7 @@ Duas colunas extras, pedidas no PR #3: `n_focos_origem` (quantos focos do Aqua s
 
 **`dias_sem_dados`**: dias em que o FIRMS informa falha de um satélite (`missing_data`). Vale para o mundo todo. A API devolve quantos dias sem dado cada mês teve, e o front marca o mês a partir de 3 dias. A resposta diferencia três casos: zero focos, mês com falha de satélite e área fora da cobertura. Uma falha da coluna NRT do FIRMS só entra se for **depois** do último dia SP daquele satélite (regra do próprio FIRMS: antes disso o SP tem o dado). Conferido com os focos de 2024: nenhum dia marcado tem foco daquele satélite. Hoje são 169 dias × satélite (2001–2026). O `sem_dados` substitui a tabela inteira a cada execução.
 
-A API soma as contagens brutas da área por (região, ano, mês, satélite, D/N), multiplica pelos fatores de cada cenário e só então calcula o valor central e a faixa. Isso é necessário porque **a soma dos P10 das células não é o P10 da soma**. O cálculo é pequeno (anos × meses × 2 satélites × 2 períodos), e mudar um fator não exige refazer `agregados`.
+A API soma as contagens brutas da área por (região, ano, mês, satélite, D/N), multiplica pelos fatores de cada cenário e só então calcula o valor central e a faixa. Isso é necessário porque **a soma dos P5 das células não é o P5 da soma**. O cálculo é pequeno (anos × meses × 2 satélites × 2 períodos), e mudar um fator não exige refazer `agregados`.
 
 ## Consulta da API
 
@@ -97,7 +97,7 @@ WHERE h3 = ANY(%s::bigint[])                         -- células da área
 GROUP BY regiao_id, ano, mes, satelite, periodo;
 ```
 
-Depois, em Python, cada linha é multiplicada pelos fatores de (`regiao_id`, `mes`, `periodo`, par de satélites) de cada `ano_calibracao`. Os cenários são somados por mês e a mediana e o P10–P90 saem dessa soma.
+Depois, em Python, cada linha é multiplicada pelos fatores de (`regiao_id`, `mes`, `periodo`, par de satélites) de cada `ano_calibracao`. Os cenários são somados por mês e a mediana e o P5–P95 saem dessa soma.
 
 Área desenhada → células:
 
