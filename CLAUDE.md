@@ -29,6 +29,7 @@ A equipe quer ganhar um prêmio global do Space Apps. Leia o [docs/premiacao.md]
 
 - Todo documento novo vai em `docs/`, com nome em minúsculas, sem acento e com hífen (ex.: `docs/api.md`).
 - Ao criar ou renomear um documento, atualize a tabela de leitura do README.
+- **Sem texto lixo nos docs.** Ao terminar uma tarefa, corrija ou apague nos `.md` o que ela tornou falso: status, pendência, "a decidir", "ainda não existe". Não deixe item riscado, pergunta já respondida nem a mesma regra copiada em vários docs: a regra fica num doc só, e os outros põem o link. Decisão com o porquê não é lixo e fica.
 
 ## Regras de código
 
@@ -41,14 +42,16 @@ A equipe quer ganhar um prêmio global do Space Apps. Leia o [docs/premiacao.md]
 ## Dados
 
 - Não commite CSVs descompactados nem arquivos grandes gerados pelo pipeline. Os ZIPs de teste em `data-pipeline/data/` já estão versionados.
-- Para testar, use os arquivos de 2024 (Brasil, SP). O histórico completo ainda não chegou.
+- Para testar, use os arquivos de 2024 (Brasil, SP). O histórico completo fica só no banco de teste da frente A, fora do git ([docs/pipeline-dados.md](docs/pipeline-dados.md)).
 
 ## Git
 
 - Nunca adicione `Co-Authored-By` (nem outra linha de coautoria ou atribuição) nas mensagens de commit. O uso de IA é registrado só na tabela "Uso de IA" do README.
 - Nunca adicione "🤖 Generated with [Claude Code](https://claude.com/claude-code)" (nem outra atribuição de ferramenta) na descrição ou nos comentários de pull requests.
 - **Nunca faça push numa branch cujo PR já foi mergeado.** O commit fica fora da `main` e se perde sem aviso (já aconteceu: o `alert_rules.json` 0.2 ficou na branch do PR #14). Antes de cada push, confira o PR da branch com `gh pr view --json state`. Se estiver `MERGED`, crie uma branch nova a partir da `main` atualizada e abra outro PR.
-- A `main` é protegida: só entra por PR, e só com a esteira verde.
+- **Nunca faça commit direto na `main`. Sempre por PR**, numa branch a partir da `main` atualizada, com a esteira verde.
+- **Exceção: hotfix urgente.** Só quando o site no ar está quebrado e não dá para esperar a esteira. Só um administrador pode, porque a proteção deixa administradores passarem por cima. Depois do hotfix, abra um PR com o teste que reproduz o bug, como manda a regra dos bugs, para a correção ficar protegida.
+- A `main` é protegida no GitHub: exige PR e os 5 jobs da esteira verdes.
 
 - **Versionamento SemVer** ([docs/versionamento.md](docs/versionamento.md)): toda mensagem de commit e todo título de PR começam com o tipo (`feat:`, `fix:`, `docs:`, `test:`, `ci:`, `chore:`, `refactor:`…). Mudança que quebra o contrato leva `!` (`feat(api)!: …`). Versões só pelo workflow **Release**, nunca com tag à mão.
 
