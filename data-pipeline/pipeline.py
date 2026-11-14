@@ -6,6 +6,7 @@ Uso (nesta ordem; precisa de DATABASE_URL e, para o download, FIRMS_MAP_KEY):
     python pipeline.py stage      # mantém só os focos dentro da cobertura (sem filtros) em data/staged/
     python pipeline.py clean      # aplica os filtros do time de dados e grava parquet em data/processed/
     python pipeline.py sem_dados  # dias sem dado de satélite (FIRMS missing_data) -> dias_sem_dados
+    python pipeline.py importar [arquivo.csv|.zip ...]  # focos no banco (upsert) + cobertura; sem arg = data/staged/
 
 Detalhes: docs/pipeline-dados.md e docs/banco.md
 """
@@ -14,6 +15,7 @@ import os
 import re
 import sys
 import subprocess
+import zipfile
 from datetime import date, timedelta
 from io import StringIO
 from pathlib import Path
@@ -193,7 +195,11 @@ def raw_files(kind):
 
 
 def read_raw(p, bbox):
-    df = pd.read_csv(p, dtype={"acq_time": str, "version": str, "confidence": str})
+    src = p
+    if str(p).endswith(".zip"):  # ZIP do Archive Download: CSV + Readme.txt
+        z = zipfile.ZipFile(p)
+        src = z.open(next(n for n in z.namelist() if n.endswith(".csv")))
+    df = pd.read_csv(src, dtype={"acq_time": str, "version": str, "confidence": str})
     w, s, e, n = bbox
     return df[df.longitude.between(w, e) & df.latitude.between(s, n)]
 
@@ -337,6 +343,107 @@ def sem_dados():
     print(f"sem_dados: {len(rows)} dias × satélite", flush=True)
 
 
+# ---------------------------------------------------------------- importar
+SATELITES = {"Terra": "Terra", "Aqua": "Aqua", "N": "SNPP", "SNPP": "SNPP", "N20": "N20", "N21": "N21"}
+VIIRS_CONF = {"l": "baixa", "low": "baixa", "n": "nominal", "nominal": "nominal", "h": "alta", "high": "alta"}
+FOCOS_COLS = ["sensor", "satelite", "lat", "lon", "datahora_utc", "confianca", "frp", "periodo", "tipo",
+              "qualidade", "scan", "track", "arquivo_origem", "h3"]
+FOCOS_KEY = ["satelite", "lat", "lon", "datahora_utc"]
+
+
+def to_focos(df, kind, origem, res):
+    """Frame normalizado (saída de `normalize`) -> colunas da tabela `focos` (docs/importacao-regioes.md)."""
+    sat = df.satellite.map(SATELITES)
+    if sat.isna().any():
+        raise ValueError(f"{origem}: satélite desconhecido {sorted(set(df.satellite[sat.isna()]))}")
+    if kind == "modis":
+        c = pd.to_numeric(df.confidence)
+        conf = pd.Series("alta", index=df.index).mask(c < 80, "nominal").mask(c < 30, "baixa")
+    else:
+        conf = df.confidence.str.lower().map(VIIRS_CONF)
+    if conf.isna().any():
+        raise ValueError(f"{origem}: confiança desconhecida {sorted(set(df.confidence[conf.isna()]))}")
+    out = pd.DataFrame({
+        "sensor": "MODIS" if kind == "modis" else "VIIRS",
+        "satelite": sat,
+        "lat": df.latitude,
+        "lon": df.longitude,
+        "datahora_utc": pd.to_datetime(df.acq_date + " " + df.acq_time, format="%Y-%m-%d %H%M", utc=True),
+        "confianca": conf,
+        "frp": pd.to_numeric(df.frp, errors="coerce"),
+        "periodo": df.daynight,
+        "tipo": pd.to_numeric(df.type, errors="coerce").astype("Int16"),
+        "qualidade": df.provisional.map({True: "NRT", False: "SP"}),
+        "scan": df.scan,
+        "track": df.track,
+        "arquivo_origem": origem,
+        "h3": [h3.str_to_int(h3.latlng_to_cell(a, b, res)) for a, b in zip(df.latitude, df.longitude)],
+    })
+    # o upsert não aceita a mesma chave duas vezes no mesmo comando
+    return out.drop_duplicates(FOCOS_KEY)
+
+
+def kind_of(df):
+    # pelo satélite: o ZIP do Archive Download escreve instrument=SNPP e usa brightness/bright_t31 no VIIRS
+    return "modis" if df.satellite.isin(["Terra", "Aqua"]).all() else "viirs"
+
+
+def importar(paths=()):
+    """Carrega focos em `focos` (upsert pela chave única) e atualiza `cobertura`.
+
+    Sem argumento: todos os parquet de data/staged/ (saída do `stage`).
+    Com argumento: CSVs ou ZIPs do FIRMS, normalizados e recortados pela cobertura aqui mesmo.
+    Cada arquivo é uma transação: ou entra inteiro, ou não entra.
+    """
+    conn = db()
+    res = int(config(conn, "h3_resolucao"))
+    if paths:
+        regions = load_regions(conn)
+        bbox = bbox_of(regions)
+        jobs = [(Path(p), None) for p in paths]
+    else:
+        jobs = [(p, p.parent.name) for p in sorted(STAGE.glob("*/*.parquet"))]
+    cols = ",".join(FOCOS_COLS)
+    upd = ",".join(f"{c} = EXCLUDED.{c}" for c in FOCOS_COLS if c not in FOCOS_KEY)
+    for p, kind in jobs:
+        if kind is None:  # CSV/ZIP direto do FIRMS
+            raw = read_raw(p, bbox)
+            kind = kind_of(raw)
+            df = in_coverage(normalize(raw, kind), regions)
+        else:
+            df = pd.read_parquet(p)
+        if df.empty:
+            continue
+        f = to_focos(df, kind, p.name, res)
+        buf = StringIO()
+        f.to_csv(buf, index=False, header=False)
+        with conn.transaction():
+            conn.execute(f"CREATE TEMP TABLE focos_tmp (LIKE focos INCLUDING DEFAULTS) ON COMMIT DROP")
+            with conn.cursor().copy(f"COPY focos_tmp ({cols}) FROM STDIN WITH (FORMAT csv)") as cp:
+                cp.write(buf.getvalue())
+            ins, upd_n = conn.execute(f"""
+                WITH r AS (
+                    INSERT INTO focos ({cols}) SELECT {cols} FROM focos_tmp
+                    ON CONFLICT ({",".join(FOCOS_KEY)}) DO UPDATE SET {upd}
+                    RETURNING (xmax = 0) AS novo)
+                SELECT count(*) FILTER (WHERE novo), count(*) FILTER (WHERE NOT novo) FROM r""").fetchone()
+            # a cobertura é o país (unidade de download), não o bioma: o período do arquivo vale para
+            # todas as regiões. Usar a data do último foco de cada bioma confundiria "zero focos" com "sem dados".
+            conn.execute("""
+                INSERT INTO cobertura (regiao_id, satelite, data_inicio, data_fim)
+                SELECT r.id, t.satelite, t.ini, t.fim
+                FROM (SELECT satelite, min(datahora_utc)::date ini, max(datahora_utc)::date fim
+                      FROM focos_tmp GROUP BY satelite) t CROSS JOIN regioes r
+                ON CONFLICT (regiao_id, satelite) DO UPDATE
+                SET data_inicio = least(cobertura.data_inicio, EXCLUDED.data_inicio),
+                    data_fim = greatest(cobertura.data_fim, EXCLUDED.data_fim), atualizado_em = now()""")
+        print(f"importar: {p.name}: {ins:,} novos, {upd_n:,} atualizados", flush=True)
+
+
 if __name__ == "__main__":
-    {"cadastrar": cadastrar, "download": download, "stage": stage, "clean": clean,
-     "sem_dados": sem_dados}[sys.argv[1]]()
+    cmd = sys.argv[1]
+    if cmd == "importar":
+        importar(sys.argv[2:])
+    else:
+        {"cadastrar": cadastrar, "download": download, "stage": stage, "clean": clean,
+         "sem_dados": sem_dados}[cmd]()

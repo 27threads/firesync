@@ -26,6 +26,8 @@ data/staged/{modis,viirs}/   parquet por arquivo: só pontos dentro da cobertura
             │
             ├──▶ python eda.py            → reports/eda.html + CSVs de contagem
             │
+            ├──▶ python pipeline.py importar → tabela `focos` (tudo, upsert) + `cobertura`
+            │
             ▼  python pipeline.py clean    (filtros do time de dados)
 data/processed/{modis,viirs}_{main,lowconf}/satellite=…/daynight=…/year=…/
             + data/processed/clean_report.json (quantas linhas cada filtro tirou)
@@ -69,6 +71,35 @@ Diferenças de formato que o `normalize` corrige:
 - **NRT não tem a coluna `type`.** Linhas NRT ficam com `type` vazio e `provisional = True`.
 
 **Variáveis:** `FIRMS_MAP_KEY` e `DATABASE_URL`, como variáveis de ambiente ou no arquivo `data-pipeline/.env` (fora do git).
+
+## Importador (`importar`)
+
+Lê o `stage` (ou um CSV/ZIP do FIRMS passado como argumento) e grava em `focos` **tudo o que está na cobertura**, sem filtro de qualidade. Os filtros entram depois, na agregação.
+
+| Etapa | Regra |
+| --- | --- |
+| Satélite | `Terra`, `Aqua`, `N` → `SNPP`, `N20`, `N21`. Valor desconhecido faz o arquivo falhar |
+| Confiança | VIIRS `l`/`n`/`h` → baixa/nominal/alta. MODIS `< 30` baixa, `30–79` nominal, `≥ 80` alta |
+| Data e hora | `acq_date` + `acq_time` (HHMM, UTC) → `datahora_utc` |
+| Qualidade | `NRT` se a versão tem "NRT", senão `SP` |
+| H3 | célula na resolução da tabela `config` (o banco recusa outra) |
+| Chave única | (`satelite`, `lat`, `lon`, `datahora_utc`): `INSERT ... ON CONFLICT DO UPDATE`. Repetidos no mesmo arquivo viram uma linha |
+| Transação | um arquivo por transação: entra inteiro ou não entra |
+| `cobertura` | período do arquivo por satélite, gravado para todas as regiões (a cobertura é o país, não o bioma), sempre ampliando. Usar a data do último foco de cada bioma confundiria "zero focos" com "sem dados" |
+
+Reimportar o mesmo arquivo não duplica: tudo vira "atualizado".
+
+Teste com os ZIPs de 2024 do repo (Brasil, SP), em ~3 min:
+
+| Satélite | Plano de extração | Importado | Diferença |
+| --- | --- | --- | --- |
+| Aqua | 319.074 | 318.716 | −0,11% |
+| Terra | 208.820 | 208.585 | −0,11% |
+| S-NPP | 1.935.740 | 1.932.612 | −0,16% |
+| NOAA-20 | 1.988.404 | 1.985.271 | −0,16% |
+| NOAA-21 | 1.948.842 | 1.945.784 | −0,16% |
+
+A diferença são focos fora dos 6 biomas (mar e ilhas). A reimportação do MODIS deu 0 novos e 527.301 atualizados. Os 6,4 milhões de focos de 2024 ocupam **1,7 GB** com os índices, então o histórico inteiro do Brasil deve passar de 6 GB.
 
 ## Filtros de qualidade (`clean`)
 
@@ -185,6 +216,7 @@ python pipeline.py cadastrar     # precisa do banco com a migration aplicada
 python pipeline.py download      # ~3,5 GB; retoma de onde parou
 python pipeline.py stage
 python pipeline.py sem_dados     # dias sem dado de satélite (FIRMS) -> dias_sem_dados
+python pipeline.py importar      # data/staged/ -> focos + cobertura (ou: importar arquivo.csv|.zip ...)
 python eda.py                    # reports/eda.html
 python pipeline.py clean
 ```

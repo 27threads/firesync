@@ -60,4 +60,36 @@ except ValueError:
 from pipeline import assign_cells  # noqa: E402
 a, b = assign_cells([{1, 2}, {3}], [{1, 2, 9, 7}, {3, 2, 9, 8}])
 assert a == {1, 2, 9, 7} and b == {3, 8} and not (a & b)
+
+# importador: mapeamento para a tabela focos
+from pipeline import to_focos  # noqa: E402
+
+mf = normalize(frame([
+    [-3.5, -60.1, "2020-09-01", "130", "Aqua", "29", "6.03", 10, "D", 0],
+    [-3.5, -60.1, "2020-09-01", "130", "Aqua", "29", "6.03", 10, "D", 0],     # mesma chave -> 1 linha
+    [-3.6, -60.2, "2020-09-01", "1745", "Terra", "80", "6.1NRT", 5, "N", None],
+], C), "modis").assign(scan=1.0, track=1.0)
+f = to_focos(mf, "modis", "teste.csv", 6)
+assert len(f) == 2
+assert f.satelite.tolist() == ["Aqua", "Terra"] and f.sensor.unique().tolist() == ["MODIS"]
+assert f.confianca.tolist() == ["baixa", "alta"]          # <30 baixa, >=80 alta
+assert f.qualidade.tolist() == ["SP", "NRT"]
+assert str(f.datahora_utc.iloc[1]) == "2020-09-01 17:45:00+00:00"
+assert f.tipo.isna().tolist() == [False, True]
+assert all(((h >> 52) & 15) == 6 for h in f.h3)           # bate com o CHECK do banco
+
+vf = normalize(frame([[-3, -60, "2020-01-01", "418", "N", "n", "2", 1.2, "N", 0],
+                      [-3, -61, "2020-01-01", "418", "N21", "h", "2", 1.2, "N", 0]], C), "viirs").assign(scan=0.4, track=0.4)
+f = to_focos(vf, "viirs", "teste.csv", 6)
+assert f.satelite.tolist() == ["SNPP", "N21"] and f.confianca.tolist() == ["nominal", "alta"]
+
+from pipeline import kind_of  # noqa: E402
+assert kind_of(pd.DataFrame({"satellite": ["Aqua", "Terra"]})) == "modis"
+assert kind_of(pd.DataFrame({"satellite": ["SNPP"], "instrument": ["SNPP"]})) == "viirs"  # ZIP do Archive Download
+
+try:
+    to_focos(normalize(frame([[-3, -60, "2020-01-01", "418", "X9", "n", "2", 1.2, "N", 0]], C), "viirs").assign(scan=0.4, track=0.4), "viirs", "t", 6)
+    raise AssertionError("satélite desconhecido deveria falhar")
+except ValueError:
+    pass
 print("ok")
