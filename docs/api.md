@@ -15,6 +15,7 @@ Mudar este contrato exige avisar a equipe antes e atualizar este documento no me
 - **Zero, sem dados e fora da cobertura são coisas diferentes**, e a resposta sempre diz qual é o caso.
 - **A faixa de incerteza é calculada depois de somar.** Totais por ano, sazonalidade e anomalias são calculados por cenário, e só no fim saem a mediana e o P10–P90. A soma dos P10 não é o P10 da soma.
 - **O número mostrado se chama `detections`** (detecções de fogo), a convenção do FIRMS. Um fogo grande ocupa vários pixels, então não é "número de incêndios".
+- **O papel do sistema:** o FIRMS mostra onde o fogo está agora. O firesync diz se isso é normal para esse lugar e essa época do ano. O público inclui equipes de alerta precoce e de resposta a emergências (RD07), então o indicador principal é a **janela recente** (últimos 7 dias), e não o mês inteiro.
 
 ## Endpoints
 
@@ -71,7 +72,7 @@ coverage        full | partial | none, com mensagem
 months[]        o calendário: um item por mês do intervalo
 years[]         total por ano e ranking (RF10)
 seasonality[]   12 itens, um por mês do ano (RF09)
-current_month   mês atual contra a mediana histórica (RF11)
+recent          últimos 7 dias e mês até hoje contra o normal da época (RF11)
 indicators      números de destaque (RD06)
 ```
 
@@ -82,6 +83,7 @@ indicators      números de destaque (RD06)
 | `data_version` | data | `"2026-11-14"` | Quando os dados foram carregados |
 | `scale` | texto | `"VIIRS"` | Escala da série harmonizada |
 | `last_month` | `YYYY-MM` | `"2026-11"` | Último mês com dado |
+| `updated_at` | data e hora UTC | `"2026-11-14T15:00:00Z"` | Última atualização NRT. A tela mostra quão fresco é o dado |
 | `h3_resolution` | inteiro | `6` | Só informativo. O front não usa |
 
 ### `area`
@@ -122,8 +124,8 @@ Um item por mês do intervalo, sem buracos. Mês sem focos vem com `detections: 
 | `incomplete` | booleano | `true` se `missing_days >= 3`, ou se o mês é o atual e ainda não acabou |
 | `provisional` | booleano | `true` se o mês tem dados NRT (ainda não substituídos pelos SP) |
 | `frp_sum` | número ou `null` | Soma do FRP em MW. `null` quando `source = estimated_modis`, porque o FRP do MODIS não é comparável |
-| `anomaly` | número | `detections − mediana do mesmo mês nos anos de referência` (RF12) |
-| `anomaly_pct` | número ou `null` | `detections / mediana − 1`. `null` quando a mediana é zero |
+| `anomaly` | número ou `null` | `detections − mediana do mesmo mês nos anos de referência` (RF12). `null` no mês atual, que ainda não acabou (a comparação dele fica em `recent.month_to_date`) |
+| `anomaly_pct` | número ou `null` | `detections / mediana − 1`. `null` quando a mediana é zero ou no mês atual |
 
 `detections` é número decimal nos meses estimados (Aqua × fator). O front arredonda para mostrar.
 
@@ -152,17 +154,31 @@ Doze itens, de janeiro a dezembro, usando **só os anos completos** do intervalo
 | `min`, `max` | número | Menor e maior ano |
 | `n_years` | inteiro | Quantos anos entraram |
 
-### `current_month`: mês atual contra a mediana (RF11)
+### `recent`: o agora contra o normal da época (RF11)
+
+Sempre calculado até o último dia com dado (`data_through`), **independente do intervalo pedido**. Compara sempre **os mesmos dias do calendário** nos anos de referência. Não usa proporção: o fogo não se distribui igual dentro do mês, e na temporada ele cresce ao longo do mês. Uma proporção mostraria queda justamente quando a situação piora.
 
 | Campo | Tipo | Significado |
 | --- | --- | --- |
-| `month` | `YYYY-MM` | O mês atual (`last_month`) |
-| `detections` | número | Detecções até agora |
-| `partial` | booleano | `true` se o mês ainda não acabou |
-| `days_with_data` | inteiro | Dias do mês já cobertos |
-| `historical_median` | número | Mediana do mesmo mês nos anos de referência. Se `partial`, proporcional aos dias (ver "Em aberto") |
-| `difference` | número | `detections − historical_median` |
-| `difference_pct` | número | `detections / historical_median − 1` |
+| `data_through` | data | Último dia com dado |
+| `last_7_days` | objeto | Os 7 dias até `data_through` (janela principal, para alerta precoce) |
+| `month_to_date` | objeto | Do dia 1 do mês atual até `data_through` (RF11) |
+
+Os dois objetos têm o mesmo formato:
+
+| Campo | Tipo | Significado |
+| --- | --- | --- |
+| `start`, `end` | data | Janela comparada |
+| `detections` | número | Detecções na janela, agora |
+| `typical_median` | número | Mediana das detecções nos **mesmos dias do calendário** dos anos de referência |
+| `typical_p25`, `typical_p75` | número | Faixa do normal (25% e 75% dos anos), para a tela dizer "dentro do normal" ou "acima do normal" |
+| `difference` | número | `detections − typical_median` |
+| `difference_pct` | número ou `null` | `detections / typical_median − 1`. `null` quando a mediana é zero |
+| `n_years` | inteiro | Quantos anos entraram no normal |
+
+Os dias recentes são sempre VIIRS observado, então não há fator nem faixa de incerteza. O normal usa só anos com VIIRS (2012 em diante), porque não existe fator diário para o Aqua.
+
+Depende de duas coisas que ainda não existem (ver "Em aberto"): a tabela de **contagens diárias** e o **job NRT**.
 
 ### `indicators` (RD06)
 
@@ -170,7 +186,7 @@ Doze itens, de janeiro a dezembro, usando **só os anos completos** do intervalo
 | --- | --- |
 | `total_detections` | Soma de `detections` no intervalo |
 | `latest_complete_year` | `{ "year", "detections", "reference_mean", "anomaly_pct" }` |
-| `current_month_vs_median_pct` | Igual a `current_month.difference_pct` |
+| `last_7_days_vs_typical_pct` | Igual a `recent.last_7_days.difference_pct` |
 
 **Anos de referência** (proposta, ver "Em aberto"): todos os anos completos da série, de 2003 ao último ano completo, menos o próprio ano do mês. Não depende do intervalo pedido, para a anomalia de um mês não mudar quando o usuário muda o filtro.
 
@@ -185,6 +201,7 @@ A fórmula é a de [importacao-regioes.md](importacao-regioes.md). Resumo do que
    - **`estimated_modis`:** para cada cenário `c` (ano de calibração), `detections_c = Σ bruto[bioma, periodo] × fator[bioma, Aqua→S-NPP, mes, periodo, c]`.
 4. Totais por ano, sazonalidade e anomalias são calculados **por cenário**. Só no fim: valor central = mediana dos cenários, faixa = P10 e P90.
 5. Preenche com zero os meses sem linha e junta os dias sem dado.
+6. Para `recent`, soma as contagens diárias da área na janela atual e na mesma janela de cada ano de referência, e tira a mediana e o P25–P75 entre os anos.
 
 Os fatores ficam na memória da API (a tabela inteira tem poucos milhares de linhas) e são recarregados quando `data_version` muda.
 
@@ -221,7 +238,7 @@ O PNG do calendário é gerado no front, a partir do que está na tela.
 ## `GET /health`
 
 ```json
-{ "status": "ok", "data_version": "2026-11-14", "last_month": "2026-11", "h3_resolution": 6 }
+{ "status": "ok", "data_version": "2026-11-14", "last_month": "2026-11", "updated_at": "2026-11-14T15:00:00Z", "h3_resolution": 6 }
 ```
 
 ## Erros
@@ -259,9 +276,9 @@ Teste obrigatório: a API devolve uma célula conhecida, e o teste confere que e
 | Região pronta (`type: region`) | < 50 ms | Cache calculado depois de cada carga de dados |
 | Área desenhada de até ~100 × 100 km | < 100 ms | Consulta direta |
 | Área desenhada do tamanho da Amazônia | < 1,5 s | Consulta direta |
-| Mesmo pedido repetido | < 50 ms | Cache por (células da área + intervalo + `data_version`) |
+| Mesmo pedido repetido | < 50 ms | Cache por (células da área + intervalo + `updated_at`) |
 
-A resposta leva `ETag` com `data_version`, para o navegador reaproveitar.
+A resposta leva `ETag` com `updated_at`, para o navegador reaproveitar. O cache expira a cada atualização NRT.
 
 ## Regras de operação
 
@@ -274,7 +291,9 @@ A resposta leva `ETag` com `data_version`, para o navegador reaproveitar.
 | # | Ponto | Proposta | Quem decide |
 | --- | --- | --- | --- |
 | 1 | NOAA-20 → S-NPP: aplicar fator ou tratar como iguais | Pergunta feita no PR #3 | Frente B |
-| 2 | Mês atual incompleto contra a mediana (RF11) | Mediana proporcional aos dias já cobertos (`median × days_with_data / days_in_month`), com aviso na tela | Equipe |
+| 2 | Job NRT mínimo (volta o X1 do `tarefas.md`) | A cada 3 h, focos NRT das últimas 48 h pela API do FIRMS, upsert e recálculo só dos dias e do mês atuais. Container com cron na VPS. A recarga SP (X2) continua cortada. Sem isso, `recent` não é verdade e o sistema não é "atualizado" (RNF03) | Equipe, frente A |
+| 2b | Tabela de contagens diárias | `agregados_diarios (h3, data, satelite, periodo, focos_brutos)`, só dias com foco, VIIRS de 2012 em diante. Estimativa: ~15 milhões de linhas no Brasil, cabe na VPS | Frente A |
+| 2c | Camada de focos recentes no mapa | Detecções das últimas 24 h ou 7 dias por cima do mapa, pela camada do FIRMS no GIBS (sem chave). É o que a equipe de resposta olha primeiro | Frente D |
 | 3 | Anos de referência da anomalia (RF12) | Todos os anos completos menos o próprio ano, fixo, independente do intervalo pedido | Equipe |
 | 4 | Medida da anomalia | Diferença absoluta e percentual contra a mediana. O RD06 pede "média de vários anos", então `indicators` usa a média | Equipe |
 | 5 | Linguagem e framework da API | Python, pela biblioteca `h3` e pelo código de consulta do [banco.md](banco.md) | Equipe (arquitetura, ponto 4) |

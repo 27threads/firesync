@@ -4,6 +4,7 @@
   "data_version": "2026-11-14",
   "scale": "VIIRS",
   "last_month": "2026-11",
+  "updated_at": "2026-11-14T15:00:00Z",
   "h3_resolution": 6
  },
  "area": {
@@ -4039,8 +4040,8 @@
    "incomplete": true,
    "provisional": true,
    "frp_sum": 981.7,
-   "anomaly": -37.4,
-   "anomaly_pct": -0.204
+   "anomaly": null,
+   "anomaly_pct": null
   }
  ],
  "years": [
@@ -4359,14 +4360,30 @@
    "n_years": 23
   }
  ],
- "current_month": {
-  "month": "2026-11",
-  "detections": 146.0,
-  "partial": true,
-  "days_with_data": 14,
-  "historical_median": 183.4,
-  "difference": -37.4,
-  "difference_pct": -0.204
+ "recent": {
+  "data_through": "2026-11-14",
+  "last_7_days": {
+   "start": "2026-11-08",
+   "end": "2026-11-14",
+   "detections": 61,
+   "typical_median": 39.5,
+   "typical_p25": 35.2,
+   "typical_p75": 45.5,
+   "difference": 21.5,
+   "difference_pct": 0.544,
+   "n_years": 14
+  },
+  "month_to_date": {
+   "start": "2026-11-01",
+   "end": "2026-11-14",
+   "detections": 146.0,
+   "typical_median": 122.5,
+   "typical_p25": 106.2,
+   "typical_p75": 142.5,
+   "difference": 23.5,
+   "difference_pct": 0.192,
+   "n_years": 14
+  }
  },
  "indicators": {
   "total_detections": 173392.9,
@@ -4376,6 +4393,6 @@
    "reference_mean": 7460.2,
    "anomaly_pct": -0.409
   },
-  "current_month_vs_median_pct": -0.204
+  "last_7_days_vs_typical_pct": 0.544
  }
 }
