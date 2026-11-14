@@ -10,7 +10,7 @@ O que faz:
      Se o Aqua tem menos que o mínimo de focos, aplica a fusão na ordem de ORDEM_FUSAO (meses vizinhos no mesmo
      período, depois o ano inteiro no mesmo período, depois o ano inteiro com dia e noite) e registra em `fusao_com`.
   3. Validação deixando um ano de fora: para cada ano y, os fatores dos outros anos estimam y a partir do Aqua de y.
-     Estimado = mediana entre cenários de E_k = soma(Aqua_y x F_k) (a mesma conta da API). Faixa = P10 e P90 de E_k,
+     Estimado = mediana entre cenários de E_k = soma(Aqua_y x F_k) (a mesma conta da API). Faixa = P5 e P95 de E_k (FAIXA),
      interpolação linear. Compara com o S-NPP real de y.
   4. Critério fixado antes de rodar: se o erro médio de 2022-2024 passar de 1,5x o de 2012-2021 (Amazônia),
      ficam só 2012-2021; senão, 2012-2024.
@@ -24,14 +24,14 @@ Uso (dentro de data-pipeline/, com DATABASE_URL configurado como no pipeline.py)
 Opções:
     --minimo N            mínimo de focos do Aqua para ter fator próprio (padrão 30; ESCOLHA DA EQUIPE, ainda em aberto)
     --erro simples|ponderado
-                          medida de erro do ano que decide o critério. "simples" (média de |e-o|/o nos meses) é o
-                          critério combinado no PR #3; "ponderado" (soma|e-o| / soma o) é proposta em discussão.
+                          medida de erro do ano que decide o critério. Padrão "ponderado" (soma|e-o| / soma o),
+                          aprovado no PR #4. "simples" (média de |e-o|/o nos meses) era o critério original do PR #3.
                           O relatório mostra as duas de qualquer forma.
 
 Saídas na pasta --saida:
     fatores_todos_os_anos.csv   um fator por bioma x mês x período x ano (2012-2024), com n_focos_origem e fusao_com
     validacao_anos.csv          erro de cada ano (as duas medidas) e cobertura da faixa, por bioma
-    validacao_meses.csv         estimado, P10, P90 e observado de cada bioma x ano x mês
+    validacao_meses.csv         estimado, faixa (P5 e P95) e observado de cada bioma x ano x mês
     relatorio.txt               resumo e a decisão dos anos
 """
 import argparse
@@ -46,6 +46,13 @@ ANOS_ANTES_DERIVA = list(range(2012, 2022))
 ANOS_DEPOIS_DERIVA = [2022, 2023, 2024]
 LIMITE_CRITERIO = 1.5           # ESCOLHA DA EQUIPE (PR #3)
 REGIAO_DA_DECISAO = "Amazônia"  # a decisão dos anos usa a Amazônia, que tem mais focos
+# Percentis da faixa, os mesmos da API (interpolação linear). Com poucos cenários, a faixa entre percentis cobre
+# menos do que o nome sugere: para um ano novo, a chance esperada de cair dentro é cerca de
+#   P10-P90: ~68% com 12 cenários (validação) e ~69% com 13 (série)
+#   P5-P95:  ~78% com 12 cenários (validação) e ~79% com 13 (série)
+# (simulação com anos intercambiáveis, 200 mil sorteios)
+# A primeira rodada com P10-P90 mediu 0,58 a 0,69. Troca para P5-P95 decidida pelo Weberson em 14/11/2026.
+FAIXA = (5, 95)
 
 # Ordem da fusão quando o Aqua não atinge o mínimo (docs/decisoes-harmonizacao.md):
 #   "vizinhos": meses m-1 e m+1 no mesmo período e mesmo ano (dezembro e janeiro são vizinhos)
@@ -141,7 +148,7 @@ def fatores_por_ano(m, minimo):
 # ---------------------------------------------------------------- validação
 
 def estimar(aqua_mes, fatores, anos_cenario):
-    """aqua_mes: A de um bioma x ano x mês por período. Devolve (mediana, p10, p90, n_cenarios) de E_k."""
+    """aqua_mes: A de um bioma x ano x mês por período. Devolve (mediana, faixa_baixa, faixa_alta, n_cenarios) de E_k."""
     e = []
     for k in anos_cenario:
         f = fatores.get(k)
@@ -155,7 +162,7 @@ def estimar(aqua_mes, fatores, anos_cenario):
     if not e:
         return np.nan, np.nan, np.nan, 0
     e = np.array(e)
-    return float(np.median(e)), float(np.percentile(e, 10)), float(np.percentile(e, 90)), len(e)
+    return float(np.median(e)), float(np.percentile(e, FAIXA[0])), float(np.percentile(e, FAIXA[1])), len(e)
 
 
 def validar(m, fat):
@@ -168,16 +175,16 @@ def validar(m, fat):
         aqua = dict(zip(g["periodo"], g["A"]))
         obs = int(g["S"].sum())
         outros = [k for k in ANOS_BASE if k != ano]
-        est, p10, p90, n = estimar(aqua, f_idx.get((regiao, mes), {}), outros)
+        est, baixa, alta, n = estimar(aqua, f_idx.get((regiao, mes), {}), outros)
         linhas.append({"regiao": regiao, "ano": ano, "mes": mes, "aqua": int(g["A"].sum()), "observado": obs,
-                       "estimado": est, "p10": p10, "p90": p90, "n_cenarios": n})
+                       "estimado": est, "faixa_baixa": baixa, "faixa_alta": alta, "n_cenarios": n})
     return pd.DataFrame(linhas)
 
 
 def erros_por_ano(v):
     v = v.dropna(subset=["estimado"]).copy()
     v["erro_abs"] = (v["estimado"] - v["observado"]).abs()
-    v["dentro"] = (v["observado"] >= v["p10"]) & (v["observado"] <= v["p90"])
+    v["dentro"] = (v["observado"] >= v["faixa_baixa"]) & (v["observado"] <= v["faixa_alta"])
     linhas = []
     for (regiao, ano), g in v.groupby(["regiao", "ano"]):
         com_obs = g[g["observado"] > 0]
@@ -185,7 +192,7 @@ def erros_por_ano(v):
             "regiao": regiao, "ano": ano, "meses": len(g),
             "erro_simples": float((com_obs["erro_abs"] / com_obs["observado"]).mean()) if len(com_obs) else np.nan,
             "erro_ponderado": float(g["erro_abs"].sum() / g["observado"].sum()) if g["observado"].sum() else np.nan,
-            "cobertura_faixa_80": float(g["dentro"].mean()),
+            "cobertura_faixa": float(g["dentro"].mean()),
         })
     return pd.DataFrame(linhas)
 
@@ -223,7 +230,7 @@ def main():
     ap.add_argument("--csv")
     ap.add_argument("--saida", required=True)
     ap.add_argument("--minimo", type=int, default=30)
-    ap.add_argument("--erro", choices=["simples", "ponderado"], default="simples")
+    ap.add_argument("--erro", choices=["simples", "ponderado"], default="ponderado")
     ap.add_argument("--gravar", action="store_true")
     a = ap.parse_args()
 
@@ -255,8 +262,9 @@ def main():
             rel.append(f"  {medida}: 2012-2021 = {b:.3f} | 2022-2024 = {d:.3f} | razão = {r:.2f}")
         rel.append(f"\nDecisão ({a.erro}, limite {LIMITE_CRITERIO}x): razão {razao:.2f} -> anos {anos[0]} a {anos[-1]} "
                    f"({len(anos)} cenários)")
-        cob = erros.groupby("regiao")["cobertura_faixa_80"].mean().round(2)
-        rel.append("Cobertura da faixa de 80% (média dos anos, meta 0,80):\n" + cob.to_string())
+        cob = erros.groupby("regiao")["cobertura_faixa"].mean().round(2)
+        rel.append(f"Cobertura da faixa P{FAIXA[0]} a P{FAIXA[1]} (média dos anos; esperado ~0,78 com os 12 cenários "
+                   f"da validação e ~0,79 com os 13 da série):\n" + cob.to_string())
 
     if a.gravar:
         if a.csv:

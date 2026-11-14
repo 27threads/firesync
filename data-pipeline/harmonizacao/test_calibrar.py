@@ -88,7 +88,7 @@ def main():
           f"com deriva: razão {razao_d:.2f} -> {len(anos_d)} anos")
     print("[dados inventados] fusões:", fat["fusao_com"].value_counts().to_dict())
     print("[dados inventados] cobertura da faixa (Amazônia):",
-          round(erros[erros["regiao"] == "Amazônia"]["cobertura_faixa_80"].mean(), 2))
+          round(erros[erros["regiao"] == "Amazônia"]["cobertura_faixa"].mean(), 2))
     if falhas:
         print("FALHOU:\n  " + "\n  ".join(falhas))
         sys.exit(1)
