@@ -192,12 +192,12 @@ Para adicionar uma região: acrescente uma entrada em `regioes.json` e rode `sta
 | --- | --- | --- | --- |
 | Fonte do histórico | Archive Download (pedido) | Resumos anuais por país | Mesmo dado SP, sem fila de aprovação (A1) |
 | NOAA-21 | Só reserva no NRT | Baixa também o SP desde 03/2023 | Extra, não atrapalha. É só não usar |
-| Terra | Fora do cálculo | Baixado e mantido separado (`satellite=Terra`) | Decisão em aberto, abaixo |
+| Terra | Fora do cálculo | Baixado e mantido separado (`satellite=Terra`) | Confirmado: só Aqua |
 | Banco e H3 | Tabelas `focos`, `regioes`, `cobertura` com H3 | Ainda em parquet | A4–A6 pendentes |
 
 ## Pendências e decisões em aberto
 
-- [ ] Decidir se o Terra entra (fator próprio) ou fica fora (só Aqua, a partir de 2003)
+- [x] Terra fora do cálculo: só Aqua, a partir de 2003 (decisão do time de dados, com base na tabela "Aqua × Terra"). O Terra continua baixado e separado
 - [x] Banco de dados: PostgreSQL
 - [ ] Resolução H3 (ponto 3), combinada com a frente C. Sugestão: res 6
 - [ ] Investigar a queda de S-NPP/Aqua em 2025
