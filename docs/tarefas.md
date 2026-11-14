@@ -36,7 +36,7 @@ A e B dividem `data-pipeline/`. Antes de começar, combinem a estrutura de subpa
 
 | ID | Tarefa | Status | Pronto quando |
 | --- | --- | --- | --- |
-| T00 | Decidir os pontos 1, 2, 4, 5 e 12 de [arquitetura.md](arquitetura.md) e escrever as justificativas | fazendo (1, 2 e 12 decididos; faltam 4 e 5) | Os 5 pontos preenchidos |
+| T00 | Decidir os pontos 1, 2, 4, 5 e 12 de [arquitetura.md](arquitetura.md) e escrever as justificativas | fazendo (1, 2, 5 e 12 decididos; falta o 4) | Os 5 pontos preenchidos |
 | T01 | Fechar o formato de `agregados` (colunas, tipos, resolução H3) | feito ([banco.md](banco.md), PR #2) | Seção escrita em [importacao-regioes.md](importacao-regioes.md) |
 | T02 | Escrever `docs/api.md` com endpoints, pedido, resposta, erros e um JSON de exemplo | fazendo (na `main`, falta A e D confirmarem) | A e D leram e concordaram |
 | T03 | Preencher responsáveis desta página e criar as 4 branches | a fazer | Tabela de frentes preenchida |
