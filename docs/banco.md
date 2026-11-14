@@ -80,6 +80,8 @@ Duas colunas extras, pedidas no PR #3: `n_focos_origem` (quantos focos do Aqua s
 - **só o satélite que vale no mês:** Aqua até janeiro de 2012, VIIRS de fevereiro de 2012 em diante (um VIIRS por período: S-NPP até 02/11/2026, NOAA-20 depois). Isso deixa a tabela com cerca de metade das linhas;
 - **só confiança nominal e alta** (o arquivo `lowconf` do `clean` não entra).
 
+**`config.data_version`** (texto `YYYY-MM-DD`): gravado pelo `agregar.py` quando ele refaz a tabela inteira. É o `meta.data_version` da API, e quando ele muda a API recarrega os fatores.
+
 **`dias_sem_dados`**: dias em que o FIRMS informa falha de um satélite (`missing_data`). Vale para o mundo todo. A API devolve quantos dias sem dado cada mês teve, e o front marca o mês a partir de 3 dias. A resposta diferencia três casos: zero focos, mês com falha de satélite e área fora da cobertura. Uma falha da coluna NRT do FIRMS só entra se for **depois** do último dia SP daquele satélite (regra do próprio FIRMS: antes disso o SP tem o dado). Conferido com os focos de 2024: nenhum dia marcado tem foco daquele satélite. Hoje são 169 dias × satélite (2001–2026). O `sem_dados` substitui a tabela inteira a cada execução.
 
 A API soma as contagens brutas da área por (região, ano, mês, satélite, D/N), multiplica pelos fatores de cada cenário e só então calcula o valor central e a faixa. Isso é necessário porque **a soma dos P10 das células não é o P10 da soma**. O cálculo é pequeno (anos × meses × 2 satélites × 2 períodos), e mudar um fator não exige refazer `agregados`.

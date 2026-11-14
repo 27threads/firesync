@@ -1,6 +1,7 @@
 """Análise exploratória de cada base (antes dos filtros), a partir de data/staged/.
 
 Uso: python eda.py   ->  reports/eda.html
+Precisa de `pip install matplotlib` (fora do requirements.txt para não pesar a imagem do job).
 Bases: MODIS Terra, MODIS Aqua, VIIRS SNPP, VIIRS NOAA-20, VIIRS NOAA-21.
 """
 import base64
