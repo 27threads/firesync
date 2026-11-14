@@ -1,7 +1,7 @@
 from typing import Protocol
 
-from firesync_backend.domain.models.area import Area
-from firesync_backend.domain.models.snapshot import HistorySnapshot
+from backend.domain.models.area import Area
+from backend.domain.models.snapshot import HistorySnapshot
 
 
 class HistoryRepository(Protocol):

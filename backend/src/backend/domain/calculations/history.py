@@ -2,8 +2,8 @@
 from collections import defaultdict
 from math import fsum, isfinite
 
-from firesync_backend.domain.models.error import CalendarError
-from firesync_backend.domain.models.month import Month
+from backend.domain.models.error import CalendarError
+from backend.domain.models.month import Month
 from .statistics import percentile, summarize
 
 

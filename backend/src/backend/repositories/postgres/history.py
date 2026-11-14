@@ -5,9 +5,9 @@ from math import fsum
 import h3
 from psycopg.rows import dict_row
 
-from firesync_backend.domain.calculations.spatial import MAX_CELLS, cells_for_area
-from firesync_backend.domain.models.error import CalendarError
-from firesync_backend.domain.models.snapshot import HistorySnapshot
+from backend.domain.calculations.spatial import MAX_CELLS, cells_for_area
+from backend.domain.models.error import CalendarError
+from backend.domain.models.snapshot import HistorySnapshot
 
 
 class PostgresHistoryRepository:

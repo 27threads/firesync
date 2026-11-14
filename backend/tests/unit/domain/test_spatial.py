@@ -1,8 +1,8 @@
 import h3
 import pytest
-from firesync_backend.domain.models.area import Area
-from firesync_backend.domain.models.error import CalendarError
-from firesync_backend.domain.calculations.spatial import cells_for_area
+from backend.domain.models.area import Area
+from backend.domain.models.error import CalendarError
+from backend.domain.calculations.spatial import cells_for_area
 
 
 def test_small_area_uses_one_cell():

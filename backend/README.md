@@ -18,11 +18,11 @@ Linguagem: **Python**, confirmada por Rafael para esta primeira parte. O framewo
 
 ## Estrutura
 
-Layout `src/` para o pacote `firesync_backend`, com testes fora do código de produção. Domínio, repositório histórico PostgreSQL e serviço de calendário estão implementados; as pastas HTTP continuam reservadas para a entrega de integração.
+Layout `src/` para o pacote `backend`, com testes fora do código de produção. Domínio, repositório histórico PostgreSQL e serviço de calendário estão implementados; as pastas HTTP continuam reservadas para a entrega de integração.
 
 ```text
 backend/
-├── src/firesync_backend/
+├── src/backend/
 │   ├── domain/
 │   │   ├── models/                 objetos e valores do domínio
 │   │   └── calculations/           funções puras de cálculo
@@ -72,9 +72,9 @@ Uso do serviço em Python, com `DATABASE_URL` fornecida pelo ambiente:
 ```python
 import os
 from psycopg_pool import ConnectionPool
-from firesync_backend.domain.models.area import Area
-from firesync_backend.repositories.postgres.history import PostgresHistoryRepository
-from firesync_backend.services.calendar import CalendarService
+from backend.domain.models.area import Area
+from backend.repositories.postgres.history import PostgresHistoryRepository
+from backend.services.calendar import CalendarService
 
 with ConnectionPool(os.environ["DATABASE_URL"], min_size=1, max_size=4) as pool:
     repository = PostgresHistoryRepository(pool)

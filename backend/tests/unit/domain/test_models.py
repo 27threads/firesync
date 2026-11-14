@@ -1,9 +1,9 @@
 import json
 import pytest
-from firesync_backend.domain.models.area import Area
-from firesync_backend.domain.models.month import Month
-from firesync_backend.domain.models.error import CalendarError
-from firesync_backend.domain.calculations.statistics import percentile
+from backend.domain.models.area import Area
+from backend.domain.models.month import Month
+from backend.domain.models.error import CalendarError
+from backend.domain.calculations.statistics import percentile
 
 
 @pytest.mark.parametrize("value", ["2020-00", "2020-13", "20-01", "2020-1", "2020-01-01", None])

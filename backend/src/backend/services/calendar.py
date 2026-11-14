@@ -2,14 +2,14 @@ from collections import defaultdict
 from datetime import datetime, UTC
 from math import fsum
 
-from firesync_backend.domain.calculations.history import (
+from backend.domain.calculations.history import (
     aligned, annual_results, anomaly, factor_index, month_scenarios,
     months_between, seasonality_results, total,
 )
-from firesync_backend.domain.calculations.statistics import percentile, summarize
-from firesync_backend.domain.models.error import CalendarError
-from firesync_backend.domain.models.month import Month
-from firesync_backend.repositories.interfaces.history import HistoryRepository
+from backend.domain.calculations.statistics import percentile, summarize
+from backend.domain.models.error import CalendarError
+from backend.domain.models.month import Month
+from backend.repositories.interfaces.history import HistoryRepository
 
 
 class CalendarService:

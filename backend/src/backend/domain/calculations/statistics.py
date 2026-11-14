@@ -1,6 +1,6 @@
 from math import isfinite
 
-from firesync_backend.domain.models.error import CalendarError
+from backend.domain.models.error import CalendarError
 
 
 def percentile(values, percent):

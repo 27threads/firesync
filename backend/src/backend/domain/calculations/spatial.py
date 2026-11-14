@@ -5,7 +5,7 @@ import h3
 from pyproj import Geod
 from shapely.geometry import Polygon, mapping, shape
 
-from firesync_backend.domain.models.error import CalendarError
+from backend.domain.models.error import CalendarError
 
 MAX_CELLS = 250_000
 

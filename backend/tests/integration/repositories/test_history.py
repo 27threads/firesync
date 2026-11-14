@@ -8,9 +8,9 @@ from psycopg import sql
 from psycopg_pool import ConnectionPool
 import pytest
 
-from firesync_backend.domain.models.area import Area
-from firesync_backend.domain.models.error import CalendarError
-from firesync_backend.repositories.postgres.history import PostgresHistoryRepository
+from backend.domain.models.area import Area
+from backend.domain.models.error import CalendarError
+from backend.repositories.postgres.history import PostgresHistoryRepository
 
 pytestmark = pytest.mark.integration
 
@@ -128,7 +128,7 @@ def test_wrong_configured_resolution_rejected(database):
 
 def test_calendar_service_with_real_postgres_and_factors(database):
     from datetime import date
-    from firesync_backend.services.calendar import CalendarService
+    from backend.services.calendar import CalendarService
     pool, region, cell = database
     with pool.connection() as conn:
         conn.execute("INSERT INTO cobertura(regiao_id,satelite,data_inicio,data_fim) VALUES (%s,'Aqua','2003-01-01','2012-01-31')",(region,))
