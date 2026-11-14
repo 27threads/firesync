@@ -1,0 +1,13 @@
+# Cobertura de linhas do pipeline (docs/testes.md). A esteira junta unidade e integração.
+[run]
+source = .
+branch = True
+omit =
+    tests/*
+    test_*.py
+    eda.py
+
+[report]
+# Só sobe, nunca desce: quando a cobertura medida passar deste número, suba o mínimo no mesmo PR.
+fail_under = 35
+show_missing = True
