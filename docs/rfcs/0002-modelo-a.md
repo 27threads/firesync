@@ -1,6 +1,6 @@
 # RFC 0002: Modelo A, a chance de o MODIS ver um fogo do VIIRS (caminho C)
 
-- **Status:** Decidido pelo Weberson em 14/11/2026 (caminho C). Em revisão neste PR
+- **Status:** Decidido pelo Weberson em 14/11/2026 (caminho C). **Etapa A concluída em 14/11/2026** (código e resultado no PR #53, aguardando revisão). Etapa B opcional, não iniciada. Este PR segue em revisão
 - **Autor:** Weberson (frente B)
 - **Data:** 2026-11-14
 
@@ -74,6 +74,17 @@ A ordem de execução do caminho C. Cada passo só começa depois do anterior, e
 | 9 | Abrir o PR do código: checagens de código morto e de cobertura, linha de uso de IA no README, sem `Co-Authored-By`, Mateus revisando | 20 min |
 
 **Ponto de corte:** se o gradient boosting (passo 6) não ficar pronto até a meia-noite, seguimos só com a tabela simples, que já entrega a curva e a prova cruzada.
+
+**Situação da etapa A em 14/11/2026: os passos 1 a 9 estão concluídos.** O gradient boosting ficou pronto antes do ponto de corte, então não foi preciso cair para a tabela simples.
+
+| Passo | Situação |
+| --- | --- |
+| 1 a 6 | Feitos: branch separada, 16 testes com dados inventados escritos antes do código, pares de 2024 com a limpeza da frente A importada, corte no espaço, tabela simples e gradient boosting |
+| 7 | Feito: AUC (0,753 contra 0,708 da tabela), calibração (erro médio de 0,7 ponto percentual) e prova cruzada. **A prova cruzada, como foi definida, não é um teste do fator por contagens** (seção "O que a etapa A mostrou") |
+| 8 | Feito: `docs/img/modelo/curva_deteccao_2024.png`, com a legenda sugerida para a tela de Método |
+| 9 | Feito: PR #53, esteira verde, aguardando revisão |
+
+**Ainda não feitos:** a etapa B (passos 10 a 12), os passos 13 e 14 (registro final e entrega à frente D, que dependem da revisão e do merge dos PRs #26, #48 e #53) e o passo 0.1 (resposta dos revisores às duas perguntas do RFC).
 
 ### Etapa B: modelo com o histórico (frente A, domingo de manhã, opcional)
 
