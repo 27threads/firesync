@@ -77,7 +77,6 @@ def test_snapshot_stays_consistent_during_concurrent_write(database):
     pool, region, _ = database
     # Intercept between SELECT config and SELECT counts; another connection commits.
     # Production adapter must still see the original version AND original count.
-    original = PostgresHistoryRepository._load
     from unittest.mock import patch
     from psycopg import Cursor
     execute = Cursor.execute
@@ -125,3 +124,34 @@ def test_wrong_configured_resolution_rejected(database):
         conn.execute("UPDATE config SET valor='5' WHERE chave='h3_resolucao'")
     with pytest.raises(CalendarError):
         PostgresHistoryRepository(pool).load(Area('region',region_id=region))
+
+
+def test_calendar_service_with_real_postgres_and_factors(database):
+    from datetime import date
+    from firesync_backend.services.calendar import CalendarService
+    pool, region, cell = database
+    with pool.connection() as conn:
+        conn.execute("INSERT INTO cobertura(regiao_id,satelite,data_inicio,data_fim) VALUES (%s,'Aqua','2003-01-01','2012-01-31')",(region,))
+        # Distinct cells are summed by region, month and day/night in SQL.
+        second = h3.str_to_int(next(c for c in h3.grid_disk(h3.int_to_str(cell),1) if h3.str_to_int(c) != cell))
+        conn.execute('INSERT INTO celula_regiao VALUES (%s,%s)',(second,region))
+        conn.execute("INSERT INTO agregados VALUES (%s,2003,1,%s,'Aqua','D',2,4),(%s,2003,1,%s,'Aqua','D',3,6)", (cell,region,second,region))
+        conn.execute("INSERT INTO fatores_harmonizacao(regiao_id,satelite_origem,satelite_destino,mes,periodo,ano_calibracao,fator) VALUES (%s,'Aqua','SNPP',1,'D',2013,2),(%s,'Aqua','SNPP',1,'D',2014,4)",(region,region))
+    service=CalendarService(PostgresHistoryRepository(pool),clock=lambda:date(2026,11,14))
+    result=service.calculate(Area('region',region_id=region),'2003-01','2003-01')
+    assert result['area']['n_cells'] == 2
+    assert result['months'][0]['raw_count'] == 5
+    assert result['months'][0]['detections'] == 15
+    assert result['months'][0]['band_low'] == pytest.approx(10.5)
+    assert result['months'][0]['band_high'] == pytest.approx(19.5)
+
+
+def test_rollback_releases_pool_after_query_failure(database):
+    pool, region, _ = database
+    with pool.connection() as conn:
+        conn.execute('ALTER TABLE fatores_harmonizacao RENAME TO saved_factors')
+    with pytest.raises(psycopg.errors.UndefinedTable):
+        PostgresHistoryRepository(pool).load(Area('region',region_id=region))
+    with pool.connection() as conn:
+        conn.execute('ALTER TABLE saved_factors RENAME TO fatores_harmonizacao')
+    assert PostgresHistoryRepository(pool).load(Area('region',region_id=region)).counts[0]['raw_count'] == 7
