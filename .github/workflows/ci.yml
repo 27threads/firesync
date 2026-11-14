@@ -190,6 +190,7 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           npm --prefix .. ci
+          npm --prefix .. test
           npm --prefix .. run build
           (npm --prefix .. run preview -- --port 5173 &) && npx wait-on http://localhost:5173
           npx playwright test

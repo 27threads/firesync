@@ -77,7 +77,7 @@ Arquivo: `.github/workflows/ci.yml`. Roda em todo PR e em todo push na `main`.
 | **Pipeline · unidade** | `test_pipeline.py` |
 | **Pipeline · integração com PostGIS** | Migrations aplicadas duas vezes (precisam rodar de novo sem erro), `test_banco.py`, job NRT com o FIRMS simulado e o relatório de cobertura, que aparece no resumo do job |
 | **API · contrato e especificação TDD** | Contrato do `api-exemplo.json` e do `alert_rules.json`, mais a especificação do domínio. As especificações já implementadas não usam `xfail`. Com código em `backend/src/`, também a cobertura mínima de 94,2% com PostGIS |
-| **Front · jornadas de usuário** | As jornadas compilam. Com o front criado (`frontend/package.json`), sobe o site e roda as jornadas no Chromium |
+| **Front · unidade e jornadas** | As jornadas compilam. Com o front criado (`frontend/package.json`), roda os testes de unidade (Vitest), o build (com `tsc`, que barra variável e parâmetro sem uso), sobe o site e roda as jornadas no Chromium |
 
 ## Como rodar no seu computador
 

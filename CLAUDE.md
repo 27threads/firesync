@@ -12,7 +12,7 @@ A equipe quer ganhar um prêmio global do Space Apps. Leia o [docs/premiacao.md]
 
 ## Antes de escrever código
 
-- Ache sua tarefa em [docs/tarefas.md](docs/tarefas.md). Mexa só nas pastas da sua frente e trabalhe na branch dela. Atualize o status da tarefa ao começar e ao terminar.
+- Ache sua tarefa em [docs/tarefas.md](docs/tarefas.md). Mexa só nas pastas da sua frente, numa branch própria a partir da `main` atualizada. Atualize o status da tarefa ao começar e ao terminar.
 - Confira em [docs/arquitetura.md](docs/arquitetura.md) se a stack da parte que você vai mexer já foi decidida. Se estiver "a decidir", pergunte. Não escolha linguagem, banco ou framework por conta própria.
 - Os documentos em `docs/` são a fonte de verdade. Se o código e um documento discordarem, pergunte antes de mudar qualquer um dos dois.
 - A abordagem de harmonização é da equipe (regra do Space Apps). Implemente o que está documentado e não invente outro método.
@@ -72,4 +72,6 @@ API (a partir da raiz): `pip install -r backend/requirements-dev.txt` e `pytest 
 
 Jornadas de usuário (a partir de `frontend/e2e/`): `npm ci` e `npx playwright test`.
 
-O resto da API e do front: a preencher quando a stack estiver definida.
+Front (a partir de `frontend/`): `npm ci`, `npm test` (Vitest), `npm run dev` (porta 5173) e `npm run build`.
+
+Os comandos de execução HTTP da API serão acrescentados quando as rotas estiverem implementadas.
