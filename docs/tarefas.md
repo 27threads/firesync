@@ -6,19 +6,19 @@ Divisão do trabalho entre as 4 pessoas da equipe, até a submissão (domingo, 1
 
 - Cada pessoa tem uma frente e mexe **só nas pastas da sua frente**. Para mexer em outra pasta, fale antes com o responsável dela.
 - As frentes dependem de **contratos** (formato da tabela `agregados` e `docs/api.md`), nunca do código de outra frente. Até a parte real ficar pronta, trabalhe com dados falsos no formato do contrato.
-- Cada pessoa trabalha na branch da sua frente e faz merge na `main` assim que algo funcionar.
+- Cada tarefa vai numa branch própria, criada a partir da `main` atualizada, e entra na `main` por PR assim que algo funcionar (regras de Git no [CLAUDE.md](../CLAUDE.md)).
 - Mudar um contrato exige avisar a equipe antes. Depois, atualize o documento do contrato no mesmo commit.
 - Ao começar uma tarefa, mude o status para `fazendo`. Ao terminar, mude para `feito`. Status possíveis: `a fazer`, `fazendo`, `feito`, `bloqueado`, `cortado`.
 - Agentes: leia a sua frente inteira e os documentos indicados nela antes de começar.
 
 ## Frentes
 
-| Frente | Responsável | Branch | Pastas |
-| --- | --- | --- | --- |
-| A. Importador e dados | | `a-importador` | `data-pipeline/` (importação) |
-| B. Harmonização | | `b-harmonizacao` | `data-pipeline/` (calibração e agregação, em módulo separado do importador), `config/` (regras do alerta) |
-| C. API, deploy e submissão | | `c-api` | `backend/`, `infra/` (deploy), `docs/api.md` |
-| D. Frontend e demo | | `d-frontend` | `frontend/` |
+| Frente | Responsável | Pastas |
+| --- | --- | --- |
+| A. Importador e dados | Eduardo | `data-pipeline/` (importação) |
+| B. Harmonização | Weberson | `data-pipeline/` (calibração e agregação, em módulo separado do importador), `config/` (regras do alerta) |
+| C. API, deploy e submissão | Rafael | `backend/`, `infra/` (deploy), `docs/api.md` |
+| D. Frontend e demo | Mateus | `frontend/` |
 
 A e B dividem `data-pipeline/`. Antes de começar, combinem a estrutura de subpastas para não editarem os mesmos arquivos.
 
@@ -36,10 +36,10 @@ A e B dividem `data-pipeline/`. Antes de começar, combinem a estrutura de subpa
 
 | ID | Tarefa | Status | Pronto quando |
 | --- | --- | --- | --- |
-| T00 | Decidir os pontos 1, 2, 4, 5 e 12 de [arquitetura.md](arquitetura.md) e escrever as justificativas | fazendo (1, 2, 5 e 12 decididos; falta o 4) | Os 5 pontos preenchidos |
+| T00 | Decidir os pontos 1, 2, 4, 5 e 12 de [arquitetura.md](arquitetura.md) e escrever as justificativas | feito | Os 5 pontos preenchidos |
 | T01 | Fechar o formato de `agregados` (colunas, tipos, resolução H3) | feito ([banco.md](banco.md), PR #2) | Seção escrita em [importacao-regioes.md](importacao-regioes.md) |
 | T02 | Escrever `docs/api.md` com endpoints, pedido, resposta, erros e um JSON de exemplo | fazendo (na `main`, falta A e D confirmarem) | A e D leram e concordaram |
-| T03 | Preencher responsáveis desta página e criar as 4 branches | a fazer | Tabela de frentes preenchida |
+| T03 | Preencher responsáveis desta página | feito | Tabela de frentes preenchida |
 
 ## A. Importador e dados
 
@@ -95,10 +95,10 @@ D1 a D5 começam com o JSON de exemplo do `api.md`, sem esperar a API.
 
 | ID | Tarefa | Depende de | Status | Pronto quando |
 | --- | --- | --- | --- | --- |
-| D1 | Esqueleto do app, interface em inglês e crédito ao FIRMS visível | T00 | a fazer | App abre local |
+| D1 | Esqueleto do app, interface em inglês e crédito ao FIRMS visível | T00 | feito (Vite + React + TS em `frontend/`; texto fixo, Method e Data & credits no `index.html`, abre sem JS) | App abre local |
 | D2 | Mapa com desenho de polígono e retângulo (RD01) e entrada de lat/lon (RD02) | D1 | a fazer | Área desenhada vira o pedido do `api.md` |
 | D3 | Seletor de intervalo de datas (RF07) | D1 | a fazer | Datas entram no pedido |
-| D4 | Calendário meses × anos em heatmap com paleta acessível (RF08, RD03, RD04) e meses com falha de satélite (`dias_sem_dados`) diferentes de zero | D1 | a fazer | Renderiza o JSON de exemplo |
+| D4 | Calendário meses × anos em heatmap com paleta acessível (RF08, RD03, RD04) e meses com falha de satélite (`dias_sem_dados`) diferentes de zero | D1 | feito (`frontend/src/calendar/`: D3 + SVG, cividis log, hachura no estimado, borda no incompleto, estados próprios para zero e sem dados, linha da troca de sensor, tooltip e teclado; renderiza o `api-exemplo.json`) | Renderiza o JSON de exemplo |
 | D5 | Indicadores principais, sazonalidade, ranking de anos, mês atual vs. mediana e anomalia (RF09–RF12, RD06) | D1 | a fazer | Renderiza o JSON de exemplo |
 | D6 | Download das análises e do CSV (RF13, RD05) | D4, D5 | a fazer | Arquivos baixam e abrem |
 | D7 | Ligar o front na API real | C3, D2–D5 | a fazer | M2 atingido |
