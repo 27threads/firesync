@@ -2,7 +2,7 @@
 
 Nov 14, 2026 · frente D · **rascunho, a equipe aprova antes de usar**
 
-Prompt para um agente de IA construir o front do firesync. Foi adaptado de um prompt de sites comerciais (negócio local) e mantém dele o método de design, as regras de animação, de performance e de "nada sem fonte". Saíram SEO local, NAP, WhatsApp, avaliações do Google e JSON-LD de LocalBusiness, que não se aplicam. Entraram os critérios do Space Apps, o contrato da API e as regras de honestidade dos dados.
+Prompt para um agente de IA construir o front do firesync.
 
 Antes de rodar, a equipe precisa decidir os pontos da seção "Decisões que o agente não toma". O CLAUDE.md proíbe o agente de escolher stack por conta própria.
 
@@ -158,24 +158,9 @@ O agente para e pergunta se algum destes pontos de [arquitetura.md](arquitetura.
 
 | # | Ponto | Por que importa para o prompt |
 | --- | --- | --- |
-| 5 | Framework do front | O prompt original pedia HTML/CSS/JS sem build. Para uma ferramenta com mapa, estado e downloads, a equipe pode preferir um framework. As duas coisas funcionam com GSAP |
+| 5 | Framework do front | HTML/CSS/JS sem build ou um framework. Uma ferramenta com mapa, estado e downloads pode pedir um framework. Os dois funcionam com GSAP |
 | 6 | Biblioteca de mapa e desenho de área | Define o peso do WebGL e como a área vira o pedido do `api.md` |
 | 7 | Biblioteca de gráficos do calendário | D3, Observable Plot, canvas próprio etc. Muda o custo de redesenho e de acessibilidade |
 | 8 | Paleta acessível do heatmap | viridis ou cividis (RD04) |
 | 9 | Formato do download | PNG, PDF, CSV. O pacote de auditoria já está no `api.md` |
 | 10 | Granularidade do calendário | Mensal ou diária |
-
-## O que mudou em relação ao prompt original
-
-| Prompt original (negócio local) | Aqui |
-| --- | --- |
-| Vender o site para um cliente, copy em português | Convencer jurados da NASA e servir equipes de emergência, interface em inglês |
-| Briefing, fotos e logo do cliente | Documentos do repo, contrato da API e JSON de exemplo |
-| `CONFIRMAR` para preço, horário, nomes | `TODO(confirm)` para número, fato de satélite ou texto de método sem fonte |
-| Conceito vindo do ofício do negócio | Conceito vindo do satélite, do pixel, da grade e do próprio dado. A equipe aprova |
-| Seções de serviço, avaliações, horário, mapa de rota | Ferramenta (RF06–RF13), Method, Data & credits |
-| SEO local, NAP, Google Maps, LocalBusiness, robots de IA, llms.txt | Removido. Ficam meta tags, Open Graph e JSON-LD opcional de `WebApplication`/`Dataset` |
-| WhatsApp em todos os CTAs | Removido. O CTA é usar a ferramenta e baixar os dados |
-| Sem regra sobre dado | Origem, faixa, troca de sensor, zero ≠ sem dados, sem FRP em MW |
-| Zip + artefato privado | Pasta `frontend/` na branch `d-frontend`, deploy pela frente C (C7) |
-| Lighthouse SEO ≥ 95 | Acessibilidade e Boas práticas ≥ 95, SEO ≥ 90 |

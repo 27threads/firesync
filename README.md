@@ -101,7 +101,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `data-pipeline/pipeline.py`, `agregar.py`, `eda.py`, `test_pipeline.py`, `test_banco.py`, `job_nrt.py`, `Dockerfile`, `migrations/` | Claude Code (Claude Opus 5.5) | Código gerado a partir das especificações de filtro escritas pelo time de dados. Revisado pela equipe |
 | `docs/banco.md`, `data-pipeline/migrations/001_inicial.sql` | Claude Code (Claude Opus 5.5) | Schema e documento de decisões gerados a partir dos docs do repo e de um benchmark local. Revisado pela equipe |
 | `docs/pipeline-dados.md` | Claude Code (Claude Opus 5.5) | Redação do relatório do que foi feito e dos achados da análise exploratória |
-| `docs/prompt-frontend.md` | Claude Code (Claude Opus 5.5) | Adaptação de um prompt de sites para o front do firesync, a partir dos docs do repo. A equipe aprova antes de usar |
+| `docs/prompt-frontend.md` | Claude Code (Claude Opus 5.5) | Prompt do front escrito a partir dos docs do repo. A equipe aprova antes de usar |
 
 ## Dados e créditos
 
