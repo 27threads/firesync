@@ -122,7 +122,8 @@ def test_gradient_boosting_separa_e_calibra_nos_blocos_de_teste():
     modelo = m.ajustar_boosting(treino, ["Amazônia", "Cerrado"], semente=3)
     p = m.prever_boosting(modelo, teste, ["Amazônia", "Cerrado"])
     med = m.medir(teste["viu"], p)
-    assert med["auc"] > 0.8
+    teto = m.medir(teste["viu"], teste["p_real"])["auc"]          # o melhor possível: conhece a chance verdadeira
+    assert med["auc"] > teto - 0.03                               # o modelo chega perto do teto, que tem sorteio embutido
     assert abs(med["taxa_prevista"] - med["taxa_observada"]) < 0.02
 
 
@@ -184,10 +185,12 @@ def test_ponta_a_ponta_com_dados_inventados_recupera_que_so_fogo_forte_e_visto()
     curva = r["curva"].query("bioma == 'todos'")
     fraca = curva[curva["faixa"] == "0-2"]["taxa_viu"].mean()
     forte = curva[curva["faixa"] == "25+"]["taxa_viu"].mean()
-    assert forte > 0.8 and fraca < 0.2                              # o que foi plantado
+    # plantado: a chance vai de ~5% (abaixo de 2 MW) a ~75% em média (25 MW ou mais)
+    assert 0.65 < forte < 0.85 and fraca < 0.15 and forte > 4 * fraca
     medidas = r["medidas"].set_index("modelo")
-    assert medidas.loc["boosting", "auc"] > 0.8
-    assert medidas.loc["boosting", "auc"] > medidas.loc["referencia", "auc"] if "auc" in medidas else True
+    assert medidas.loc["boosting", "auc"] > 0.7                       # os dados inventados têm sorteio, o teto é ~0,77
+    assert medidas.loc["boosting", "auc"] > medidas.loc["tabela", "auc"] - 0.02
+    assert medidas.loc["tabela", "auc"] > medidas.loc["referencia", "auc"] + 0.15   # a referência é a taxa única (AUC 0,5)
     assert {"treino", "teste"} == set(r["grupos"]["grupo"])
     assert "janela" in r["relatorio"]
 
