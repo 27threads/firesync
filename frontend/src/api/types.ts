@@ -1,5 +1,82 @@
 // Tipos da resposta de POST /calendar, iguais ao docs/api.md. Só o que o front usa.
 
+export interface GeoJsonPolygon {
+  type: 'Polygon';
+  coordinates: number[][][];
+}
+
+export interface RegionArea {
+  type: 'region';
+  region_id: number;
+}
+
+export interface GeoJsonArea {
+  type: 'geojson';
+  geometry: GeoJsonPolygon;
+}
+
+export interface PointArea {
+  type: 'point';
+  lat: number;
+  lon: number;
+  radius_km: number;
+}
+
+export type AreaInput = RegionArea | GeoJsonArea | PointArea;
+
+export interface PeriodInput {
+  start?: string;
+  end?: string;
+}
+
+export interface CalendarRequest {
+  area: AreaInput;
+  start?: string;
+  end?: string;
+}
+
+export interface RegionOption {
+  region_id: number;
+  name: string;
+  source: string;
+  bbox: [number, number, number, number];
+}
+
+export interface HealthResponse {
+  status: string;
+  data_version: string;
+  last_month: string;
+  updated_at: string;
+  h3_resolution: number;
+}
+
+export type CoverageStatus = 'full' | 'partial' | 'none';
+
+export interface Coverage {
+  status: CoverageStatus;
+  covered_fraction: number;
+  message: string | null;
+}
+
+export interface BiomeShare {
+  region_id: number;
+  name: string;
+  fraction: number;
+}
+
+export interface ResponseArea {
+  type: 'region' | 'geojson' | 'point';
+  n_cells: number;
+  area_km2: number;
+  biomes: BiomeShare[];
+}
+
+export interface NoCoverageResponse {
+  meta: Meta;
+  area: ResponseArea;
+  coverage: Coverage & { status: 'none' };
+}
+
 export type MonthSource = 'estimated_modis' | 'observed_viirs';
 
 export interface CalendarMonth {
@@ -72,9 +149,13 @@ export interface Meta {
 
 export interface CalendarResponse {
   meta: Meta;
+  area?: ResponseArea;
+  coverage?: Coverage;
   months: CalendarMonth[];
   years: YearTotal[];
   seasonality: SeasonalityMonth[];
   recent: Recent;
   indicators: Indicators;
 }
+
+export type CalendarApiResult = CalendarResponse | NoCoverageResponse;

@@ -31,7 +31,13 @@ body {
 }
 
 a { color: var(--thermal); }
-a:focus-visible, button:focus-visible { outline: 2px solid var(--thermal); outline-offset: 2px; }
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--thermal);
+  outline-offset: 2px;
+}
 
 .skip-link { position: absolute; left: -999px; }
 .skip-link:focus { left: var(--gutter); top: 8px; background: var(--night-raised); padding: 8px 12px; z-index: 10; }
@@ -228,3 +234,257 @@ p, li { max-width: var(--measure); }
 .year-bar__fill--incomplete { fill: transparent; stroke: var(--thermal); stroke-width: 1.5; stroke-dasharray: 3 2; }
 .year-bar__hatch { stroke: rgba(255, 255, 255, 0.55); stroke-width: 1.5; }
 .year-bar__band line { stroke: var(--text); stroke-width: 1.5; }
+
+/* Seleção de área e período (D2 e D3) */
+.area-controls {
+  margin-top: 20px;
+  display: grid;
+  gap: 20px;
+}
+
+.area-controls__top {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 16px 24px;
+  align-items: start;
+}
+
+.control-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.control-field label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.control-field input,
+.control-field select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--night);
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.control-field input[aria-invalid='true'] {
+  border-color: #e05268;
+}
+
+.period-fieldset,
+.point-fieldset {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  min-width: 0;
+}
+
+.period-fieldset legend,
+.point-fieldset legend {
+  padding: 0 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.period-fieldset__inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 12px;
+}
+
+.point-fieldset__inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.point-form__submit {
+  display: flex;
+  align-items: flex-end;
+}
+
+.tool-panel .control-hint {
+  margin-top: 8px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.tool-panel .field-error {
+  margin-top: 6px;
+  padding: 6px 10px;
+  border: 1px solid #e05268;
+  border-radius: 4px;
+  background: #33101a;
+  color: #ffd6de;
+  font-size: 0.8125rem;
+}
+
+.area-map {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.area-map__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.area-map__actions,
+.area-map__layers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.map-btn {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--night);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.map-btn:hover {
+  border-color: var(--text-muted);
+}
+
+.map-btn--active {
+  border-color: var(--thermal);
+  background: #2b2112;
+  color: var(--text);
+}
+
+.map-btn--primary {
+  border-color: var(--thermal);
+  background: var(--thermal);
+  color: var(--night);
+}
+
+.map-btn--primary:hover {
+  background: #f5b95e;
+}
+
+.tool-panel .area-map__hint {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.area-map__viewport {
+  position: relative;
+  width: 100%;
+  height: 380px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #0d1326;
+  touch-action: pan-y;
+}
+
+.area-map__viewport--drawing {
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.area-map__canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.area-map__drag-preview {
+  position: absolute;
+  border: 2px dashed var(--thermal);
+  background: rgba(242, 169, 59, 0.16);
+  pointer-events: none;
+  z-index: 600;
+}
+
+.area-map__placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  pointer-events: none;
+}
+
+.leaflet-container {
+  background: #0d1326;
+  font-family: var(--font-sans);
+}
+
+.area-map__viewport .leaflet-container {
+  touch-action: pan-y;
+}
+
+.area-map__viewport--drawing .leaflet-container {
+  touch-action: none;
+}
+
+.leaflet-control-attribution {
+  max-width: 100%;
+  background: rgba(11, 16, 32, 0.86) !important;
+  color: var(--text-muted) !important;
+  font-size: 0.75rem;
+}
+
+.leaflet-control-attribution a {
+  color: var(--thermal) !important;
+}
+
+.tool-status {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text);
+}
+
+.tool-panel .tool-alert {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid #e05268;
+  border-radius: 4px;
+  background: #33101a;
+  color: #ffd6de;
+}
+
+.tool-panel .coverage-notice {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--thermal);
+  border-radius: 6px;
+  background: #241c10;
+  color: var(--text);
+}
+
+@media (max-width: 640px) {
+  .tool-panel {
+    padding: 16px;
+  }
+
+  .area-map__viewport {
+    height: 280px;
+  }
+}
