@@ -89,7 +89,7 @@ Lê o `stage` (ou um CSV/ZIP do FIRMS passado como argumento) e grava em `focos`
 
 Reimportar o mesmo arquivo não duplica: tudo vira "atualizado".
 
-**SP substitui NRT.** O NRT só vale depois do último dia SP de cada satélite. Depois de cada arquivo, o importador apaga os focos NRT de dias que já têm SP (as coordenadas mudam um pouco no reprocessamento, então a chave única não junta os dois e o mesmo fogo contaria duas vezes). O `download` também apaga o arquivo NRT que ficou todo dentro do período SP. A migration `003_focos_nrt.sql` cria o índice que deixa isso rápido.
+**SP substitui NRT.** O NRT só vale depois do último dia SP de cada satélite. Depois de cada arquivo, o importador apaga os focos NRT de dias que já têm SP (as coordenadas mudam um pouco no reprocessamento, então a chave única não junta os dois e o mesmo fogo contaria duas vezes). O `download` também apaga o arquivo NRT que ficou todo dentro do período SP. A migration `003_focos_nrt.sql` cria um índice só dos focos NRT, ordenado pelo tempo (12 MB), que deixa isso rápido e também atende a camada de focos recentes da API (issue #5).
 
 Teste com os ZIPs de 2024 do repo (Brasil, SP), em ~3 min:
 
@@ -102,6 +102,20 @@ Teste com os ZIPs de 2024 do repo (Brasil, SP), em ~3 min:
 | NOAA-21 | 1.948.842 | 1.945.784 | −0,16% |
 
 A diferença são focos fora dos 6 biomas (mar e ilhas). A reimportação do MODIS deu 0 novos e 527.301 atualizados. Os 6,4 milhões de focos de 2024 ocupam **1,7 GB** com os índices, então o histórico inteiro do Brasil deve passar de 6 GB.
+
+### Carga completa no banco de teste (14/11/2026)
+
+`python pipeline.py importar` em todo o `data/staged/` (Brasil, 2000 a 14/11/2026): 511 arquivos, **46,4 milhões de focos**, **12 GB** com os índices, 56 min, sem erro. Nenhum dia tem SP e NRT do mesmo satélite.
+
+| Satélite | SP | NRT |
+| --- | --- | --- |
+| Aqua | 6.219.189 (2002-07-04 a 2026-08-31) | 73.685 (2026-09-01 a 11-14) |
+| Terra | 3.834.371 (2000-11-01 a 2026-08-31) | 48.203 |
+| S-NPP | 19.359.047 (2012-01-20 a 2026-07-31) | 531.308 (até 2026-11-02) |
+| NOAA-20 | 10.971.288 (2018-04-01 a 2026-07-31) | 581.203 |
+| NOAA-21 | 4.211.423 (2023-03-01 a 2026-07-31) | 566.272 |
+
+Na VPS, reservar ~30 GB livres para o banco.
 
 ## Agregação (`agregar.py`, tarefa B4)
 
@@ -118,6 +132,15 @@ Monta `agregados` a partir de `focos`, em SQL, dentro do banco. É a contagem **
 | Antes de 2003 | não entra (Terra fora) |
 
 Cada execução apaga os meses do intervalo e grava de novo numa transação, então rodar duas vezes dá o mesmo resultado. As mesmas regras de limpeza existem em pandas no `clean`: mudou uma, mude a outra.
+
+Resultado no histórico completo: 4,68 milhões de linhas (553 MB) em 2,5 min. A soma de `focos_brutos` bate exatamente com os focos filtrados de cada satélite: Aqua 2.711.134, S-NPP 17.883.306, NOAA-20 60.062.
+
+| Consulta | Tempo |
+| --- | --- |
+| Calendário de uma área de ~100 × 100 km (241 células) | 2–9 ms |
+| Calendário da Amazônia inteira (110 mil células) | ~0,8 s (meta do `api.md`: < 1,5 s) |
+| Focos recentes, 7 dias, bbox da Amazônia, agrupados por célula | 19 ms com cache (466 ms frio) |
+| Focos recentes, 24 h, bbox da Amazônia | 1 ms |
 
 
 ## Filtros de qualidade (`clean`)
