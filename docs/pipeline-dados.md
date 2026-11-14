@@ -101,6 +101,23 @@ Teste com os ZIPs de 2024 do repo (Brasil, SP), em ~3 min:
 
 A diferença são focos fora dos 6 biomas (mar e ilhas). A reimportação do MODIS deu 0 novos e 527.301 atualizados. Os 6,4 milhões de focos de 2024 ocupam **1,7 GB** com os índices, então o histórico inteiro do Brasil deve passar de 6 GB.
 
+## Agregação (`agregar.py`, tarefa B4)
+
+Monta `agregados` a partir de `focos`, em SQL, dentro do banco. É a contagem **bruta**: os fatores são aplicados na API. Fica num módulo separado do importador, como pede o `tarefas.md`.
+
+| Regra | Valor (de [importacao-regioes.md](importacao-regioes.md)) |
+| --- | --- |
+| Satélite do mês | jan/2003 a jan/2012: Aqua. fev/2012 a out/2026: S-NPP. nov/2026 em diante: NOAA-20. Um por mês, nunca a soma |
+| Confiança | só nominal e alta |
+| `type` | `type ≠ 0` sai. NRT não tem `type` e fica, provisório ([regras-variaveis.md](regras-variaveis.md)) |
+| FRP | vazio, zero ou negativo sai |
+| Região | bioma da célula, por `celula_regiao` (cada célula num bioma só) |
+| Mês sem focos | não tem linha (a API preenche zero) |
+| Antes de 2003 | não entra (Terra fora) |
+
+Cada execução apaga os meses do intervalo e grava de novo numa transação, então rodar duas vezes dá o mesmo resultado. As mesmas regras de limpeza existem em pandas no `clean`: mudou uma, mude a outra.
+
+
 ## Filtros de qualidade (`clean`)
 
 Implementados conforme as especificações de filtro do time de dados.
@@ -217,6 +234,7 @@ python pipeline.py download      # ~3,5 GB; retoma de onde parou
 python pipeline.py stage
 python pipeline.py sem_dados     # dias sem dado de satélite (FIRMS) -> dias_sem_dados
 python pipeline.py importar      # data/staged/ -> focos + cobertura (ou: importar arquivo.csv|.zip ...)
+python agregar.py                # focos -> agregados (ou: agregar.py 2026-10 2026-11 para refazer só esses meses)
 python eda.py                    # reports/eda.html
 python pipeline.py clean
 ```

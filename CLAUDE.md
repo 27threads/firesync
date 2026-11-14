@@ -41,6 +41,6 @@ Pipeline de dados (bash, a partir de `data-pipeline/`):
 
 - Instalar: `pip install -r requirements.txt`
 - Testes: `python test_pipeline.py`
-- Etapas: `python pipeline.py download|stage|clean` e `python eda.py` (detalhes em [docs/pipeline-dados.md](docs/pipeline-dados.md))
+- Etapas: `python pipeline.py cadastrar|download|stage|sem_dados|clean`, `python agregar.py` e `python eda.py` (detalhes em [docs/pipeline-dados.md](docs/pipeline-dados.md))
 
 API e front: a preencher quando a stack estiver definida.

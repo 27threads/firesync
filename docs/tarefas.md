@@ -52,7 +52,7 @@ Ler antes: [firms-extracao-dados.md](firms-extracao-dados.md), [plano-extracao-a
 | A3 | Criar `.gitignore` para CSVs descompactados e arquivos gerados | — | feito | `git status` limpo depois de descompactar os ZIPs |
 | A4 | Criar o banco com as tabelas `focos`, `regioes` e `cobertura` | T00 | feito (`data-pipeline/migrations/001_inicial.sql`, em PR) | Script de criação versionado |
 | A5 | Importador: normalizar colunas, calcular H3, upsert com a chave única, atualizar `cobertura` | A4 | feito (`pipeline.py importar`; 2024 bate com o plano, diferença < 0,2% = fora dos biomas) | `importar` carrega os 5 arquivos de 2024 e as contagens batem com a tabela do plano de extração |
-| A6 | Cadastrar as regiões Amazônia e Pantanal em `regioes`, com `celulas_h3` | A2, A4 | feito (os 6 biomas, `pipeline.py cadastrar`) | As duas regiões com polígono e células |
+| A6 | Cadastrar as regiões Amazônia e Pantanal em `regioes`, com as células em `celula_regiao` | A2, A4 | feito (os 6 biomas, `pipeline.py cadastrar`) | As duas regiões com polígono e células |
 | A7 | Carregar o histórico completo | A1, A5 | a fazer | `cobertura` mostra cada satélite no período esperado |
 
 ## B. Harmonização
@@ -66,7 +66,7 @@ B1 e B2 podem começar direto nos CSVs de 2024, sem esperar o importador.
 | B1 | Protótipo do cálculo do fator Aqua → S-NPP (escala VIIRS) **por bioma, mês e dia/noite**, em contagens por célula H3, só confiança nominal ou alta e `type = 0`. Primeiro nos CSVs de 2024, depois nos anos de sobreposição disponíveis. Ver [decisoes-harmonizacao.md](decisoes-harmonizacao.md) | — | a fazer | Fatores da Amazônia calculados, com razão média perto de 6 e variação mensal visível |
 | B2 | Definir a escolha do satélite por mês (Aqua, S-NPP, NOAA-20), como aplicar a cadeia de fatores e como rotular cada mês como observado ou estimado | — | a fazer | Regra escrita em [importacao-regioes.md](importacao-regioes.md) |
 | B3 | Job de calibração gravando em `fatores_harmonizacao`, com um cenário por ano de calibração (base 2012 a 2024; o próprio job roda a validação deixando um ano de fora e aplica o critério de 1,5× para escolher os anos) e só confiança nominal e alta | A5, B1 | a fazer | Fatores dos 6 biomas no banco |
-| B4 | Job de agregação gravando a contagem bruta em `agregados` (célula × ano × mês × satélite × dia/noite), só do satélite que vale em cada mês e só com confiança nominal e alta, no formato do `banco.md` (PR #2) | T01, B3 | a fazer | `agregados` preenchida para as duas regiões |
+| B4 | Job de agregação gravando a contagem bruta em `agregados` (célula × ano × mês × satélite × dia/noite), só do satélite que vale em cada mês e só com confiança nominal e alta, no formato do `banco.md` (PR #2) | T01, B3 | feito pela frente A (`data-pipeline/agregar.py`, PR #2) | `agregados` preenchida para as duas regiões |
 | B5 | Comando `recalcular <regiao>` (fatores + agregados da região) | B3, B4 | a fazer | Rodar duas vezes dá o mesmo resultado |
 | B6 | Validar a série harmonizada contra a do INPE (só forma da curva, anos altos, meses de pico) e registrar o resultado da validação do B3 (erro por ano, decisão dos anos e cobertura da faixa) | A2, A7, B4 | a fazer | Gráficos de comparação salvos, para usar na página do projeto |
 
@@ -80,7 +80,7 @@ Ler antes: [requisitos.md](requisitos.md), [importacao-regioes.md](importacao-re
 | C2 | Gerar `agregados` falsos no formato do contrato, para testar sem esperar B | T01 | a fazer | Script versionado |
 | C3 | Converter a área (polígono, retângulo ou lat/lon) em células H3 e somar os `agregados` | C1 | a fazer | Calendário meses × anos correto para uma área de teste |
 | C4 | Sazonalidade, ranking de anos, mediana do mês atual e anomalias (RF09–RF12) | C3 | a fazer | Valores conferidos à mão para uma área |
-| C5 | Resposta "sem dados" fora da `cobertura` e marcação de `sem_dados` | C3 | a fazer | Área fora do Brasil devolve o aviso, não um calendário vazio |
+| C5 | Resposta "sem dados" fora da `cobertura` e marcação dos dias de `dias_sem_dados` | C3 | a fazer | Área fora do Brasil devolve o aviso, não um calendário vazio |
 | C6 | Export CSV dos focos da busca (RD05) | C3 | a fazer | Arquivo abre no Excel |
 | C7 | Deploy público de banco, API e front | T00, M2 | a fazer | Link funciona numa janela anônima |
 | C8 | Pedir a classificação FortiGuard do site | C7 | a fazer | Pedido enviado |
@@ -98,7 +98,7 @@ D1 a D5 começam com o JSON de exemplo do `api.md`, sem esperar a API.
 | D1 | Esqueleto do app, interface em inglês e crédito ao FIRMS visível | T00 | a fazer | App abre local |
 | D2 | Mapa com desenho de polígono e retângulo (RD01) e entrada de lat/lon (RD02) | D1 | a fazer | Área desenhada vira o pedido do `api.md` |
 | D3 | Seletor de intervalo de datas (RF07) | D1 | a fazer | Datas entram no pedido |
-| D4 | Calendário meses × anos em heatmap com paleta acessível (RF08, RD03, RD04) e meses `sem_dados` diferentes de zero | D1 | a fazer | Renderiza o JSON de exemplo |
+| D4 | Calendário meses × anos em heatmap com paleta acessível (RF08, RD03, RD04) e meses com falha de satélite (`dias_sem_dados`) diferentes de zero | D1 | a fazer | Renderiza o JSON de exemplo |
 | D5 | Indicadores principais, sazonalidade, ranking de anos, mês atual vs. mediana e anomalia (RF09–RF12, RD06) | D1 | a fazer | Renderiza o JSON de exemplo |
 | D6 | Download das análises e do CSV (RF13, RD05) | D4, D5 | a fazer | Arquivos baixam e abrem |
 | D7 | Ligar o front na API real | C3, D2–D5 | a fazer | M2 atingido |

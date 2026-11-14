@@ -92,4 +92,19 @@ try:
     raise AssertionError("satélite desconhecido deveria falhar")
 except ValueError:
     pass
+# agregação: satélite do mês (tabela de importacao-regioes.md)
+from agregar import janelas, mes, proximo_mes  # noqa: E402
+assert janelas(date(2003, 1, 1), date(9999, 1, 1)) == [
+    ("Aqua", date(2003, 1, 1), date(2012, 2, 1)),     # jan/2012 ainda é Aqua
+    ("SNPP", date(2012, 2, 1), date(2026, 11, 1)),
+    ("N20", date(2026, 11, 1), date(9999, 1, 1))]      # nov/2026 já é NOAA-20
+assert janelas(date(2026, 10, 1), date(2026, 12, 1)) == [("SNPP", date(2026, 10, 1), date(2026, 11, 1)),
+                                                         ("N20", date(2026, 11, 1), date(2026, 12, 1))]
+assert janelas(date(2000, 11, 1), date(2003, 1, 1)) == []   # antes de 2003 não entra (Terra fora)
+assert proximo_mes(mes("2026-12")) == date(2027, 1, 1)
+
+# a MAP_KEY nunca aparece em mensagem de erro
+from pipeline import mask_key  # noqa: E402
+assert mask_key("https://x/api/area/csv/abc123/MODIS_SP/1,2,3,4/5/2026-01-01") == \
+    "https://x/api/area/csv/***/MODIS_SP/1,2,3,4/5/2026-01-01"
 print("ok")
