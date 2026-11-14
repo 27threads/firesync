@@ -166,8 +166,6 @@ Ressalvas a declarar:
 
 As colunas `n_focos_origem` e `fusao_com`, pedidas à frente A para a salvaguarda do mínimo de focos, entraram na migration 002 (PR #2) e já foram preenchidas pela calibração gravada.
 
-**Anos de calibração:** ver o item 4. A diferença de processamento entre 10 e 13 cenários é desprezível. O que pesa é o risco da deriva do Aqua, e o critério fixado antes de rodar evita escolher os anos depois de ver o resultado.
-
 **NOAA-20 → S-NPP (DECIDIDO, Weberson, 14/11/2026): fator 1.** O NOAA-20 só é usado de novembro de 2026 em diante, ou seja, no mês atual, que o RF11 compara com a mediana. Tratar os dois como iguais faz o mês atual mostrar a mesma contagem que o usuário vê no FIRMS. As razões anuais NOAA-20/S-NPP ficaram entre 0,97 e 1,04, e um fator por mês e dia/noite teria mais ruído que a própria diferença. A razão de 1,12 em 2026 não conta, porque o S-NPP parou no meio do ano. Limite declarado no Método: diferença de até 4% entre os dois VIIRS.
 
 ## 5. DECIDIDO (Weberson, 14/11/2026): o classificador (modelo A) como análise complementar
