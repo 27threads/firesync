@@ -25,6 +25,7 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 9 | [Contrato da API](docs/api.md) | Endpoints, pedido, resposta, erros, export de auditoria. JSON de exemplo em [api-exemplo.json](docs/api-exemplo.json) | Antes de mexer na API ou no front |
 | 10 | [Prompt do frontend](docs/prompt-frontend.md) | Prompt para o agente que constrói o front: direção de design, regras de dado na tela, animação, performance e etapas de construção | Antes de começar a frente D |
 | 11 | [Validação do nível de alerta](docs/validacao-alerta.md) | Solução A + B da issue #9: teste retroativo com "o que veio depois" e eventos conhecidos, no lugar da área queimada | Antes de mexer no alerta ou no `alert_rules.json` |
+| 12 | [RFC 0001: backtest do alerta](docs/rfcs/0001-backtest-alerta.md) | Como implementar a solução A + B: consultas, janelas, contas, saídas, autoteste e plano | Antes de implementar o backtest do alerta |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
@@ -105,6 +106,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `docs/prompt-frontend.md` | Claude Code (Claude Opus 5.5) | Prompt do front escrito a partir dos docs do repo. A equipe aprova antes de usar |
 | `docs/api.md`, `docs/api-exemplo.json` (issues #22 e #29) | Claude Code (Claude Opus 5.5) | Correções do contrato escritas a partir das issues da auditoria. Revisado pela equipe |
 | `.github/workflows/ci.yml` (job "Só documentação?"), `.github/scripts/roda_testes.sh`, `test_roda_testes.sh` | Claude Code (Claude Opus 5.5) | Filtro que pula os testes de código em PR só de `.md`. Revisado pela equipe |
+| `docs/validacao-alerta.md`, `docs/rfcs/0001-backtest-alerta.md` | Claude Code (Claude Opus 5.5) | Proposta de validação do alerta e RFC de implementação, escritos a partir da issue #9 e da revisão do PR #42. Revisado pela equipe |
 
 ## Dados e créditos
 
