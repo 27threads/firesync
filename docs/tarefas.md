@@ -99,7 +99,7 @@ D1 a D5 começam com o JSON de exemplo do `api.md`, sem esperar a API.
 | D2 | Mapa com desenho de polígono e retângulo (RD01) e entrada de lat/lon (RD02) | D1 | a fazer | Área desenhada vira o pedido do `api.md` |
 | D3 | Seletor de intervalo de datas (RF07) | D1 | a fazer | Datas entram no pedido |
 | D4 | Calendário meses × anos em heatmap com paleta acessível (RF08, RD03, RD04) e meses com falha de satélite (`dias_sem_dados`) diferentes de zero | D1 | feito (`frontend/src/calendar/`: D3 + SVG, cividis log, hachura no estimado, borda no incompleto, estados próprios para zero e sem dados, linha da troca de sensor, tooltip e teclado; renderiza o `api-exemplo.json`) | Renderiza o JSON de exemplo |
-| D5 | Indicadores principais, sazonalidade, ranking de anos, mês atual vs. mediana e anomalia (RF09–RF12, RD06) | D1 | a fazer | Renderiza o JSON de exemplo |
+| D5 | Indicadores principais, sazonalidade, ranking de anos, mês atual vs. mediana e anomalia (RF09–RF12, RD06) | D1 | feito (`frontend/src/summary/`: indicadores, cartões "last 7 days" e "month to date" com a janela atual desenhada sobre a faixa P25–P75, sazonalidade com mediana e mínimo–máximo, ranking com faixa nos anos estimados, 2012 `mixed` e anos incompletos sem posição; renderiza o `api-exemplo.json`) | Renderiza o JSON de exemplo |
 | D6 | Download das análises e do CSV (RF13, RD05) | D4, D5 | a fazer | Arquivos baixam e abrem |
 | D7 | Ligar o front na API real | C3, D2–D5 | a fazer | M2 atingido |
 | D8 | Demo: vídeo de até 30 s com legenda em inglês, ou até 7 slides em inglês, com nome da equipe, membros, desafio, imagem do projeto, experiência do usuário e uso dos dados da NASA | D7 | a fazer | Link público testado numa janela anônima |
