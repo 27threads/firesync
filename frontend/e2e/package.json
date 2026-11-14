@@ -1,0 +1,13 @@
+{
+  "name": "firesync-e2e",
+  "private": true,
+  "description": "Jornadas de usuário (E2E) do firesync, com Playwright",
+  "scripts": {
+    "test": "playwright test",
+    "list": "playwright test --list"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1",
+    "@types/node": "22.10.2"
+  }
+}
