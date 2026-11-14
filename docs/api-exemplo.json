@@ -4085,7 +4085,7 @@
    "difference": 21.5,
    "difference_pct": 0.544,
    "n_years": 14,
-   "n_windows": 350,
+   "n_windows": 434,
    "n_high": 5,
    "high_share": 0.082
   },
@@ -4099,7 +4099,7 @@
    "difference": 23.5,
    "difference_pct": 0.192,
    "n_years": 14,
-   "n_windows": 350,
+   "n_windows": 434,
    "n_high": 12,
    "high_share": 0.082
   }

@@ -91,11 +91,34 @@ Erro ponderado por ano na Amazônia: de 2,4% (2017) a 12,6% (2020).
 | P10 a P90 | 68% | 69% |
 | **P5 a P95 (decidida)** | **78%** | **79%** |
 
-Por isso a faixa passou a ser **P5 a P95**, que corresponde a "cerca de 8 em 10". A cobertura medida com P5 a P95 sai na próxima rodada do passo 1 e entra aqui e na tela de Método.
+Por isso a faixa passou a ser **P5 a P95**, que corresponde a "cerca de 8 em 10".
+
+### Resultado final da calibração (B3, gravada em 14/11/2026)
+
+O Eduardo rodou a versão final (`calibrar.py` com P5 a P95 e erro ponderado, branch `trabalho/harmonizacao`) com `--gravar` no banco de teste. O autoteste passou.
+
+- **Anos:** os 13 (2012 a 2024). Razão do erro ponderado 1,13, abaixo de 1,5×.
+- **Fatores gravados:** 1.860 em `fatores_harmonizacao` (Aqua → SNPP), 6 biomas, 13 anos, 12 meses, dia e noite. Mínimo de 30 focos do Aqua; 451 condições com fusão.
+- **Cobertura medida da faixa P5 a P95** (fração dos meses em que o valor real caiu dentro, média dos anos):
+
+| Bioma | Cobertura | Na tela |
+| --- | --- | --- |
+| Cerrado | 0,80 | cerca de 8 em 10 |
+| Amazônia | 0,79 | cerca de 8 em 10 |
+| Mata Atlântica | 0,77 | cerca de 8 em 10 |
+| Caatinga | 0,76 | cerca de 8 em 10 |
+| Pantanal | 0,76 | cerca de 8 em 10 |
+| Pampa | 0,68 | cerca de 7 em 10 |
+
+Cinco biomas ficaram no valor esperado pela teoria (cerca de 0,78). O Pampa ficou abaixo, porque tem pouquíssimos focos e quase todos os fatores noturnos dele precisaram de fusão.
+
+**Regra da tela (combinada com o Mateus no PR #4):** a tela diz "cerca de N em 10" com o **N medido de cada bioma**, sem prometer um número que não foi medido.
+
+**Anos excepcionais:** na Amazônia, a cobertura caiu em 2020 (0,67) e 2024 (0,58), anos de seca e fogo extremos. O erro ponderado também foi o maior nesses anos (12,6% e 9,5%). Limite a declarar no Método: em anos que fogem do padrão, a estimativa erra mais e a faixa cobre menos.
 
 **Classe de intensidade na tela (aprovada no PR #4, `api.md`):** `low` abaixo de 5 MW, `medium` de 5 a 25 MW, `high` de 25 MW ou mais **ou** pixel saturado do VIIRS (confiança alta). Limites fixos na tela. A regra do pixel saturado vale só para o VIIRS: no MODIS, confiança alta não indica saturação.
 
-Pedido à frente A (migration 002): acrescentar `n_focos_origem` e `fusao_com` em `fatores_harmonizacao`, para a salvaguarda do mínimo de focos.
+As colunas `n_focos_origem` e `fusao_com`, pedidas à frente A para a salvaguarda do mínimo de focos, entraram na migration 002 (PR #2) e já foram preenchidas pela calibração gravada.
 
 **Anos de calibração:** ver o item 4. A diferença de processamento entre 10 e 13 cenários é desprezível. O que pesa é o risco da deriva do Aqua, e o critério fixado antes de rodar evita escolher os anos depois de ver o resultado.
 
@@ -112,7 +135,8 @@ O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, 
 ## 6. Limites a declarar no método
 
 - O fator é por bioma, mês e dia/noite. Não corrige por potência do fogo.
-- A faixa de incerteza reflete a variação entre anos de sobreposição e não cobre outras fontes de erro.
+- A faixa de incerteza reflete a variação entre anos de sobreposição e não cobre outras fontes de erro. Cobertura medida: cerca de 8 em 10 em cinco biomas, cerca de 7 em 10 no Pampa.
+- Em anos de fogo excepcional (como 2020 e 2024 na Amazônia), a estimativa erra mais e a faixa cobre menos.
 - A deriva de órbita do Aqua (depois de 2022) só pode afetar a calibração, e a validação deixando um ano de fora mede isso. O calendário de 2012 em diante usa o VIIRS e não é afetado.
 - **Contagem baixa do Aqua no período estimado:** se o Aqua viu zero ou poucos focos numa área pequena num mês fraco, a estimativa também fica zero ou baixa, mesmo que o VIIRS fosse ver fogos pequenos. A faixa não captura isso. PROPOSTA para a frente C: a API marca o mês estimado como "estimativa pouco confiável" quando a contagem bruta do Aqua na área for menor que 10 (limite ESCOLHA DA EQUIPE).
 - Calibrado por bioma do IBGE. Não vale automaticamente para regiões fora do Brasil.
@@ -122,7 +146,9 @@ O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, 
 
 ## 7. Pendências
 
-1. Rodar de novo o passo 1 da B3 com P5 a P95, registrar a cobertura medida e gravar os fatores (`--gravar`).
-2. Confirmar o mínimo de focos por condição (a primeira rodada usou 30). (As colunas `n_focos_origem` e `fusao_com` já estão na migration 002 do PR #2.)
-3. Investigar a queda de S-NPP/Aqua em 2025.
-4. Esta decisão muda o que o contexto do projeto dizia sobre o modelo A (o classificador deixa de gerar o fator da série). A equipe deve concordar com a mudança.
+1. **Cobertura da faixa por estação** (pedida pelo Mateus no PR #4). Não precisa rodar de novo: sai do `validacao_meses.csv` da rodada gravada, que está no computador do Eduardo. Pedido feito no PR #21 em 14/11/2026; aguardando o arquivo. A separação usa a **temporada de fogo** de cada bioma (os meses que somam 80% do fogo do ano) contra o resto do ano (ESCOLHA DA EQUIPE), porque a estação seca muda de bioma para bioma.
+2. **B6, comparação com o INPE.** O script está pronto (`data-pipeline/harmonizacao/validar_inpe.py`, branch `trabalho/harmonizacao`) e passou no autoteste com dados inventados (degrau de +1% com fatores certos, +102% com fatores pela metade). Aguarda o PR #21 entrar na `main` (série do INPE com o satélite de referência: NOAA-12 até 03/07/2002, Aqua depois) e o Eduardo rodar no banco de teste. Mede, por bioma: correlação mensal e anual, os 5 anos com mais fogo, o mês de pico, a sazonalidade e o **degrau em 2012** (razão firesync/INPE antes e depois da troca de satélite; perto de zero quer dizer que a troca não inventou fogo). Contexto da frente A (issue #19): a série do Aqua no FIRMS já tem correlação mensal de 0,998 com a do INPE e o mesmo mês de pico em 23 de 23 anos, então o degrau em 2012 mede principalmente a nossa conversão.
+3. **Levar o código da B3 e da B6 para o `main`.** Os scripts (`prototipo_fator.py`, `calibrar.py`, `validar_inpe.py` e os autotestes) estão só na branch `trabalho/harmonizacao`. O envio direto ao `main` foi bloqueado pelo controle de permissões em 14/11/2026. Depende de decisão do Weberson: abrir um PR ou liberar o envio.
+4. Confirmar o mínimo de focos por condição (a calibração gravada usou 30).
+5. Investigar a queda de S-NPP/Aqua em 2025.
+6. Esta decisão muda o que o contexto do projeto dizia sobre o modelo A (o classificador deixa de gerar o fator da série). A equipe deve concordar com a mudança.

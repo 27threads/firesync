@@ -1,5 +1,5 @@
 {
-  "version": "0.1",
+  "version": "0.2",
   "status": "initial proposal, to be calibrated by the backtest in issue #9",
   "baseline": {
     "window_days": 7,
@@ -20,6 +20,12 @@
   "intensity": {
     "medium_min_mw": 5,
     "high_min_mw": 25,
-    "saturated_is_high": true
+    "saturated_is_high": {
+      "enabled": true,
+      "sensors": [
+        "VIIRS"
+      ],
+      "note": "VIIRS high confidence marks a saturated pixel. MODIS high confidence does not."
+    }
   }
 }
