@@ -8,7 +8,7 @@ Cada rodada:
     2. importa (upsert em `focos`, cobertura e SP substituindo NRT, ver pipeline.importar);
     3. refaz `agregados` só dos meses da janela;
     4. atualiza `dias_sem_dados`;
-    5. grava `config.atualizado_em` (UTC, ISO 8601) para a API mostrar quão fresco é o dado.
+    5. grava `config.atualizado_em` (UTC, ISO 8601 com Z, como o `updated_at` do api.md) para a API mostrar quão fresco é o dado.
 Uma rodada que falha no meio não grava `atualizado_em`, então a API continua mostrando a última que deu certo.
 """
 import sys
@@ -50,7 +50,7 @@ def rodada():
     agregar.agregar(*meses_da_janela(agora.date()))
     p.sem_dados()
     conn.execute("""INSERT INTO config (chave, valor) VALUES ('atualizado_em', %s)
-                    ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor""", (agora.isoformat(timespec="seconds"),))
+                    ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor""", (agora.strftime("%Y-%m-%dT%H:%M:%SZ"),))
     for a in arquivos:  # já está no banco; dá para baixar de novo se precisar
         a.unlink()
     print(f"job_nrt: ok, atualizado_em = {agora:%Y-%m-%dT%H:%M:%S}Z", flush=True)

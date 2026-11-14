@@ -25,8 +25,8 @@ import pipeline as p  # noqa: E402
 conn = p.db()
 for m in sorted((p.ROOT / "migrations").glob("*.sql")):  # idempotentes
     conn.execute(m.read_text(encoding="utf-8"))
-if conn.execute("SELECT count(*) FROM focos").fetchone()[0]:
-    sys.exit("focos já tem dados: use um banco descartável")
+if conn.execute("SELECT (SELECT count(*) FROM focos) + (SELECT count(*) FROM regioes)").fetchone()[0]:
+    sys.exit("focos ou regioes já têm dados: use um banco descartável")  # o teste apaga regioes
 
 # uma região retangular de teste e as células dela
 conn.execute("DELETE FROM regioes")
