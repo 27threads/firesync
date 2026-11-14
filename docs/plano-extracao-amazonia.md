@@ -70,10 +70,10 @@ A carga histórica é feita uma vez. Depois disso, um job mantém a base em dia 
 
 | Job | Frequência | Fontes | Janela | O que faz |
 | --- | --- | --- | --- | --- |
-| Atualização NRT | A cada 3 h | `VIIRS_NOAA20_NRT`, `VIIRS_NOAA21_NRT` | Últimas 48 h | Upsert dos focos novos, recalcula os dias e o mês atuais em `agregados` e renova o cache da API |
+| Atualização NRT (`data-pipeline/job_nrt.py`, feito) | A cada 3 h | `VIIRS_NOAA20_NRT`, `VIIRS_NOAA21_NRT` | Últimas 48 h | Upsert dos focos novos, refaz em `agregados` os meses da janela, atualiza `dias_sem_dados` e grava `config.atualizado_em` (a chave do cache da API) |
 | Recarga SP | Mensal | `VIIRS_NOAA20_SP` | Últimos \~6 meses | **Fora do escopo da submissão.** Substituiria os dados NRT pelos de qualidade científica, que chegam com cerca de 5 meses de defasagem |
 
-O MODIS não entra no job NRT, porque o Aqua só é usado até janeiro de 2012. O NOAA-21 entra só como reserva. O fator de calibração fica congelado depois da carga histórica. Os jobs só aplicam o fator, nunca recalibram. Os dados NRT não trazem a coluna `type`, então as fontes estáticas são filtradas pelas células H3 marcadas como `type = 2` no histórico SP.
+O MODIS não entra no job NRT, porque o Aqua só é usado até janeiro de 2012. O NOAA-21 entra só como reserva. O fator de calibração fica congelado depois da carga histórica. Os jobs só aplicam o fator, nunca recalibram. Os dados NRT não trazem a coluna `type`: o foco NRT entra marcado como provisório, como manda o [regras-variaveis.md](regras-variaveis.md). O filtro por células H3 marcadas como `type = 2` no histórico SP não foi implementado.
 
 ## Dados de teste já baixados
 
@@ -91,9 +91,10 @@ Na Amazônia, o S-NPP detecta cerca de 6,3× mais focos que o Aqua. Os três VII
 
 ## Checklist
 
-- [ ] Fazer o pedido no FIRMS (Brasil, 2000-11-01 até hoje, MODIS + S-NPP + NOAA-20, CSV)
-- [ ] Baixar o shapefile de biomas do IBGE
-- [ ] Baixar a série mensal do bioma Amazônia do INPE
-- [ ] Pedir a MAP\_KEY do FIRMS para os jobs de atualização
-- [ ] Testar o importador com os arquivos de 2024
-- [ ] Carregar o histórico completo quando o pedido chegar
+- [x] Histórico do FIRMS: trocado pelos resumos anuais por país (Brasil, sem fila de aprovação) + API para 2026 ([pipeline-dados.md](pipeline-dados.md))
+- [x] Baixar o shapefile de biomas do IBGE (`pipeline.py cadastrar`)
+- [x] Baixar a série mensal do INPE (`pipeline.py inpe`, os 6 biomas)
+- [x] Pedir a MAP\_KEY do FIRMS para os jobs de atualização
+- [x] Testar o importador com os arquivos de 2024 (contagens batem com a tabela acima, diferença < 0,2%)
+- [x] Carregar o histórico completo (banco de teste: 46,4 milhões de focos)
+- [ ] Carregar o banco na VPS e ligar o job NRT (roteiro em [banco.md](banco.md), depende do `docker-compose` do backend)

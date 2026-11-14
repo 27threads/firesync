@@ -41,7 +41,7 @@ Toda parte gerada ou assistida por IA precisa entrar na tabela "Uso de IA" do RE
 Pipeline de dados (bash, a partir de `data-pipeline/`):
 
 - Instalar: `pip install -r requirements.txt`
-- Testes: `python test_pipeline.py`
-- Etapas: `python pipeline.py cadastrar|download|stage|sem_dados|clean`, `python agregar.py` e `python eda.py` (detalhes em [docs/pipeline-dados.md](docs/pipeline-dados.md))
+- Testes: `python test_pipeline.py` (sem banco) e `TEST_DATABASE_URL=... python test_banco.py` (num Postgres descartável; o comando está no topo do arquivo)
+- Etapas: `python pipeline.py cadastrar|download|stage|sem_dados|importar|clean|inpe`, `python agregar.py`, `python job_nrt.py` (rodada do job NRT) e `python eda.py` (detalhes em [docs/pipeline-dados.md](docs/pipeline-dados.md))
 
 API e front: a preencher quando a stack estiver definida.

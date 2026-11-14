@@ -6,6 +6,7 @@ Uso (nesta ordem; precisa de DATABASE_URL e, para o download, FIRMS_MAP_KEY):
     python pipeline.py stage      # mantém só os focos dentro da cobertura (sem filtros) em data/staged/
     python pipeline.py clean      # aplica os filtros do time de dados e grava parquet em data/processed/
     python pipeline.py sem_dados  # dias sem dado de satélite (FIRMS missing_data) -> dias_sem_dados
+    python pipeline.py importar [arquivo.csv|.zip ...]  # focos no banco (upsert) + cobertura; sem arg = data/staged/
 
 Detalhes: docs/pipeline-dados.md e docs/banco.md
 """
@@ -14,6 +15,7 @@ import os
 import re
 import sys
 import subprocess
+import zipfile
 from datetime import date, timedelta
 from io import StringIO
 from pathlib import Path
@@ -82,7 +84,7 @@ def curl(url, dest=None):
             subprocess.run(args + ["-o", str(tmp)], check=True)
             tmp.replace(dest)
             return None
-        return subprocess.run(args, check=True, capture_output=True, text=True).stdout
+        return subprocess.run(args, check=True, capture_output=True, text=True, encoding="utf-8").stdout
     except subprocess.CalledProcessError as e:
         # a MAP_KEY vai na URL (/csv/<chave>/...): nunca deixar ela chegar ao log
         raise RuntimeError(f"curl falhou ({e.returncode}): {mask_key(url)}") from None
@@ -183,6 +185,10 @@ def download():
         sp_end = date.fromisoformat(avail.loc[sp, "max_date"])
         nrt_end = date.fromisoformat(avail.loc[nrt, "max_date"])
         jobs = [(sp, date.fromisoformat(start), sp_end), (nrt, sp_end + timedelta(days=1), nrt_end)]
+        for old in (RAW / "api" / nrt).glob("*.csv"):  # o SP chegou: o NRT desses dias sai (e o staged dele)
+            if date.fromisoformat(old.stem) + timedelta(days=4) <= sp_end:
+                old.unlink()
+                (STAGE / ("viirs" if "VIIRS" in nrt else "modis") / f"{nrt}_{old.stem}.parquet").unlink(missing_ok=True)
         for source, d0, d1 in jobs:
             d = d0
             while d <= d1:
@@ -205,7 +211,12 @@ def raw_files(kind):
 
 
 def read_raw(p, bbox):
-    df = pd.read_csv(p, dtype={"acq_time": str, "version": str, "confidence": str})
+    dtype = {"acq_time": str, "version": str, "confidence": str}
+    if str(p).endswith(".zip"):  # ZIP do Archive Download: CSV + Readme.txt
+        with zipfile.ZipFile(p) as z, z.open(next(n for n in z.namelist() if n.endswith(".csv"))) as f:
+            df = pd.read_csv(f, dtype=dtype)
+    else:
+        df = pd.read_csv(p, dtype=dtype)
     w, s, e, n = bbox
     return df[df.longitude.between(w, e) & df.latitude.between(s, n)]
 
@@ -350,6 +361,151 @@ def sem_dados():
     print(f"sem_dados: {len(rows)} dias × satélite", flush=True)
 
 
+# ---------------------------------------------------------------- importar
+SATELITES = {"Terra": "Terra", "Aqua": "Aqua", "N": "SNPP", "SNPP": "SNPP", "N20": "N20", "N21": "N21"}
+VIIRS_CONF = {"l": "baixa", "low": "baixa", "n": "nominal", "nominal": "nominal", "h": "alta", "high": "alta"}
+FOCOS_COLS = ["sensor", "satelite", "lat", "lon", "datahora_utc", "confianca", "frp", "periodo", "tipo",
+              "qualidade", "scan", "track", "arquivo_origem", "h3"]
+FOCOS_KEY = ["satelite", "lat", "lon", "datahora_utc"]
+
+
+def to_focos(df, kind, origem, res):
+    """Frame normalizado (saída de `normalize`) -> colunas da tabela `focos` (docs/importacao-regioes.md)."""
+    sat = df.satellite.map(SATELITES)
+    if sat.isna().any():
+        raise ValueError(f"{origem}: satélite desconhecido {sorted(set(df.satellite[sat.isna()]))}")
+    if kind == "modis":
+        c = pd.to_numeric(df.confidence)
+        conf = pd.Series("alta", index=df.index).mask(c < 80, "nominal").mask(c < 30, "baixa")
+    else:
+        conf = df.confidence.str.lower().map(VIIRS_CONF)
+    if conf.isna().any():
+        raise ValueError(f"{origem}: confiança desconhecida {sorted(set(df.confidence[conf.isna()]))}")
+    out = pd.DataFrame({
+        "sensor": "MODIS" if kind == "modis" else "VIIRS",
+        "satelite": sat,
+        "lat": df.latitude,
+        "lon": df.longitude,
+        "datahora_utc": pd.to_datetime(df.acq_date + " " + df.acq_time, format="%Y-%m-%d %H%M", utc=True),
+        "confianca": conf,
+        "frp": pd.to_numeric(df.frp, errors="coerce"),
+        "periodo": df.daynight,
+        "tipo": pd.to_numeric(df.type, errors="coerce").astype("Int16"),
+        "qualidade": df.provisional.map({True: "NRT", False: "SP"}),
+        "scan": df.scan,
+        "track": df.track,
+        "arquivo_origem": origem,
+        "h3": [h3.str_to_int(h3.latlng_to_cell(a, b, res)) for a, b in zip(df.latitude, df.longitude)],
+    })
+    # o upsert não aceita a mesma chave duas vezes no mesmo comando
+    return out.drop_duplicates(FOCOS_KEY)
+
+
+def kind_of(df):
+    # pelo satélite: o ZIP do Archive Download escreve instrument=SNPP e usa brightness/bright_t31 no VIIRS
+    return "modis" if df.satellite.isin(["Terra", "Aqua"]).all() else "viirs"
+
+
+def importar(paths=()):
+    """Carrega focos em `focos` (upsert pela chave única) e atualiza `cobertura`.
+
+    Sem argumento: todos os parquet de data/staged/ (saída do `stage`).
+    Com argumento: CSVs ou ZIPs do FIRMS, normalizados e recortados pela cobertura aqui mesmo.
+    Cada arquivo é uma transação: ou entra inteiro, ou não entra.
+    """
+    conn = db()
+    res = int(config(conn, "h3_resolucao"))
+    if paths:
+        regions = load_regions(conn)
+        if regions.empty:
+            raise SystemExit("tabela regioes vazia: rode `python pipeline.py cadastrar` antes")
+        bbox = bbox_of(regions)
+        jobs = [(Path(p), None) for p in paths]
+    else:
+        jobs = [(p, p.parent.name) for p in sorted(STAGE.glob("*/*.parquet"))]
+    cols = ",".join(FOCOS_COLS)
+    upd = ",".join(f"{c} = EXCLUDED.{c}" for c in FOCOS_COLS if c not in FOCOS_KEY)
+    for p, kind in jobs:
+        if kind is None:  # CSV/ZIP direto do FIRMS
+            raw = read_raw(p, bbox)
+            kind = kind_of(raw)
+            df = in_coverage(normalize(raw, kind), regions)
+        else:
+            df = pd.read_parquet(p)
+        if df.empty:
+            continue
+        f = to_focos(df, kind, p.name, res)
+        buf = StringIO()
+        f.to_csv(buf, index=False, header=False)
+        with conn.transaction():
+            conn.execute(f"CREATE TEMP TABLE focos_tmp ON COMMIT DROP AS SELECT {cols} FROM focos WITH NO DATA")
+            with conn.cursor().copy(f"COPY focos_tmp ({cols}) FROM STDIN WITH (FORMAT csv)") as cp:
+                cp.write(buf.getvalue())
+            ins, upd_n = conn.execute(f"""
+                WITH r AS (
+                    INSERT INTO focos ({cols}) SELECT {cols} FROM focos_tmp
+                    ON CONFLICT ({",".join(FOCOS_KEY)}) DO UPDATE SET {upd}
+                    RETURNING (xmax = 0) AS novo)
+                SELECT count(*) FILTER (WHERE novo), count(*) FILTER (WHERE NOT novo) FROM r""").fetchone()
+            # a cobertura é o país (unidade de download), não o bioma: o período do arquivo vale para
+            # todas as regiões. Usar a data do último foco de cada bioma confundiria "zero focos" com "sem dados".
+            conn.execute("""
+                INSERT INTO cobertura (regiao_id, satelite, data_inicio, data_fim)
+                SELECT r.id, t.satelite, t.ini, t.fim
+                FROM (SELECT satelite, min(datahora_utc)::date ini, max(datahora_utc)::date fim
+                      FROM focos_tmp GROUP BY satelite) t CROSS JOIN regioes r
+                ON CONFLICT (regiao_id, satelite) DO UPDATE
+                SET data_inicio = least(cobertura.data_inicio, EXCLUDED.data_inicio),
+                    data_fim = greatest(cobertura.data_fim, EXCLUDED.data_fim), atualizado_em = now()""")
+            sub = drop_nrt_under_sp(conn, sorted(f.satelite.unique()))
+        print(f"importar: {p.name}: {ins:,} novos, {upd_n:,} atualizados, {sub:,} NRT substituídos pelo SP", flush=True)
+
+
+def drop_nrt_under_sp(conn, satelites):
+    """O NRT só vale depois do último dia SP do satélite: quando o SP chega, ele substitui o NRT daqueles dias.
+
+    As coordenadas mudam um pouco no reprocessamento, então a chave única não junta os dois; sem isto o
+    mesmo fogo contaria duas vezes. Roda depois de cada arquivo, então a ordem de importação não importa.
+    """
+    n = 0
+    for sat in satelites:
+        n += conn.execute("""
+            DELETE FROM focos
+            WHERE satelite = %(s)s AND qualidade = 'NRT'
+              AND datahora_utc < (SELECT date_trunc('day', max(datahora_utc)) + interval '1 day'
+                                  FROM focos WHERE satelite = %(s)s AND qualidade = 'SP')""", {"s": sat}).rowcount
+    return n
+
+
+# ---------------------------------------------------------------- inpe (A2)
+INPE_JSON = "https://data.inpe.br/queimadas/estatisticas/media/estatistica/paises/brasil.json"
+INPE_CSV = ROOT / "referencia" / "inpe_mensal_biomas.csv"
+
+
+def inpe_mensal(d):
+    """JSON de estatísticas do INPE (histórico mensal por estado × bioma) -> bioma × ano × mês."""
+    rows = [(h["bioma"]["nome_bioma"], h["ano"], int(m), n)
+            for h in d["historico_mensal"] for m, n in h["meses"].items() if n is not None]
+    df = pd.DataFrame(rows, columns=["bioma", "ano", "mes", "focos"])
+    return df.groupby(["bioma", "ano", "mes"], as_index=False).focos.sum()
+
+
+def inpe():
+    """Série mensal de focos do INPE por bioma (satélite de referência AQUA_M-T desde 04/07/2002), para validar (B6)."""
+    # shortcut: é o JSON que a página data.inpe.br/queimadas/estatisticas carrega (não documentado);
+    # se mudar de formato, a leitura falha em vez de gravar dado errado.
+    d = json.loads(curl(INPE_JSON))
+    df = inpe_mensal(d)
+    INPE_CSV.parent.mkdir(exist_ok=True)
+    df.to_csv(INPE_CSV, index=False)
+    sat = "; ".join(f"{f['satelite']} {f['inicio']} a {f['fim']}" for f in d["meta"]["faixas_de_satelite"])
+    print(f"inpe: {len(df):,} linhas até {d['meta']['data_limite']} ({sat}) -> {INPE_CSV.name}", flush=True)
+
+
 if __name__ == "__main__":
-    {"cadastrar": cadastrar, "download": download, "stage": stage, "clean": clean,
-     "sem_dados": sem_dados}[sys.argv[1]]()
+    cmd = sys.argv[1]
+    if cmd == "importar":
+        importar(sys.argv[2:])
+    else:
+        {"cadastrar": cadastrar, "download": download, "stage": stage, "clean": clean,
+         "sem_dados": sem_dados, "inpe": inpe}[cmd]()
