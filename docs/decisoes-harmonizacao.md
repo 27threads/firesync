@@ -136,18 +136,16 @@ Dois alertas:
 
 ### Resultado da comparação com o INPE (B6, rodada final de 14/11/2026)
 
-O Eduardo rodou `data-pipeline/harmonizacao/validar_inpe.py` (commit `9127baa`, branch `trabalho/harmonizacao`) no banco de teste, **sem gravar nada**, de 2003 a 2025, só com `satelite = AQUA_M-T` e meses completos do INPE (PR #21). Resultado na issue #40. Todos os biomas ficaram com 276 meses e 23 anos completos, 1 mês com zero detecções entrou na comparação e nenhum mês ficou sem estimativa por falta de fator. É a segunda rodada, feita depois da correção dos três erros achados na revisão do PR #26 (faixa anual somada por cenário, meses zerados na comparação, versão dos dados ao gravar); os números da primeira rodada foram descartados.
+O Eduardo rodou `data-pipeline/harmonizacao/validar_inpe.py` (commit `7216712`, branch `trabalho/harmonizacao`) no banco de teste, **sem gravar nada**, de 2003 a 2025, só com `satelite = AQUA_M-T` e meses completos do INPE (PR #21). Resultado na issue #40. Todos os biomas ficaram com 276 meses e 23 anos completos, 1 mês com zero detecções entrou na comparação e nenhum mês ficou sem estimativa por falta de fator. Esta rodada já tem a correção dos três erros achados na revisão do PR #26 (faixa anual somada por cenário, meses zerados na comparação, versão dos dados ao gravar) e a conta nova do degrau (2013 a 2024). Os números das rodadas anteriores foram descartados.
 
-A coluna "Degrau em 2012" ainda é da conta antiga, com o "depois" indo até 2025. Ela será refeita com 2013 a 2024 (ver abaixo).
-
-| Bioma | Correlação mensal | Correlação anual | Anos de mais fogo em comum (de 5) | Mês de pico igual (±1 mês) | Degrau em 2012 (conta antiga) |
+| Bioma | Correlação mensal | Correlação anual | Anos de mais fogo em comum (de 5) | Mês de pico igual (±1 mês) | Degrau em 2012 |
 | --- | --- | --- | --- | --- | --- |
-| Amazônia | 0,992 | 0,992 | 4 | 91% | −2,4% |
-| Caatinga | 0,955 | 0,891 | 5 | 96% | +2,9% |
-| Cerrado | 0,991 | 0,986 | 5 | 100% | +5,9% |
-| Pantanal | 0,983 | 0,987 | 4 | 96% | +7,1% |
-| Pampa | 0,944 | 0,952 | 4 | 83% | +10,8% |
-| Mata Atlântica | 0,973 | 0,950 | 4 | 100% | −14,1% |
+| Amazônia | 0,992 | 0,992 | 4 | 91% | −0,6% |
+| Caatinga | 0,955 | 0,891 | 5 | 96% | +5,4% |
+| Cerrado | 0,991 | 0,986 | 5 | 100% | +5,8% |
+| Pantanal | 0,983 | 0,987 | 4 | 96% | +6,9% |
+| Pampa | 0,944 | 0,952 | 4 | 83% | +12,3% |
+| Mata Atlântica | 0,973 | 0,950 | 4 | 100% | −12,7% |
 
 A correlação da sazonalidade fica entre 0,95 e 1,00 em todos os biomas.
 
@@ -155,14 +153,22 @@ Leitura em palavras simples:
 
 - **A série harmonizada tem a mesma forma da série do INPE:** sobe e desce nos mesmos anos, com o pico no mesmo mês. Isso vale para os seis biomas.
 - **O degrau em 2012 é uma checagem de consistência, e não a prova de que o fator acerta** (ponto levantado pelo Mateus na issue #40). O fator vem da razão S-NPP/Aqua, e a série do INPE é quase o próprio Aqua (correlação mensal de 0,998, issue #19). Por isso o degrau tende a zero pela própria conta: um valor perto de zero mostra que a conversão não tem erro de código ou de dados na troca de satélite. **A prova de acerto é a validação deixando um ano de fora** (erro de cerca de 6% por ano na Amazônia e faixa que acerta cerca de 8 em 10), descrita na seção 4.
-- **A conta do degrau mudou (DECIDIDO, Weberson, 14/11/2026):** o "depois" passa a usar só 2013 a 2024, os anos da calibração. Antes ia até 2025, ano fora da calibração por causa da deriva do Aqua (razão anômala, cerca de 4,9 na Amazônia), que puxava a média para baixo. A mudança está no PR #26, com um teste que reproduz o problema. O Eduardo vai rodar a B6 de novo, e os novos valores entram nesta tabela.
-- **Mata Atlântica e Pampa:** na conta antiga, os dois passavam de 10% (−14,1% e +10,8%). A frase do Método espera a conta nova. O Pampa tem explicação: pouquíssimo fogo, e quase todos os fatores noturnos dele usaram fusão, o que deixa a estimativa antes de 2012 baixa. A Mata Atlântica ainda não tem: a estimativa de 2003 a 2011 saiu alta em relação ao INPE (razão média de 6,88 antes, contra 5,91 depois). Para saber se é um ou dois anos fora da curva ou a série inteira, o script passou a gravar a razão ano a ano (`razao_anual.csv`).
+- **A conta do degrau (DECIDIDO, Weberson, 14/11/2026):** o "depois" usa só 2013 a 2024, os anos da calibração. Antes ia até 2025, ano fora da calibração por causa da deriva do Aqua, que puxava a média para baixo. A mudança está no PR #26, com um teste que reproduz o problema.
+- **Amazônia, Cerrado, Caatinga e Pantanal:** a troca de satélite não cria salto artificial. A Amazônia fica praticamente em zero (−0,6%), e os outros três ficam até cerca de 7%.
+- **Mata Atlântica (−12,7%): a razão com o INPE muda aos poucos ao longo da série inteira**, numa tendência que atravessa os anos. Ela sobe de 5,74 em 2003 para 8,20 em 2010, fica perto de 6,8 em 2012 a 2015 e desce até 5,47 em 2024. A razão **também desce depois de 2012**, quando a série é o VIIRS medido, sem conversão. Então a tendência está na relação entre os satélites e o INPE nesse bioma, e o fator, que é o mesmo em todos os anos, não é a causa provável. Sem 2010 e 2011, o degrau ainda fica em cerca de −9% (conta aproximada da frente A, com a média simples das razões anuais). A explicação ainda não está provada: a conferência que fecha a questão é a razão entre o Aqua **bruto** do FIRMS e o do INPE ano a ano (pendência 9).
+- **Pampa (+12,3%): o resultado depende de anos com pouquíssimo fogo.** 2022 está fora da curva (razão de 7,63, com só 754 focos no INPE); sem 2022, o degrau cai para cerca de +8% (conta aproximada da frente A). O resto é ruído de contagem pequena, com 700 a 1.800 focos por ano no INPE. Soma-se o que já estava registrado: o Aqua quase não vê fogo noturno lá, e quase todos os fatores noturnos do Pampa usaram fusão.
+
+**Frase para a tela de Método** (base para a frente D):
+
+> "A troca de satélite em 2012 não cria salto artificial na Amazônia (−0,6%) nem no Cerrado, na Caatinga e no Pantanal (até cerca de 7%). Na Mata Atlântica, a relação com o INPE muda aos poucos ao longo de toda a série, inclusive depois de 2012, quando não há conversão. No Pampa, o resultado depende de anos com pouquíssimo fogo."
+
+Em inglês, para a interface: "The 2012 satellite switch creates no artificial jump in the Amazon (−0.6%), nor in the Cerrado, Caatinga and Pantanal (up to about 7%). In the Atlantic Forest, the ratio to INPE drifts gradually across the whole series, including after 2012, when no conversion is applied. In the Pampa, the result depends on years with very few fires."
 
 Ressalvas a declarar:
 
 - **Os totais anuais do relatório somam os valores centrais mensais**, enquanto a série anual e a API usam a **mediana do total do ano por cenário** (regra 7 da fórmula, `importacao-regioes.md`). As duas contas diferem um pouco (até cerca de 3 pontos percentuais no degrau, numa conferência da frente B feita com a série anual que o Eduardo mandou). Fica como melhoria menor da B6: fazer `comparar` usar o total anual por cenário, como a API.
 - **No Pantanal, a razão com o INPE oscila mais** do que na Amazônia: nos gráficos, fica entre cerca de 5,5 e 8,6, e é mais alta nos anos recentes (2020 em diante) do que em 2013 a 2019. Vale mostrar essa variação no Método, em vez de só o degrau.
-- **Gráficos:** o Eduardo gerou `grafico_Amazônia.png` e `grafico_Pantanal.png` (branch `a-b6-graficos`, frente A, `docs/img/b6/`), com os dados reais e rótulos em inglês. Nas duas imagens, a legenda cobre o topo da faixa de incerteza nos primeiros anos. A legenda foi movida para baixo do gráfico neste PR; as imagens precisam ser geradas de novo antes de ir para a página do projeto.
+- **Gráficos:** o Eduardo gerou `grafico_Amazônia.png` e `grafico_Pantanal.png` com os dados reais, rótulos em inglês e a legenda abaixo do gráfico (branch `a-b6-graficos`, `docs/img/b6/`, commit `9807edf`). Eles vão para a tela de Método e para a página do projeto depois de um PR da frente A para a `main`.
 
 **Classe de intensidade na tela (aprovada no PR #4, `api.md`):** `low` abaixo de 5 MW, `medium` de 5 a 25 MW, `high` de 25 MW ou mais **ou** pixel saturado do VIIRS (confiança alta). Limites fixos na tela. A regra do pixel saturado vale só para o VIIRS: no MODIS, confiança alta não indica saturação.
 
@@ -183,6 +189,7 @@ O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, 
 - O fator é por bioma, mês e dia/noite. Não corrige por potência do fogo.
 - A faixa de incerteza reflete a variação entre anos de sobreposição e não cobre outras fontes de erro. Cobertura medida: cerca de 8 em 10 em cinco biomas, cerca de 7 em 10 no Pampa. Na temporada de fogo, cerca de 8,5 em 10 na Amazônia, no Pantanal e na Caatinga.
 - No Pampa, a estimativa tende a ficar abaixo do real (pouquíssimo fogo noturno visto pelo Aqua).
+- Na comparação com o INPE, a troca de satélite em 2012 deixa um degrau de −12,7% na Mata Atlântica e de +12,3% no Pampa. Na Mata Atlântica, a relação com o INPE muda aos poucos ao longo de toda a série, inclusive depois de 2012; no Pampa, o resultado depende de anos com pouquíssimo fogo. Nos outros biomas, o degrau fica até cerca de 7%.
 - Em anos de fogo excepcional (como 2020 e 2024 na Amazônia), a estimativa erra mais e a faixa cobre menos.
 - A deriva de órbita do Aqua (depois de 2022) só pode afetar a calibração, e a validação deixando um ano de fora mede isso. O calendário de 2012 em diante usa o VIIRS e não é afetado.
 - **Contagem baixa do Aqua no período estimado:** se o Aqua viu zero ou poucos focos numa área pequena num mês fraco, a estimativa também fica zero ou baixa, mesmo que o VIIRS fosse ver fogos pequenos. A faixa não captura isso. PROPOSTA para a frente C: a API marca o mês estimado como "estimativa pouco confiável" quando a contagem bruta do Aqua na área for menor que 10 (limite ESCOLHA DA EQUIPE).
@@ -196,8 +203,9 @@ O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, 
 1. ~~Cobertura da faixa por estação~~: feita (seção "Cobertura dentro e fora da temporada de fogo").
 2. ~~B6, comparação com o INPE~~: feita (seção "Resultado da comparação com o INPE"). A comparação mede, por bioma: correlação mensal e anual, os 5 anos com mais fogo, o mês de pico, a sazonalidade e o **degrau em 2012** (razão firesync/INPE antes e depois da troca de satélite; perto de zero quer dizer que a troca não inventou fogo). Contexto da frente A (issue #19): a série do Aqua no FIRMS já tem correlação mensal de 0,998 com a do INPE e o mesmo mês de pico em 23 de 23 anos, então o degrau em 2012 mede principalmente a nossa conversão.
 3. **Levar o código da B3 e da B6 para o `main`:** vai pelo PR #26 (decisão do Weberson em 14/11/2026), que aguarda a aprovação do Mateus.
-4. **Gerar de novo os dois gráficos** (Amazônia e Pantanal) com a legenda nova, para a página do projeto (frente A, no banco de teste).
+4. ~~Gerar de novo os dois gráficos~~: feito pelo Eduardo (commit `9807edf`, branch `a-b6-graficos`). Falta o PR da frente A para levar as imagens à `main`.
 5. **B6, melhoria menor:** fazer `comparar` usar o total anual por cenário, como a API (ver "Ressalvas" da comparação com o INPE).
 6. Confirmar o mínimo de focos por condição (a calibração gravada usou 30).
 7. Investigar a queda de S-NPP/Aqua em 2025.
 8. Esta decisão muda o que o contexto do projeto dizia sobre o modelo A (o classificador deixa de gerar o fator da série). A equipe deve concordar com a mudança.
+9. **Opcional, Mata Atlântica:** calcular ano a ano a razão entre o Aqua bruto do FIRMS e o Aqua do INPE. Se ela tiver a mesma rampa de 2003 a 2010, fica confirmado que o degrau desse bioma vem da relação entre os satélites, e não do fator.
