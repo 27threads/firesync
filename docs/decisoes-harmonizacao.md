@@ -138,7 +138,9 @@ Dois alertas:
 
 O Eduardo rodou `data-pipeline/harmonizacao/validar_inpe.py` (commit `9127baa`, branch `trabalho/harmonizacao`) no banco de teste, **sem gravar nada**, de 2003 a 2025, só com `satelite = AQUA_M-T` e meses completos do INPE (PR #21). Resultado na issue #40. Todos os biomas ficaram com 276 meses e 23 anos completos, 1 mês com zero detecções entrou na comparação e nenhum mês ficou sem estimativa por falta de fator. É a segunda rodada, feita depois da correção dos três erros achados na revisão do PR #26 (faixa anual somada por cenário, meses zerados na comparação, versão dos dados ao gravar); os números da primeira rodada foram descartados.
 
-| Bioma | Correlação mensal | Correlação anual | Anos de mais fogo em comum (de 5) | Mês de pico igual (±1 mês) | Degrau em 2012 |
+A coluna "Degrau em 2012" ainda é da conta antiga, com o "depois" indo até 2025. Ela será refeita com 2013 a 2024 (ver abaixo).
+
+| Bioma | Correlação mensal | Correlação anual | Anos de mais fogo em comum (de 5) | Mês de pico igual (±1 mês) | Degrau em 2012 (conta antiga) |
 | --- | --- | --- | --- | --- | --- |
 | Amazônia | 0,992 | 0,992 | 4 | 91% | −2,4% |
 | Caatinga | 0,955 | 0,891 | 5 | 96% | +2,9% |
@@ -152,13 +154,13 @@ A correlação da sazonalidade fica entre 0,95 e 1,00 em todos os biomas.
 Leitura em palavras simples:
 
 - **A série harmonizada tem a mesma forma da série do INPE:** sobe e desce nos mesmos anos, com o pico no mesmo mês. Isso vale para os seis biomas.
-- **A troca de satélite em 2012 não criou salto grande na Amazônia (−2,4%) nem no Pantanal (+7,1%)**, os dois biomas da demonstração. O teste com erro inventado deu +102%, então esses valores são pequenos.
-- **Mata Atlântica (−14,1%) e Pampa (+10,8%) passam de 10%.** Isso precisa ser declarado no Método: "em alguns biomas, a troca de sensor deixa um degrau de até cerca de 14% na razão com o INPE". O Pampa tem pouquíssimo fogo e quase todos os fatores noturnos dele usaram fusão.
+- **O degrau em 2012 é uma checagem de consistência, e não a prova de que o fator acerta** (ponto levantado pelo Mateus na issue #40). O fator vem da razão S-NPP/Aqua, e a série do INPE é quase o próprio Aqua (correlação mensal de 0,998, issue #19). Por isso o degrau tende a zero pela própria conta: um valor perto de zero mostra que a conversão não tem erro de código ou de dados na troca de satélite. **A prova de acerto é a validação deixando um ano de fora** (erro de cerca de 6% por ano na Amazônia e faixa que acerta cerca de 8 em 10), descrita na seção 4.
+- **A conta do degrau mudou (DECIDIDO, Weberson, 14/11/2026):** o "depois" passa a usar só 2013 a 2024, os anos da calibração. Antes ia até 2025, ano fora da calibração por causa da deriva do Aqua (razão anômala, cerca de 4,9 na Amazônia), que puxava a média para baixo. A mudança está no PR #26, com um teste que reproduz o problema. O Eduardo vai rodar a B6 de novo, e os novos valores entram nesta tabela.
+- **Mata Atlântica e Pampa:** na conta antiga, os dois passavam de 10% (−14,1% e +10,8%). A frase do Método espera a conta nova. O Pampa tem explicação: pouquíssimo fogo, e quase todos os fatores noturnos dele usaram fusão, o que deixa a estimativa antes de 2012 baixa. A Mata Atlântica ainda não tem: a estimativa de 2003 a 2011 saiu alta em relação ao INPE (razão média de 6,88 antes, contra 5,91 depois). Para saber se é um ou dois anos fora da curva ou a série inteira, o script passou a gravar a razão ano a ano (`razao_anual.csv`).
 
 Ressalvas a declarar:
 
-- **O degrau compara a média da razão firesync/INPE em 2003 a 2011 com a de 2013 em diante.** A média de 2013 em diante inclui 2025, ano com a razão anômala (cerca de 4,9 na Amazônia, deriva do Aqua já declarada nos limites). Uma conferência da frente B, feita a partir da série anual que o Eduardo mandou, mostra que tirar 2025 muda o degrau em no máximo 2,4 pontos percentuais, e nenhuma leitura muda.
-- **Os totais anuais do relatório somam os valores centrais mensais**, enquanto a série anual e a API usam a **mediana do total do ano por cenário** (regra 7 da fórmula, `importacao-regioes.md`). As duas contas diferem um pouco: na conferência acima, o degrau variou até cerca de 3 pontos percentuais conforme a conta. Fica como melhoria menor da B6: fazer `comparar` usar o total anual por cenário, como a API.
+- **Os totais anuais do relatório somam os valores centrais mensais**, enquanto a série anual e a API usam a **mediana do total do ano por cenário** (regra 7 da fórmula, `importacao-regioes.md`). As duas contas diferem um pouco (até cerca de 3 pontos percentuais no degrau, numa conferência da frente B feita com a série anual que o Eduardo mandou). Fica como melhoria menor da B6: fazer `comparar` usar o total anual por cenário, como a API.
 - **No Pantanal, a razão com o INPE oscila mais** do que na Amazônia: nos gráficos, fica entre cerca de 5,5 e 8,6, e é mais alta nos anos recentes (2020 em diante) do que em 2013 a 2019. Vale mostrar essa variação no Método, em vez de só o degrau.
 - **Gráficos:** o Eduardo gerou `grafico_Amazônia.png` e `grafico_Pantanal.png` (branch `a-b6-graficos`, frente A, `docs/img/b6/`), com os dados reais e rótulos em inglês. Nas duas imagens, a legenda cobre o topo da faixa de incerteza nos primeiros anos. A legenda foi movida para baixo do gráfico neste PR; as imagens precisam ser geradas de novo antes de ir para a página do projeto.
 

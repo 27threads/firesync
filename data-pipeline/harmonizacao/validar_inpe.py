@@ -7,9 +7,11 @@ satélite só (o Aqua, "AQUA_M-T"). O que precisa bater é a FORMA da série. Me
   - os 5 anos com mais fogo em cada série, e quantos coincidem;
   - o mês de pico de cada ano: em quantos anos coincide (com tolerância de 1 mês);
   - a sazonalidade média (perfil dos 12 meses, normalizado);
-  - o DEGRAU EM 2012: razão anual firesync / INPE antes (2003-2011) e depois (2013 em diante) da troca de satélite.
-    O INPE usa o Aqua o tempo todo; o firesync troca de Aqua x fator para o VIIRS observado em fev/2012.
-    Se a harmonização funciona, a razão fica estável e o degrau fica perto de zero.
+  - o DEGRAU EM 2012: razão anual firesync / INPE antes (2003-2011) e depois (2013-2024, os anos da calibração;
+    2025 fica fora pela deriva do Aqua) da troca de satélite. O INPE usa o Aqua o tempo todo; o firesync troca de
+    Aqua x fator para o VIIRS observado em fev/2012. O degrau é uma CHECAGEM DE CONSISTÊNCIA da conversão: como o
+    fator vem da razão S-NPP/Aqua e o INPE é quase o próprio Aqua, ele tende a zero pela conta, e um valor longe
+    de zero aponta erro de código ou de dados. A prova de acerto é a validação deixando um ano de fora (calibrar.py).
 
 Regras da conta (as mesmas da API, docs/importacao-regioes.md, "Fórmula do calendário"):
   - mês sem linha em `agregados` é ZERO detecções (dado, não falta de dado) e entra na série;
@@ -31,6 +33,7 @@ Saídas na pasta --saida:
     serie_firesync_vs_inpe.csv   bioma, ano, mes, firesync (valor central), band_low, band_high, origem, inpe
     serie_anual_firesync.csv     bioma, ano, firesync, band_low, band_high, origem (faixa somada por cenário)
     metricas_b6.csv              as medidas acima, por bioma
+    razao_anual.csv              bioma, ano, firesync, inpe, razao (anos completos), para olhar a razão ano a ano
     relatorio_b6.txt             resumo
     grafico_<bioma>.png          (se o matplotlib estiver instalado) totais anuais, razão por ano e sazonalidade
 """
@@ -42,9 +45,10 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from calibrar import FAIXA  # noqa: E402  (mesmos percentis da API e da calibração)
+from calibrar import ANOS_BASE, FAIXA  # noqa: E402  (mesmos anos e percentis da calibração e da API)
 
 ANO_INICIO = 2003
+ULTIMO_ANO_CALIBRACAO = max(ANOS_BASE)  # 2024; 2025 em diante fica fora da calibração (deriva do Aqua)
 INICIO_VIIRS = (2012, 2)  # fev/2012: primeiro mês observado pelo VIIRS
 TOLERANCIA_PICO = 1       # meses
 
@@ -160,7 +164,8 @@ def comparar(s):
         saz_i = g.groupby("mes")["inpe"].mean()
         razao = (anual_["firesync"] / anual_["inpe"]).replace([np.inf, -np.inf], np.nan)
         antes = razao[(razao.index >= ANO_INICIO) & (razao.index <= 2011)].mean()
-        depois = razao[razao.index >= 2013].mean()
+        # o "depois" usa só os anos da calibração (2013 a 2024): 2025 ficou fora dela pela deriva do Aqua
+        depois = razao[(razao.index >= 2013) & (razao.index <= ULTIMO_ANO_CALIBRACAO)].mean()
         linhas.append({
             "bioma": bioma,
             "meses": len(g),
@@ -175,10 +180,19 @@ def comparar(s):
             "pico_igual_tolerancia_1_mes": float((dif <= TOLERANCIA_PICO).mean()),
             "corr_sazonalidade": saz_f.corr(saz_i),
             "razao_media_2003_2011": antes,
-            "razao_media_2013_em_diante": depois,
+            "razao_media_2013_2024": depois,
             "degrau_2012": depois / antes - 1 if antes else np.nan,
         })
     return pd.DataFrame(linhas)
+
+
+def razao_anual(s):
+    """Razão firesync / INPE de cada ano completo (12 meses), por bioma: bioma, ano, firesync, inpe, razao."""
+    d = s.dropna(subset=["firesync"])
+    completos = d.groupby(["bioma", "ano"]).size() == 12
+    a = d.groupby(["bioma", "ano"])[["firesync", "inpe"]].sum()[completos].reset_index()
+    a["razao"] = (a["firesync"] / a["inpe"]).replace([np.inf, -np.inf], np.nan)
+    return a
 
 
 def graficos(s, anual_fs, saida, biomas):
@@ -252,11 +266,14 @@ def main():
 
     m = comparar(s)
     m.to_csv(saida / "metricas_b6.csv", index=False)
+    razao_anual(s).to_csv(saida / "razao_anual.csv", index=False)
     sem_fator = int(mensal["firesync"].isna().sum())
     zerados = int((mensal["firesync"] == 0).sum())
     rel = [f"B6: firesync x INPE (AQUA_M-T, meses completos), {ANO_INICIO} a {a.ate}",
-           "Forma da série: correlações perto de 1 e picos coincidentes = mesma forma. Degrau em 2012 perto de 0 = "
-           "a troca de satélite não criou salto artificial.",
+           "Forma da série: correlações perto de 1 e picos coincidentes = mesma forma.",
+           f"Degrau em 2012 (antes: 2003-2011; depois: 2013-{ULTIMO_ANO_CALIBRACAO}): checagem de consistência da "
+           "conversão. Perto de 0 = sem erro de código ou de dados na troca de satélite. A prova de acerto é a "
+           "validação deixando um ano de fora (calibrar.py).",
            f"Meses com zero detecções no firesync (entram na comparação): {zerados}. "
            f"Meses sem estimativa por falta de fator (ficam fora): {sem_fator}.", "",
            m.round(3).to_string(index=False), "", graficos(s, anual_fs, saida, ["Amazônia", "Pantanal"])]
