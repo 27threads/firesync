@@ -1,0 +1,33 @@
+# Checagens do versionamento SemVer (docs/versionamento.md). Rodam em todo PR.
+name: Versionamento
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  titulo:
+    name: Título do PR no padrão
+    runs-on: ubuntu-latest
+    steps:
+      - name: O título começa com o tipo da mudança
+        env:
+          TITULO: ${{ github.event.pull_request.title }}
+        run: |
+          padrao='^(feat|fix|perf|refactor|docs|test|ci|build|chore|style|revert)(\([a-z0-9._/-]+\))?!?: .+'
+          if [[ "$TITULO" =~ $padrao ]]; then
+            echo "ok: $TITULO"
+          else
+            echo "::error::O título do PR precisa começar com o tipo, por exemplo 'feat(api): calendário' ou 'fix: corrige X'. Veja docs/versionamento.md."
+            exit 1
+          fi
+
+  calculo:
+    name: Cálculo da versão
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/test_proxima_versao.sh
