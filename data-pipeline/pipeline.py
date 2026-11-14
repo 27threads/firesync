@@ -5,11 +5,13 @@ Uso (nesta ordem; precisa de DATABASE_URL e, para o download, FIRMS_MAP_KEY):
     python pipeline.py download   # arquivos anuais do país da cobertura + API (2026 / NOAA-21 / NRT)
     python pipeline.py stage      # mantém só os focos dentro da cobertura (sem filtros) em data/staged/
     python pipeline.py clean      # aplica os filtros do time de dados e grava parquet em data/processed/
+    python pipeline.py sem_dados  # dias sem dado de satélite (FIRMS missing_data) -> dias_sem_dados
 
 Detalhes: docs/pipeline-dados.md e docs/banco.md
 """
 import json
 import os
+import re
 import sys
 import subprocess
 from datetime import date, timedelta
@@ -85,21 +87,41 @@ def curl(url, dest=None):
 SIMPLIFY_DEG = 0.001  # ~110 m, bem menor que o lado da célula res 6 (~3,7 km): não muda quais células entram
 
 
+def region_cells(geom, res, mode):
+    # o polígono do IBGE tem centenas de milhares de vértices; simplificar só para achar as células
+    shape = h3.geo_to_h3shape(geom.simplify(SIMPLIFY_DEG, preserve_topology=True).__geo_interface__)
+    return {h3.str_to_int(c) for c in h3.h3shape_to_cells_experimental(shape, res, contain=mode)}
+
+
+def assign_cells(centers, overlaps):
+    """Cada célula fica em uma região só: a do centro; as de borda (costa, fronteira) que nenhum
+    centro pegou vão para a primeira região que encosta nelas. Sem isso, focos na borda somem dos agregados."""
+    claimed = set().union(*centers)
+    out = []
+    for center, overlap in zip(centers, overlaps):
+        borda = overlap - claimed
+        claimed |= borda
+        out.append(center | borda)
+    return out
+
+
 def cadastrar():
     """Única etapa que lê regioes.json. Grava o polígono em `regioes` (upsert por nome) e as células em `celula_regiao`."""
     conn = db()
     res = int(config(conn, "h3_resolucao"))
-    for r in json.loads((ROOT / "regioes.json").read_text(encoding="utf-8")):
+    regs = json.loads((ROOT / "regioes.json").read_text(encoding="utf-8"))
+    geoms = []
+    for r in regs:
         src = RAW / r["arquivo"]
         if not src.exists():
             src.parent.mkdir(parents=True, exist_ok=True)
             curl(r["url"], src)
         g = gpd.read_file(f"zip://{src}")
         # SIRGAS2000 ≈ WGS84 (<1 m)
-        geom = g[g[r["campo"]] == r["valor"]].set_crs(4326, allow_override=True).union_all()
-        # o polígono do IBGE tem centenas de milhares de vértices; simplificar só para achar as células
-        simple = geom.simplify(SIMPLIFY_DEG, preserve_topology=True)
-        cells = [h3.str_to_int(c) for c in h3.h3shape_to_cells(h3.geo_to_h3shape(simple.__geo_interface__), res)]
+        geoms.append(g[g[r["campo"]] == r["valor"]].set_crs(4326, allow_override=True).union_all())
+    cells_by_region = assign_cells([region_cells(g, res, "center") for g in geoms],
+                                   [region_cells(g, res, "overlap") for g in geoms])
+    for r, geom, cells in zip(regs, geoms, cells_by_region):
         with conn.transaction():
             rid = conn.execute(
                 """INSERT INTO regioes (nome, geom, fonte_poligono)
@@ -268,5 +290,53 @@ def clean():
     (OUT / "clean_report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False))
 
 
+# ---------------------------------------------------------------- sem_dados
+SATELITES_FIRMS = {"Terra (MODIS)": "Terra", "Aqua (MODIS)": "Aqua", "Suomi NPP (VIIRS)": "SNPP",
+                   "NOAA-20 (VIIRS)": "N20", "NOAA-21 (VIIRS)": "N21"}
+
+
+# fonte SP do data_availability para cada satélite (Terra e Aqua estão juntos no MODIS)
+SP_SOURCE = {"Terra": "MODIS_SP", "Aqua": "MODIS_SP", "SNPP": "VIIRS_SNPP_SP", "N20": "VIIRS_NOAA20_SP",
+             "N21": "VIIRS_NOAA21_SP"}
+
+
+def parse_missing(html, sp_fim):
+    """Tabela da página missing_data do FIRMS -> {(data, satelite)}.
+
+    Cada linha tem data/satélite da coluna SP e data/satélite da coluna NRT. Uma falha do NRT só vale
+    depois do último dia SP daquele satélite (regra do próprio FIRMS); antes disso o SP tem o dado.
+    """
+    tds = [t.strip() for t in re.findall(r"<td>(.*?)</td>", html, re.S)]
+    rows = set()
+    for i in range(0, len(tds), 4):
+        for (data, sat), nrt in ((tds[i:i + 2], False), (tds[i + 2:i + 4], True)):
+            if not data:
+                continue
+            if sat not in SATELITES_FIRMS:
+                raise ValueError(f"missing_data: satélite desconhecido {sat!r}")
+            d, s = date.fromisoformat(data), SATELITES_FIRMS[sat]
+            if nrt and d <= sp_fim[s]:
+                continue
+            rows.add((d, s))
+    return rows
+
+
+def sem_dados():
+    """Dias sem dado de satélite (FIRMS) -> `dias_sem_dados`. Substitui a tabela inteira (foto atual do FIRMS)."""
+    key = env("FIRMS_MAP_KEY")
+    avail = pd.read_csv(StringIO(curl(f"{API}/data_availability/csv/{key}/ALL"))).set_index("data_id")
+    sp_fim = {s: date.fromisoformat(avail.loc[src, "max_date"]) for s, src in SP_SOURCE.items()}
+    # shortcut: o FIRMS não documenta um CSV de missing_data; este é o JSON que a própria página
+    # /api/missing_data/ carrega. Se mudar de formato, o parse falha (não grava dado errado).
+    d = json.loads(curl(f"{API}/missing_data/?action=fetch_data"))
+    rows = parse_missing(d["html"], sp_fim)
+    conn = db()
+    with conn.transaction():
+        conn.execute("DELETE FROM dias_sem_dados")
+        conn.cursor().executemany("INSERT INTO dias_sem_dados (data, satelite) VALUES (%s, %s)", sorted(rows))
+    print(f"sem_dados: {len(rows)} dias × satélite", flush=True)
+
+
 if __name__ == "__main__":
-    {"cadastrar": cadastrar, "download": download, "stage": stage, "clean": clean}[sys.argv[1]]()
+    {"cadastrar": cadastrar, "download": download, "stage": stage, "clean": clean,
+     "sem_dados": sem_dados}[sys.argv[1]]()

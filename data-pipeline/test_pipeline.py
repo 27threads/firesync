@@ -40,4 +40,24 @@ main, low = clean_viirs(v, log)
 assert len(main) == 2 and len(low) == 1, (main, low)
 assert main.high_conf.tolist() == [False, True]
 assert log == {"type!=0": 0, "frp<=0_ou_vazio": 1, "conf_l_noite": 1, "duplicatas_identicas": 1}, log
+# missing_data do FIRMS: colunas SP (data, satélite) e NRT (data, satélite), vazio quando não há
+from datetime import date  # noqa: E402
+from pipeline import parse_missing  # noqa: E402
+html = ("<tr><td>2026-07-16</td><td>Suomi NPP (VIIRS)</td><td>2024-03-06</td><td>NOAA-21 (VIIRS)</td></tr>"
+        "<tr><td>2001-06-18</td><td>Terra (MODIS)</td><td></td><td></td></tr>")
+fim = {"Terra": date(2026, 8, 31), "Aqua": date(2026, 8, 31), "SNPP": date(2026, 7, 31),
+       "N20": date(2026, 7, 31), "N21": date(2026, 7, 31)}
+# a falha NRT do N21 em 2024 é antes do fim do SP (o SP tem o dado): não entra
+assert parse_missing(html, fim) == {(date(2026, 7, 16), "SNPP"), (date(2001, 6, 18), "Terra")}
+html_nrt = "<tr><td></td><td></td><td>2026-09-10</td><td>NOAA-20 (VIIRS)</td></tr>"
+assert parse_missing(html_nrt, fim) == {(date(2026, 9, 10), "N20")}   # depois do fim do SP: vale
+try:
+    parse_missing("<tr><td>2020-01-01</td><td>Outro</td><td></td><td></td></tr>", fim)
+    raise AssertionError("satélite desconhecido deveria falhar")
+except ValueError:
+    pass
+# cadastro: cada célula numa região só; borda sem dono vai para a primeira região que encosta
+from pipeline import assign_cells  # noqa: E402
+a, b = assign_cells([{1, 2}, {3}], [{1, 2, 9, 7}, {3, 2, 9, 8}])
+assert a == {1, 2, 9, 7} and b == {3, 8} and not (a & b)
 print("ok")

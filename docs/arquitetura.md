@@ -31,7 +31,7 @@ Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir"
 | 9 | Formato do download (RF13) | PNG, PDF, CSV | a decidir | |
 | 10 | Granularidade mostrada no calendário | mensal ou diária | a decidir | |
 | 11 | Onde roda o job NRT e a recarga SP | | a decidir | |
-| 12 | Hospedagem pública (front, API e banco) | | a decidir | |
+| 12 | Hospedagem pública (front, API e banco) | VPS; Postgres gerenciado | VPS com `docker compose`, incluindo `focos` (decidido no PR #2, ver [banco.md](banco.md)) | frentes A e C |
 | 13 | Cálculo da anomalia (RF11, RF12) | mediana histórica, média de vários anos | a decidir | |
 
 Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases, por que ela foi escolhida.

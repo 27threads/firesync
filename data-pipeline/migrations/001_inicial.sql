@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS config (
     valor TEXT NOT NULL
 );
 INSERT INTO config (chave, valor) VALUES
-    ('h3_resolucao', '6'),        -- mudar exige migration nova: refazer agregados e celula_regiao
+    ('h3_resolucao', '6'),        -- mudar exige migration nova: refazer agregados e as células das regiões
     ('cobertura_pais', 'Brazil')  -- unidade de download do FIRMS (arquivo anual por país)
 ON CONFLICT (chave) DO NOTHING;
 
@@ -45,17 +45,10 @@ CREATE TABLE IF NOT EXISTS regioes (
     id             SERIAL PRIMARY KEY,
     nome           TEXT   NOT NULL UNIQUE,
     geom           geometry(MultiPolygon, 4326) NOT NULL,
+    celulas_h3     BIGINT[] NOT NULL DEFAULT '{}',
     fonte_poligono TEXT   NOT NULL
 );
 CREATE INDEX IF NOT EXISTS regioes_geom ON regioes USING GIST (geom);
-
--- Quais células H3 pertencem a cada região (calculado no cadastro). Tabela, não lista: escala para o mundo.
-CREATE TABLE IF NOT EXISTS celula_regiao (
-    h3        BIGINT  NOT NULL CHECK (((h3 >> 52) & 15) = 6),
-    regiao_id INTEGER NOT NULL REFERENCES regioes (id) ON DELETE CASCADE,
-    PRIMARY KEY (h3, regiao_id)
-);
-CREATE INDEX IF NOT EXISTS celula_regiao_regiao ON celula_regiao (regiao_id);
 
 -- Período em que cada satélite tem dado em cada região. A API responde "sem dados" fora daqui.
 CREATE TABLE IF NOT EXISTS cobertura (

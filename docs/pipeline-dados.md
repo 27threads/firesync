@@ -184,6 +184,7 @@ python test_pipeline.py          # self-check dos filtros
 python pipeline.py cadastrar     # precisa do banco com a migration aplicada
 python pipeline.py download      # ~3,5 GB; retoma de onde parou
 python pipeline.py stage
+python pipeline.py sem_dados     # dias sem dado de satélite (FIRMS) -> dias_sem_dados
 python eda.py                    # reports/eda.html
 python pipeline.py clean
 ```

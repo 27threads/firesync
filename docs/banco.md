@@ -2,7 +2,7 @@
 
 Nov 14, 2026 · frente A → frente C · revisado no PR #2
 
-Este documento junta o que o backend precisa para montar o `docker-compose.yml` e o `Dockerfile` e consultar o banco. O schema está em [`data-pipeline/migrations/001_inicial.sql`](../data-pipeline/migrations/001_inicial.sql).
+Este documento junta o que o backend precisa para montar o `docker-compose.yml` e o `Dockerfile` e consultar o banco. O schema está em [`data-pipeline/migrations/`](../data-pipeline/migrations/): `001_inicial.sql` e `002_celulas_sem_dados.sql`, aplicadas nessa ordem.
 
 ## Decisões
 
@@ -22,6 +22,9 @@ Este documento junta o que o backend precisa para montar o `docker-compose.yml` 
 | 12 | Escala da série | **VIIRS.** Aqua só para 2003–2011 e para a calibração. Terra fora (guardado, mas não entra na conta) | aprovado no PR #2 |
 | 13 | Células de cada região | Tabela `celula_regiao (h3, regiao_id)`, no lugar de uma lista dentro de `regioes` | aprovado no PR #2 |
 | 14 | Confiança | Só nominal e alta entram em `agregados` (calendário e fator). Baixa fica guardada à parte | aprovado no PR #2 |
+| 15 | Satélite em `agregados` | Só o satélite que vale em cada mês: Aqua até jan/2012, VIIRS de fev/2012 em diante. Os outros só servem para a calibração, que lê de `focos` | aprovado no PR #2 |
+| 16 | Falha de satélite | Tabela `dias_sem_dados (data, satelite)`, preenchida por `pipeline.py sem_dados`. Não é por célula | aprovado no PR #2 |
+| 17 | Produção | VPS com `docker compose`, **incluindo `focos`** (export de auditoria da frente C, até 500 mil linhas) | aprovado no PR #2 |
 
 ## Resolução H3: fixa e numa fonte só
 
@@ -59,7 +62,9 @@ Um ID da resolução 6 vale cerca de 6 × 10¹⁷, e o JavaScript só representa
 - `focos` guarda **tudo o que foi baixado**, sem coluna de região. O bioma só entra na calibração e na agregação.
 - **`regioes.json` é a entrada:** versionada e fácil de revisar no git. `python pipeline.py cadastrar` lê o JSON, baixa o polígono, grava em `regioes` (upsert por `nome`) e grava as células da região, na resolução da `config`, em `celula_regiao`. **Nenhuma outra etapa lê o JSON.**
 - **Células por região numa tabela, não numa lista:** `celula_regiao (h3, regiao_id)` tem chave `(h3, regiao_id)`, índice em `regiao_id` e o mesmo `CHECK` de resolução. Uma lista dentro da linha de `regioes` não escala (o mundo tem ~4 milhões de células de terra na res 6).
-- **Polígono simplificado só para achar as células:** tolerância de 0,001° (~110 m), muito menor que o lado da célula (~3,7 km). O cadastro dos 6 biomas leva ~48 s (sem simplificar, só a Amazônia levava 102 s). A simplificação mudou menos de 0,01% das células (por exemplo, Amazônia 109.433 → 109.429), e nenhuma célula ficou em dois biomas. O polígono gravado em `regioes.geom` é o original.
+- **Polígono simplificado só para achar as células:** tolerância de 0,001° (~110 m), muito menor que o lado da célula (~3,7 km). A simplificação mudou menos de 0,01% das células, e o polígono gravado em `regioes.geom` é o original.
+- **Cada célula numa região só, sem perder a borda:** a célula vai para a região que contém o centro dela. As células de borda (costa e fronteira) cujo centro cai fora de todos os biomas vão para a região que encosta nelas. Sem isso, 0,08–0,12% dos focos de 2024 ficavam sem região e sumiriam dos `agregados`; com isso, 0%. O cadastro dos 6 biomas leva ~3 min e roda uma vez só.
+- **Conferido:** a soma da área real das células de cada bioma fica entre +0,1% e +0,4% da área do polígono do IBGE. A área de um hexágono H3 varia com o lugar: no Brasil vai de ~30 a ~43 km².
 - **A tabela `regioes` é a fonte de verdade:** a API, a calibração, a agregação e o próprio pipeline (bbox da API do FIRMS e recorte da cobertura) leem só ela.
 - Fora da cobertura, a API responde "sem dados para esta área (cobertura atual: Brasil)". Nunca zero.
 - **Para levar a outro país:** acrescentar os polígonos em `regioes.json`, rodar `cadastrar`, trocar `cobertura_pais` e baixar. O código não muda.
@@ -68,7 +73,14 @@ Um ID da resolução 6 vale cerca de 6 × 10¹⁷, e o JavaScript só representa
 
 **`fatores_harmonizacao`**: uma linha por `regiao_id × satelite_origem × satelite_destino × mes × periodo (D/N) × ano_calibracao`. Cada ano da sobreposição é um cenário. O fator central é a mediana dos anos, e a faixa é o P10–P90.
 
-**`agregados`**: contagem **bruta** por `h3 × ano × mes × satelite × periodo`, com o `regiao_id` (bioma) da célula. Mês sem focos não tem linha, e a API preenche com zero.
+Duas colunas extras, pedidas no PR #3: `n_focos_origem` (quantos focos do Aqua sustentam o fator) e `fusao_com` (condição vizinha usada quando o mínimo de focos não é atingido).
+
+**`agregados`**: contagem **bruta** por `h3 × ano × mes × satelite × periodo`, com o `regiao_id` (bioma) da célula. Mês sem focos não tem linha, e a API preenche com zero. A agregação (frente B, tarefa B4) grava:
+
+- **só o satélite que vale no mês:** Aqua até janeiro de 2012, VIIRS de fevereiro de 2012 em diante (um VIIRS por período: S-NPP até 02/11/2026, NOAA-20 depois). Isso deixa a tabela com cerca de metade das linhas;
+- **só confiança nominal e alta** (o arquivo `lowconf` do `clean` não entra).
+
+**`dias_sem_dados`**: dias em que o FIRMS informa falha de um satélite (`missing_data`). Vale para o mundo todo. A API devolve quantos dias sem dado cada mês teve, e o front marca o mês a partir de 3 dias. A resposta diferencia três casos: zero focos, mês com falha de satélite e área fora da cobertura. Uma falha da coluna NRT do FIRMS só entra se for **depois** do último dia SP daquele satélite (regra do próprio FIRMS: antes disso o SP tem o dado). Conferido com os focos de 2024: nenhum dia marcado tem foco daquele satélite. Hoje são 169 dias × satélite (2001–2026). O `sem_dados` substitui a tabela inteira a cada execução.
 
 A API soma as contagens brutas da área por (região, ano, mês, satélite, D/N), multiplica pelos fatores de cada cenário e só então calcula o valor central e a faixa. Isso é necessário porque **a soma dos P10 das células não é o P10 da soma**. O cálculo é pequeno (anos × meses × 2 satélites × 2 períodos), e mudar um fator não exige refazer `agregados`.
 
@@ -144,9 +156,6 @@ volumes:
 
 ## Ainda em aberto
 
-- Escala da série: Aqua ou VIIRS
 - Anos de calibração (proposta: 2012–2021, antes da deriva do Aqua)
-- Regra de duplicatas do MODIS e se a baixa confiança entra no calendário
-- `sem_dados` como tabela por data (`dias_sem_dados`)
-- O que sobe para produção (sem `focos`?) e como fica o export de focos (RD05)
-- Linguagem e framework da API (arquitetura, ponto 4) e hospedagem (ponto 12)
+- Regra de duplicatas do MODIS (em análise no PR #1; por enquanto só as exatas)
+- Linguagem e framework da API (arquitetura, ponto 4)
