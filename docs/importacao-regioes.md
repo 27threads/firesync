@@ -63,8 +63,10 @@ Para uma área `A`, um mês `(ano, mes)` e cada cenário `k` (ano de calibraçã
 2. **Mês `estimado_modis`:** `E_k = soma em b e p de C(b, p) × F_k(b, mes, p)`, com `F_k` o fator Aqua → S-NPP de `fatores_harmonizacao` no cenário `k`. Valor central = mediana de `E_k` entre os cenários. Faixa = percentis 10 e 90 de `E_k` entre os cenários, por interpolação linear (o padrão do `numpy.percentile`).
 3. **Mês `observado_viirs`:** valor = soma de `C(b, p)` em `b` e `p`. Sem faixa.
 4. Os fatores são aplicados **depois** de somar as células da área e **antes** de calcular os percentis.
+5. **Como cada `F_k` é calculado:** razão das somas, `F_k(b, m, p) = S_k(b, m, p) / A_k(b, m, p)`, com os totais de focos do S-NPP e do Aqua (confiança nominal e alta, `tipo = 0`) no bioma, mês, período e ano `k`. Saem os dias em que o Aqua ou o S-NPP aparecem em `dias_sem_dados`, e janeiro de 2012 (S-NPP incompleto). Quando `A_k` fica abaixo do mínimo de focos, a fusão segue esta ordem: meses vizinhos no mesmo período, depois dia e noite juntos, depois o ano inteiro do bioma (registrada em `fusao_com`).
+6. **Número de cenários:** 10 ou 13, conforme a validação, e janeiro tem um a menos. A API lê os anos que existem em `fatores_harmonizacao`, sem fixar a quantidade.
 
-Com `contagens.csv` (passo 1) e `fatores.csv` (os `F_k`) do ZIP de auditoria, qualquer pessoa refaz o `resultado.csv`.
+Com `counts.csv` (passo 1) e `factors.csv` (os `F_k`) do ZIP de auditoria, qualquer pessoa refaz o `result.csv`. Os nomes dos arquivos seguem o `docs/api.md` (PR #4).
 
 Detalhes e decisões em [decisoes-harmonizacao.md](decisoes-harmonizacao.md).
 
@@ -79,7 +81,7 @@ Cadeia de calibração, aplicada a cada região:
 1. **Escala final: VIIRS (S-NPP como referência).** Decisão do Weberson em 14/11/2026. Os meses só-MODIS (janeiro de 2003 até janeiro de 2012) são convertidos para a escala do VIIRS, e cada mês fica rotulado como observado ou estimado (`origem`) pela data.
 2. **Aqua → S-NPP:** fator por **bioma × mês × dia/noite**, calculado em contagens por célula H3, com base em 2012 a 2024. Os anos de calibração saem da validação deixando um ano de fora, com critério fixado antes: se o erro de 2022 a 2024 passar de 1,5× o de 2012 a 2021, ficam só 2012 a 2021 (10 cenários); senão, ficam os 13 anos. Cada ano de calibração é um cenário. Só confiança nominal e alta entra. Os 6 biomas do IBGE são calibrados. O fator da série é a mediana dos cenários, e a faixa de incerteza é o P10 e o P90 entre eles, calculados na API depois de somar a área. Só o Aqua entra (Terra fora, calendário a partir de 2003). 2025 em diante fica fora, porque a razão S-NPP/Aqua cai para 4,8, provavelmente pela deriva de órbita do Aqua. Ver [decisoes-harmonizacao.md](decisoes-harmonizacao.md).
 3. **NOAA-20 → S-NPP: fator 1** (decisão do Weberson em 14/11/2026). Na sobreposição de 01/04/2018 a 02/11/2026 as razões anuais ficaram entre 0,97 e 1,04, e o NOAA-20 só é usado de novembro de 2026 em diante. O mês atual mostra a mesma contagem do FIRMS, e a diferença de até 4% é declarada no Método.
-4. **NOAA-21:** só se o NOAA-20 falhar, calibrado contra o NOAA-20 a partir de 01/03/2023.
+4. **NOAA-21:** só se o NOAA-20 falhar. Pela mesma lógica do NOAA-20, também com fator 1 (razões NOAA-21/NOAA-20 entre 0,97 e 0,99 nos anos completos), com a diferença declarada no Método.
 
 Regras:
 
