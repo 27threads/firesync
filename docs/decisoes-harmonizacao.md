@@ -18,6 +18,7 @@ Este documento incorpora a revisão feita no PR 1 (comentário de nogran). Onde 
 | Baixa confiança | Guardada à parte, **fora do fator e do calendário** (seção 4) | Equipe (PR 1), aceito pelo Weberson |
 | Biomas calibrados | Os **6 biomas do IBGE**. A demo destaca Amazônia e Pantanal, e os outros biomas aparecem na seleção da interface | Equipe (PR 1), aceito pelo Weberson |
 | Dados provisórios (NRT) | Marcados com `qualidade = NRT`, fora do cálculo do fator | `banco.md` (PR #2) |
+| Duplicatas | Só linhas idênticas, nos dois sensores. O calendário conta **detecções de fogo**. Motivos em `regras-variaveis.md` | Weberson, 14/11/2026 |
 
 ## 2. Cuidados para não misturar as escalas
 
@@ -79,7 +80,6 @@ O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, 
 ## 7. Pendências
 
 1. Pedir à frente A a migration 002 (`n_focos_origem` e `fusao_com`).
-2. Regra de duplicatas do MODIS (juntar vizinhos ou só remover idênticas): em discussão.
 2. Definir o mínimo de focos por condição com a base limpa.
 3. Investigar a queda de S-NPP/Aqua em 2025.
 4. Esta decisão muda o que o contexto do projeto dizia sobre o modelo A (o classificador deixa de gerar o fator da série). A equipe deve concordar com a mudança.

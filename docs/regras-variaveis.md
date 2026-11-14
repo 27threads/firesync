@@ -30,8 +30,18 @@ Origem: documento de contexto do Weberson, revisado com os dados brutos de 2024 
 
 ## 3. Regras de duplicata
 
-- MODIS: mesmo satélite, mesma data, horário igual ou com até 1 minuto de diferença, distância menor que metade do `scan`. Fica o de maior confiança.
-- VIIRS: só linhas idênticas. Pontos vizinhos não se juntam.
+**DECIDIDO (Weberson, 14/11/2026):** nos dois sensores, remover **só as linhas idênticas** (`latitude`, `longitude`, `acq_date`, `acq_time`, `satellite`), como o `pipeline.py clean` já faz. Pontos vizinhos não se juntam.
+
+Motivos:
+
+- O calendário compara meses e anos. O que importa é contar sempre do mesmo jeito, e os pixels repetidos do MODIS (cerca de 4%, efeito bow-tie) entram no cálculo do fator e na aplicação, e se cancelam.
+- Uma frente de fogo ocupa vários pixels lado a lado. Juntar vizinhos pode apagar fogo de verdade.
+- A distância para juntar teria de ser diferente em cada sensor (pixel do MODIS de 1 km até quase 5 km, do VIIRS de 375 m), e qualquer escolha mudaria as contagens de forma arbitrária.
+- Cruzar milhões de focos por distância não cabe no prazo.
+
+Consequência na interface: o número do calendário se chama **"detecções de fogo"** (fire detections, convenção do FIRMS), com a nota "uma frente de fogo gera várias detecções".
+
+Ideia futura, fora do prazo: agrupar detecções em **eventos** para a visão de áreas críticas, só com o VIIRS e no período recente (localização pelo centro ponderado pelo FRP, FRP somado, primeira e última detecção).
 
 ## 4. Regras de ligação entre MODIS e VIIRS (só para o classificador complementar)
 
@@ -65,5 +75,4 @@ Origem: documento de contexto do Weberson, revisado com os dados brutos de 2024 
 ## 7. Perguntas em aberto
 
 1. Mínimo de focos por condição (definir com a base limpa).
-2. Duplicatas do MODIS (seção 3): juntar vizinhos ou remover só as linhas idênticas, como no VIIRS. Em discussão.
-3. Faixas de FRP para o classificador e para os indicadores de áreas críticas (sugestão inicial a partir dos dados brutos de 2024: 2, 5, 10 e 25 MW, a reconferir depois da limpeza).
+2. Faixas de FRP para o classificador e para os indicadores de áreas críticas (sugestão inicial a partir dos dados brutos de 2024: 2, 5, 10 e 25 MW, a reconferir depois da limpeza).
