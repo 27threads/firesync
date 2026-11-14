@@ -95,7 +95,7 @@ D1 a D5 começam com o JSON de exemplo do `api.md`, sem esperar a API.
 
 | ID | Tarefa | Depende de | Status | Pronto quando |
 | --- | --- | --- | --- | --- |
-| D1 | Esqueleto do app, interface em inglês e crédito ao FIRMS visível | T00 | a fazer | App abre local |
+| D1 | Esqueleto do app, interface em inglês e crédito ao FIRMS visível | T00 | feito (Vite + React + TS em `frontend/`; texto fixo, Method e Data & credits no `index.html`, abre sem JS) | App abre local |
 | D2 | Mapa com desenho de polígono e retângulo (RD01) e entrada de lat/lon (RD02) | D1 | a fazer | Área desenhada vira o pedido do `api.md` |
 | D3 | Seletor de intervalo de datas (RF07) | D1 | a fazer | Datas entram no pedido |
 | D4 | Calendário meses × anos em heatmap com paleta acessível (RF08, RD03, RD04) e meses com falha de satélite (`dias_sem_dados`) diferentes de zero | D1 | a fazer | Renderiza o JSON de exemplo |

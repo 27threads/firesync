@@ -72,4 +72,6 @@ API (a partir da raiz): `pip install -r backend/requirements-dev.txt` e `pytest 
 
 Jornadas de usuário (a partir de `frontend/e2e/`): `npm ci` e `npx playwright test`.
 
-O resto da API e do front: a preencher quando a stack estiver definida.
+Front (a partir de `frontend/`): `npm ci`, `npm test` (Vitest), `npm run dev` (porta 5173) e `npm run build`.
+
+O resto da API: a preencher quando a stack estiver definida.

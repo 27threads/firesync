@@ -9,6 +9,8 @@ Aplicação web: mapa para escolher a área, calendário em heatmap, janela rece
   - cores: cividis em escala logarítmica. Mês incompleto, estimado ou fora da cobertura vão marcados por hachura, borda ou rótulo, nunca só por cor.
 - **Requisitos que cobre:** RF06–RF13 e RD01–RD07 ([docs/requisitos.md](../docs/requisitos.md)).
 
+Comandos: `npm ci`, `npm test` (Vitest), `npm run dev` (porta 5173), `npm run build` e `npm run preview`. O texto fixo (intro, Method, Data & credits e o crédito ao FIRMS) fica no `index.html`, para a página abrir completa sem JavaScript; o React monta só a ferramenta em `#tool-root`. As cores em `src/styles.css` são provisórias até a equipe aprovar o plano de design.
+
 Regras que valem aqui:
 
 - Interface em inglês, com crédito ao NASA FIRMS visível.
