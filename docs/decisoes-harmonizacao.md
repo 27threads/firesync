@@ -146,9 +146,9 @@ O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, 
 
 ## 7. Pendências
 
-1. Cobertura da faixa separada por estação (seca e chuvosa), pedida pelo Mateus no PR #4. Sai do `validacao_meses.csv` da rodada gravada.
-2. B6: comparação com a série do INPE (pela forma da curva), depois da correção do PR #21.
-3. Levar o código da B3 (`data-pipeline/harmonizacao/`) para o `main`. Hoje ele está só na branch `trabalho/harmonizacao`.
+1. **Cobertura da faixa por estação** (pedida pelo Mateus no PR #4). Não precisa rodar de novo: sai do `validacao_meses.csv` da rodada gravada, que está no computador do Eduardo. Pedido feito no PR #21 em 14/11/2026; aguardando o arquivo. A separação usa a **temporada de fogo** de cada bioma (os meses que somam 80% do fogo do ano) contra o resto do ano (ESCOLHA DA EQUIPE), porque a estação seca muda de bioma para bioma.
+2. **B6, comparação com o INPE.** O script está pronto (`data-pipeline/harmonizacao/validar_inpe.py`, branch `trabalho/harmonizacao`) e passou no autoteste com dados inventados (degrau de +1% com fatores certos, +102% com fatores pela metade). Aguarda o PR #21 entrar na `main` (série do INPE com o satélite de referência: NOAA-12 até 03/07/2002, Aqua depois) e o Eduardo rodar no banco de teste. Mede, por bioma: correlação mensal e anual, os 5 anos com mais fogo, o mês de pico, a sazonalidade e o **degrau em 2012** (razão firesync/INPE antes e depois da troca de satélite; perto de zero quer dizer que a troca não inventou fogo). Contexto da frente A (issue #19): a série do Aqua no FIRMS já tem correlação mensal de 0,998 com a do INPE e o mesmo mês de pico em 23 de 23 anos, então o degrau em 2012 mede principalmente a nossa conversão.
+3. **Levar o código da B3 e da B6 para o `main`.** Os scripts (`prototipo_fator.py`, `calibrar.py`, `validar_inpe.py` e os autotestes) estão só na branch `trabalho/harmonizacao`. O envio direto ao `main` foi bloqueado pelo controle de permissões em 14/11/2026. Depende de decisão do Weberson: abrir um PR ou liberar o envio.
 4. Confirmar o mínimo de focos por condição (a calibração gravada usou 30).
 5. Investigar a queda de S-NPP/Aqua em 2025.
 6. Esta decisão muda o que o contexto do projeto dizia sobre o modelo A (o classificador deixa de gerar o fator da série). A equipe deve concordar com a mudança.
