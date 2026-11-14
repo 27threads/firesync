@@ -22,6 +22,7 @@ A equipe quer ganhar um prêmio global do Space Apps. Leia o [docs/premiacao.md]
   - **Bug:** primeiro um teste que reproduz o bug e falha, depois a correção, e o teste passa. Correção sem esse teste não entra.
   - **Esteira:** rode os testes antes do PR. A esteira do GitHub Actions precisa passar.
   - **Cobertura só sobe:** se a cobertura medida passar do mínimo, suba o mínimo no mesmo PR.
+  - **Sem código morto:** nada de import, variável, função ou classe sem uso, nem código comentado. A esteira roda `ruff check .` e `vulture` e quebra se achar. Rode os dois antes do PR.
   - **Especificação TDD já escrita:** se você implementar algo de `backend/tests/domain` ou `application` e o teste passar, a esteira quebra com XPASS. Tire o `xfail` daquele teste.
 
 ## Documentos
@@ -46,6 +47,8 @@ A equipe quer ganhar um prêmio global do Space Apps. Leia o [docs/premiacao.md]
 
 - Nunca adicione `Co-Authored-By` (nem outra linha de coautoria ou atribuição) nas mensagens de commit. O uso de IA é registrado só na tabela "Uso de IA" do README.
 - Nunca adicione "🤖 Generated with [Claude Code](https://claude.com/claude-code)" (nem outra atribuição de ferramenta) na descrição ou nos comentários de pull requests.
+- **Nunca faça push numa branch cujo PR já foi mergeado.** O commit fica fora da `main` e se perde sem aviso (já aconteceu: o `alert_rules.json` 0.2 ficou na branch do PR #14). Antes de cada push, confira o PR da branch com `gh pr view --json state`. Se estiver `MERGED`, crie uma branch nova a partir da `main` atualizada e abra outro PR.
+- A `main` é protegida: só entra por PR, e só com a esteira verde.
 
 ## Uso de IA
 
