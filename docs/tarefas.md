@@ -53,7 +53,7 @@ Ler antes: [firms-extracao-dados.md](firms-extracao-dados.md), [plano-extracao-a
 | A4 | Criar o banco com as tabelas `focos`, `regioes` e `cobertura` | T00 | feito (`data-pipeline/migrations/001_inicial.sql`, em PR) | Script de criação versionado |
 | A5 | Importador: normalizar colunas, calcular H3, upsert com a chave única, atualizar `cobertura` | A4 | feito (`pipeline.py importar`; 2024 bate com o plano, diferença < 0,2% = fora dos biomas) | `importar` carrega os 5 arquivos de 2024 e as contagens batem com a tabela do plano de extração |
 | A6 | Cadastrar as regiões Amazônia e Pantanal em `regioes`, com as células em `celula_regiao` | A2, A4 | feito (os 6 biomas, `pipeline.py cadastrar`) | As duas regiões com polígono e células |
-| A7 | Carregar o histórico completo | A1, A5 | a fazer | `cobertura` mostra cada satélite no período esperado |
+| A7 | Carregar o histórico completo | A1, A5 | feito no banco de teste (46,4 mi de focos, ver `pipeline-dados.md`) | `cobertura` mostra cada satélite no período esperado |
 
 ## B. Harmonização
 
