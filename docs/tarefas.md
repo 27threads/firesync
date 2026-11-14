@@ -114,4 +114,12 @@ D1 a D5 começam com o JSON de exemplo do `api.md`, sem esperar a API.
 
 ## Backend de Rafael — partes 1 a 3
 
-Branch `dev-backend-rafael`. Domínio e contratos, repositórios PostgreSQL e análise histórica: **fazendo**. Endpoints HTTP, monitoramento recente e exportação ficam para entregas seguintes. Critério principal: Validity.
+Branch `dev-backend-rafael`. Critério principal: Validity.
+
+| Parte | Status | Evidência |
+| --- | --- | --- |
+| 1. Domínio e contratos internos | feito | Modelos, seleção H3 e percentis com testes unitários |
+| 2. Repositório histórico PostgreSQL | feito | Testes reais de consulta, cobertura, rollback e snapshot durante escrita concorrente |
+| 3. Análise histórica | feito | Calendário, cenários, ranking, sazonalidade, anomalias e teste integrado com PostGIS |
+
+Endpoints HTTP, monitoramento recente e exportação ficam para entregas seguintes. C3–C5 ainda exigem a composição HTTP e a integração com os dados reais para cumprir integralmente os critérios originais. Políticas e comandos em `backend/README.md`.
