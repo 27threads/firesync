@@ -35,8 +35,8 @@ Cinco tabelas separam o dado bruto, as regiões, a cobertura, a calibração e o
 | `focos` | Foco detectado | Campos normalizados do importador + `h3` | Importador e jobs de atualização |
 | `regioes` | Região | `id`, `nome`, `geom` (polígono), `celulas_h3`, `fonte_poligono` | Cadastro manual |
 | `cobertura` | Região × satélite | `regiao_id`, `satelite`, `data_inicio`, `data_fim`, `atualizado_em` | Importador |
-| `fatores_harmonizacao` | Região × par de satélites | `regiao_id`, `satelite_origem`, `satelite_destino`, `fator`, `periodo_calibracao`, `n_meses` | Job de calibração |
-| `agregados` (contrato 1) | Célula H3 × ano × mês | `h3`, `ano`, `mes`, `focos_harmonizados`, `focos_brutos`, `frp_soma`, `sem_dados` | Job de agregação |
+| `fatores_harmonizacao` | Região × par de satélites × mês × dia/noite × ano de calibração | `regiao_id`, `satelite_origem`, `satelite_destino`, `mes`, `periodo`, `ano_calibracao`, `fator` | Job de calibração |
+| `agregados` (contrato 1) | Célula H3 × ano × mês × satélite × dia/noite | `h3`, `ano`, `mes`, `regiao_id`, `satelite`, `periodo`, `focos_brutos`, `frp_soma` (contagem bruta; o fator é aplicado na API, ver [banco.md](banco.md)) | Job de agregação |
 
 A API usa a `cobertura` para responder "sem dados para esta área" quando a área desenhada cai fora das regiões carregadas, em vez de devolver um calendário vazio. A coluna `sem_dados` marca os meses em que o FIRMS informa falha de satélite (`missing_data`), para não confundir com zero focos.
 

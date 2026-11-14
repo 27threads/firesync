@@ -27,7 +27,7 @@ plt.rcParams.update({"font.size": 9, "axes.edgecolor": MUTED, "axes.labelcolor":
 
 
 def accumulate():
-    monthly = defaultdict(int)       # (base, regiao, ano, mês) -> focos
+    monthly = defaultdict(int)       # (base, ano, mês) -> focos
     counts = defaultdict(lambda: defaultdict(int))  # base -> métrica -> n
     conf = defaultdict(lambda: defaultdict(int))
     samples = []
@@ -54,13 +54,13 @@ def accumulate():
                     bins = pd.cut(pd.to_numeric(g.confidence), [-1, 29, 49, 79, 100], labels=["0-29", "30-49", "50-79", "80-100"])
                     for k, v in bins.value_counts().items():
                         conf[base][str(k)] += v
-                for (b, y, m), v in g.groupby([g.regiao, g.acq_date.str[:4], g.acq_date.str[5:7]]).size().items():
-                    monthly[(base, b, int(y), int(m))] += v
+                for (y, m), v in g.groupby([g.acq_date.str[:4], g.acq_date.str[5:7]]).size().items():
+                    monthly[(base, int(y), int(m))] += v
                 c["inicio"] = min(c.get("inicio", "9999"), g.acq_date.min())
                 c["fim"] = max(c.get("fim", ""), g.acq_date.max())
-            samples.append(df.sample(frac=SAMPLE, random_state=0)[["base", "frp_n", "scan", "track", "acq_time", "daynight", "regiao"]])
+            samples.append(df.sample(frac=SAMPLE, random_state=0)[["base", "frp_n", "scan", "track", "acq_time", "daynight"]])
             print("eda:", p.name, flush=True)
-    m = pd.Series(monthly).rename_axis(["base", "regiao", "ano", "mes"]).rename("focos").reset_index()
+    m = pd.Series(monthly).rename_axis(["base", "ano", "mes"]).rename("focos").reset_index()
     return m, counts, conf, pd.concat(samples, ignore_index=True)
 
 
@@ -79,7 +79,7 @@ def calendar(m, base):
     ax.set_yticks(range(len(t)), t.index)
     ax.grid(False)
     fig.colorbar(im, ax=ax, label="focos/mês")
-    ax.set_title(f"{base}: focos por mês (regiões de regioes.json)", loc="left", color=INK)
+    ax.set_title(f"{base}: focos por mês (cobertura)", loc="left", color=INK)
     return png(fig)
 
 
@@ -158,8 +158,8 @@ def main():
             img, r = ratio(m, num, den)
             ratios.append(img)
             r.to_csv(out / f"razao_{num.split()[-1]}_{den.split()[-1]}.csv".lower())
-    parts = [f"<h1>Análise exploratória das bases FIRMS: regiões de regioes.json</h1>",
-             "<p>Dados <b>antes</b> dos filtros de limpeza (só recorte pelas regiões de regioes.json). Distribuições usam amostra de "
+    parts = [f"<h1>Análise exploratória das bases FIRMS: cobertura (Brasil)</h1>",
+             "<p>Dados <b>antes</b> dos filtros de limpeza (só recorte pela cobertura, tabela regioes). Distribuições usam amostra de "
              f"{SAMPLE:.0%}. Tabela mensal completa em <code>reports/focos_mensais_por_base.csv</code>.</p>",
              "<h2>Resumo por base</h2>", summary(counts, conf, s),
              "<h2>Comparação entre bases</h2>", annual(m), *ratios]

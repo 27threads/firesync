@@ -1,11 +1,12 @@
-"""Pipeline de dados FIRMS (MODIS + VIIRS), etapa de arquivos (antes do banco).
+"""Pipeline de dados FIRMS (MODIS + VIIRS).
 
-Uso:
-    python pipeline.py download   # polígonos das regiões + arquivos anuais do Brasil + API (2026 / NOAA-21 / NRT)
-    python pipeline.py stage      # recorta as regiões de regioes.json (sem filtros) em data/staged/
+Uso (nesta ordem; precisa de DATABASE_URL e, para o download, FIRMS_MAP_KEY):
+    python pipeline.py cadastrar  # regioes.json -> tabela regioes (polígono + celulas_h3)
+    python pipeline.py download   # arquivos anuais do país da cobertura + API (2026 / NOAA-21 / NRT)
+    python pipeline.py stage      # mantém só os focos dentro da cobertura (sem filtros) em data/staged/
     python pipeline.py clean      # aplica os filtros do time de dados e grava parquet em data/processed/
 
-Detalhes: docs/pipeline-dados.md
+Detalhes: docs/pipeline-dados.md e docs/banco.md
 """
 import json
 import os
@@ -16,15 +17,17 @@ from io import StringIO
 from pathlib import Path
 
 import geopandas as gpd
+import h3
 import pandas as pd
+import psycopg
+import shapely
 
 ROOT = Path(__file__).parent
 RAW = ROOT / "data" / "raw"
 STAGE = ROOT / "data" / "staged"
 OUT = ROOT / "data" / "processed"
-COUNTRY_URL = "https://firms.modaps.eosdis.nasa.gov/data/country/{src}/{y}/{src}_{y}_Brazil.csv"
+COUNTRY_URL = "https://firms.modaps.eosdis.nasa.gov/data/country/{src}/{y}/{src}_{y}_{pais}.csv"
 API = "https://firms.modaps.eosdis.nasa.gov/api"
-REGIOES = json.loads((ROOT / "regioes.json").read_text(encoding="utf-8"))  # regiões são dado, não código
 
 # Arquivos anuais por país (versão padrão, com `type`). Último ano completo publicado: 2025.
 COUNTRY_FILES = {
@@ -41,19 +44,30 @@ API_SOURCES = [
 ]
 
 MODIS_COLS = ["latitude", "longitude", "brightness", "bright_t31", "scan", "track", "acq_date", "acq_time",
-              "satellite", "confidence", "version", "frp", "daynight", "type", "regiao", "provisional"]
+              "satellite", "confidence", "version", "frp", "daynight", "type", "provisional"]
 VIIRS_COLS = ["latitude", "longitude", "bright_ti4", "bright_ti5", "scan", "track", "acq_date", "acq_time",
-              "satellite", "confidence", "version", "frp", "daynight", "type", "regiao", "provisional", "high_conf"]
+              "satellite", "confidence", "version", "frp", "daynight", "type", "provisional", "high_conf"]
 
 
-def map_key():
-    if os.environ.get("FIRMS_MAP_KEY"):
-        return os.environ["FIRMS_MAP_KEY"]
-    env = ROOT / ".env"
-    for line in env.read_text().splitlines() if env.exists() else []:
-        if line.startswith("FIRMS_MAP_KEY="):
+def env(name):
+    if os.environ.get(name):
+        return os.environ[name]
+    f = ROOT / ".env"
+    for line in f.read_text().splitlines() if f.exists() else []:
+        if line.startswith(name + "="):
             return line.split("=", 1)[1].strip()
-    raise SystemExit("FIRMS_MAP_KEY não definida (variável de ambiente ou data-pipeline/.env)")
+    raise SystemExit(f"{name} não definida (variável de ambiente ou data-pipeline/.env)")
+
+
+def db():
+    return psycopg.connect(env("DATABASE_URL"), autocommit=True)
+
+
+def config(conn, chave):
+    row = conn.execute("SELECT valor FROM config WHERE chave = %s", (chave,)).fetchone()
+    if row is None:
+        raise SystemExit(f"config.{chave} não existe: rode a migration")
+    return row[0]
 
 
 def curl(url, dest=None):
@@ -67,10 +81,49 @@ def curl(url, dest=None):
     return subprocess.run(args, check=True, capture_output=True, text=True).stdout
 
 
+# ---------------------------------------------------------------- cadastrar
+def cadastrar():
+    """Única etapa que lê regioes.json. Grava polígono e células H3 em `regioes` (upsert por nome)."""
+    conn = db()
+    res = int(config(conn, "h3_resolucao"))
+    for r in json.loads((ROOT / "regioes.json").read_text(encoding="utf-8")):
+        src = RAW / r["arquivo"]
+        if not src.exists():
+            src.parent.mkdir(parents=True, exist_ok=True)
+            curl(r["url"], src)
+        g = gpd.read_file(f"zip://{src}")
+        # SIRGAS2000 ≈ WGS84 (<1 m)
+        geom = g[g[r["campo"]] == r["valor"]].set_crs(4326, allow_override=True).union_all()
+        cells = [h3.str_to_int(c) for c in h3.h3shape_to_cells(h3.geo_to_h3shape(geom.__geo_interface__), res)]
+        conn.execute(
+            """INSERT INTO regioes (nome, geom, celulas_h3, fonte_poligono)
+               VALUES (%s, ST_Multi(ST_GeomFromWKB(%s, 4326)), %s, %s)
+               ON CONFLICT (nome) DO UPDATE
+               SET geom = EXCLUDED.geom, celulas_h3 = EXCLUDED.celulas_h3, fonte_poligono = EXCLUDED.fonte_poligono""",
+            (r["nome"], shapely.to_wkb(geom), cells, r["fonte_poligono"]))
+        print(f"cadastrar: {r['nome']} ({len(cells):,} células res {res})", flush=True)
+
+
+def load_regions(conn):
+    """Polígonos da tabela `regioes` (a cobertura é a união deles)."""
+    rows = conn.execute("SELECT nome, ST_AsBinary(geom) FROM regioes ORDER BY id").fetchall()
+    return gpd.GeoDataFrame({"nome": [r[0] for r in rows]},
+                            geometry=shapely.from_wkb([bytes(r[1]) for r in rows]), crs=4326).rename_geometry("geom")
+
+
+def bbox_of(regions):
+    w, s, e, n = regions.total_bounds
+    return (w - 0.01, s - 0.01, e + 0.01, n + 0.01)  # oeste, sul, leste, norte; folga pro arredondamento da URL
+
+
 # ---------------------------------------------------------------- download
 def download():
-    key = map_key()
-    regions = load_regions()
+    key = env("FIRMS_MAP_KEY")
+    conn = db()
+    pais = config(conn, "cobertura_pais")
+    regions = load_regions(conn)
+    if regions.empty:
+        raise SystemExit("tabela regioes vazia: rode `python pipeline.py cadastrar` antes")
     for src, years in COUNTRY_FILES.items():
         for y in years:
             dest = RAW / "country" / f"{src}_{y}.csv"
@@ -78,7 +131,7 @@ def download():
                 continue
             dest.parent.mkdir(parents=True, exist_ok=True)
             print("país:", dest.name, flush=True)
-            curl(COUNTRY_URL.format(src=src, y=y), dest)
+            curl(COUNTRY_URL.format(src=src, y=y, pais=pais), dest)
 
     avail = pd.read_csv(StringIO(curl(f"{API}/data_availability/csv/{key}/ALL"))).set_index("data_id")
     bbox = ",".join(f"{v:.2f}" for v in bbox_of(regions))
@@ -114,8 +167,8 @@ def read_raw(p, bbox):
 
 
 def stage():
-    """Bruto -> só as regiões de regioes.json, colunas normalizadas, sem nenhum filtro de qualidade."""
-    regions = load_regions()
+    """Bruto -> só focos dentro da cobertura (união de `regioes`), colunas normalizadas, sem filtro de qualidade."""
+    regions = load_regions(db())
     bbox = bbox_of(regions)
     for kind in ["modis", "viirs"]:
         for p in raw_files(kind):
@@ -126,11 +179,8 @@ def stage():
             df = read_raw(p, bbox)
             if df.empty:
                 continue
-            add_regiao(normalize(df, kind), regions).to_parquet(dest, index=False)
+            in_coverage(normalize(df, kind), regions).to_parquet(dest, index=False)
             print("stage:", dest.name, flush=True)
-
-
-# ---------------------------------------------------------------- clean
 
 
 def normalize(df, kind):
@@ -143,32 +193,14 @@ def normalize(df, kind):
     return df
 
 
-def load_regions():
-    """Polígonos de regioes.json (baixa o arquivo de origem se faltar). Retorna GeoDataFrame [regiao, geometry]."""
-    parts = []
-    for r in REGIOES:
-        src = RAW / r["arquivo"]
-        if not src.exists():
-            src.parent.mkdir(parents=True, exist_ok=True)
-            curl(r["url"], src)
-        g = gpd.read_file(f"zip://{src}")
-        g = g[g[r["campo"]] == r["valor"]].set_crs(4326, allow_override=True)  # SIRGAS2000 ≈ WGS84 (<1 m)
-        parts.append(gpd.GeoDataFrame({"regiao": [r["nome"]]}, geometry=[g.union_all()], crs=4326))
-    return pd.concat(parts, ignore_index=True)
-
-
-def bbox_of(regions):
-    w, s, e, n = regions.total_bounds
-    return (w - 0.01, s - 0.01, e + 0.01, n + 0.01)  # oeste, sul, leste, norte; folga pro arredondamento da URL
-
-
-def add_regiao(df, regions):
+def in_coverage(df, regions):
+    """Mantém os pontos dentro de qualquer região. Não grava a região no foco (isso é da calibração)."""
     pts = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.longitude, df.latitude), crs=4326)
-    j = gpd.sjoin(pts, regions, predicate="within", how="inner")
-    j = j[~j.index.duplicated()]  # ponto exatamente na divisa entre regiões
-    return pd.DataFrame(j.drop(columns=["geometry", "index_right"]))
+    j = gpd.sjoin(pts, regions[["geom"]], predicate="within", how="inner")
+    return df.loc[j.index.unique()]
 
 
+# ---------------------------------------------------------------- clean
 def keep(df, mask, log, key):
     """Filtra e soma no log quantas linhas saíram (acumula entre arquivos)."""
     log[key] = log.get(key, 0) + int((~mask).sum())
@@ -211,12 +243,12 @@ def clean():
     OUT.mkdir(parents=True, exist_ok=True)
     report = {}
     for kind, fn, cols in [("modis", clean_modis, MODIS_COLS), ("viirs", clean_viirs, VIIRS_COLS)]:
-        log = {"linhas_amazonia_pantanal": 0, "principal": 0, "baixa_confianca": 0}
+        log = {"linhas_na_cobertura": 0, "principal": 0, "baixa_confianca": 0}
         for name in ["main", "lowconf"]:
             shutil.rmtree(OUT / f"{kind}_{name}", ignore_errors=True)
         for p in sorted((STAGE / kind).glob("*.parquet")):
             df = pd.read_parquet(p)
-            log["linhas_amazonia_pantanal"] += len(df)
+            log["linhas_na_cobertura"] += len(df)
             main, low = fn(df, log)
             log["principal"] += len(main); log["baixa_confianca"] += len(low)
             write(main, OUT / f"{kind}_main", cols)
@@ -227,4 +259,4 @@ def clean():
 
 
 if __name__ == "__main__":
-    {"download": download, "stage": stage, "clean": clean}[sys.argv[1]]()
+    {"cadastrar": cadastrar, "download": download, "stage": stage, "clean": clean}[sys.argv[1]]()

@@ -4,23 +4,25 @@ Nov 14, 2026 · branch `a-importador`
 
 ## Resumo
 
-O histórico do FIRMS já está baixado e não depende do pedido do Archive Download. Usamos os **resumos anuais por país** (Brasil, versão SP) até 2025 e a **API** para 2026. Um pipeline de arquivos em Python recorta as regiões de `data-pipeline/regioes.json`, aplica os filtros de qualidade do time de dados e gera uma análise exploratória por satélite.
+O histórico do FIRMS já está baixado e não depende do pedido do Archive Download. Usamos os **resumos anuais por país** (Brasil, versão SP) até 2025 e a **API** para 2026. Um pipeline em Python cadastra as regiões de calibração (os 6 biomas do IBGE) no banco, mantém todos os focos da cobertura (Brasil inteiro), aplica os filtros de qualidade do time de dados e gera uma análise exploratória por satélite.
 
-Ainda **não** existe banco, H3 nem importador com upsert (tarefas A4 e A5). Esta etapa serviu para conhecer os dados e decidir o pré-processamento antes de escrever o importador.
+O banco já tem schema (A4) e as regiões cadastradas. Ainda **não** existe o importador de `focos` com upsert (A5). Esta etapa serviu para conhecer os dados e decidir o pré-processamento antes de escrever o importador.
 
 ## Arquitetura atual
 
 ```
-FIRMS (arquivos anuais por país + API)      IBGE (Biomas 1:250.000)
-            │                                         │
-            ▼  python pipeline.py download            ▼
-data/raw/country/   CSV Brasil inteiro, 1 por sensor e ano (SP, com `type`)
-data/raw/api/       CSV de 5 em 5 dias, bbox das regiões (2026 SP + NRT, NOAA-21)
+regioes.json ──▶ python pipeline.py cadastrar ──▶ tabela `regioes` (6 biomas, polígono + celulas_h3)
+                                                        │ (bbox e cobertura vêm daqui)
+FIRMS (arquivos anuais por país + API)                  ▼
+            │  python pipeline.py download
+            ▼
+data/raw/country/   CSV do país da cobertura, 1 por sensor e ano (SP, com `type`)
+data/raw/api/       CSV de 5 em 5 dias, bbox da cobertura (2026 SP + NRT, NOAA-21)
 data/raw/ibge/      polígonos
             │
-            ▼  python pipeline.py stage    (sem filtro de qualidade)
-data/staged/{modis,viirs}/   parquet por arquivo: só pontos dentro das regiões,
-                             colunas normalizadas, coluna `regiao`
+            ▼  python pipeline.py stage    (sem filtro de qualidade, sem coluna de região)
+data/staged/{modis,viirs}/   parquet por arquivo: só pontos dentro da cobertura (Brasil),
+                             colunas normalizadas
             │
             ├──▶ python eda.py            → reports/eda.html + CSVs de contagem
             │
@@ -33,8 +35,9 @@ Tudo roda **um arquivo de cada vez**, porque o histórico (~30 milhões de focos
 
 | Arquivo | O que faz |
 | --- | --- |
-| `data-pipeline/pipeline.py` | `download`, `stage`, `clean` |
-| `data-pipeline/regioes.json` | Regiões como dado: nome, fonte do polígono, URL, campo e valor do filtro |
+| `data-pipeline/pipeline.py` | `cadastrar`, `download`, `stage`, `clean` |
+| `data-pipeline/migrations/` | Schema do banco ([banco.md](banco.md)) |
+| `data-pipeline/regioes.json` | Entrada do `cadastrar`: os 6 biomas (nome, fonte do polígono, URL, campo e valor). Só o `cadastrar` lê este arquivo |
 | `data-pipeline/eda.py` | Análise exploratória por satélite, antes dos filtros |
 | `data-pipeline/test_pipeline.py` | Self-check dos filtros com casos sintéticos |
 | `data-pipeline/requirements.txt` | Dependências |
@@ -65,7 +68,7 @@ Diferenças de formato que o `normalize` corrige:
 - O Archive Download NRT do VIIRS usa `brightness`/`bright_t31`. O SP usa `bright_ti4`/`bright_ti5`.
 - **NRT não tem a coluna `type`.** Linhas NRT ficam com `type` vazio e `provisional = True`.
 
-**MAP_KEY:** variável de ambiente `FIRMS_MAP_KEY` ou arquivo `data-pipeline/.env` com `FIRMS_MAP_KEY=...` (fora do git).
+**Variáveis:** `FIRMS_MAP_KEY` e `DATABASE_URL`, como variáveis de ambiente ou no arquivo `data-pipeline/.env` (fora do git).
 
 ## Filtros de qualidade (`clean`)
 
@@ -166,10 +169,10 @@ Achados:
 3. **Terra e Aqua são bem diferentes.** Os horários de passagem não são os mesmos (Terra ~10:30/22:30 e Aqua ~13:30/01:30 no horário local), e por isso o Terra tem 46% dos focos à noite e o Aqua só 11%.
 4. **A FRP mediana do VIIRS é ~5× menor que a do MODIS.** O VIIRS conta muitos fogos fracos que o MODIS não vê.
 5. **A razão S-NPP/Aqua muda mês a mês.** Na Amazônia em 2020 foi de 3,7× (abril) a 9,5× (agosto). Tabela completa em `reports/razao_snpp_aqua.csv`. É o dado de entrada da harmonização (frente B).
-7. **Os três VIIRS são equivalentes:** NOAA-20/S-NPP e NOAA-21/NOAA-20 ficam entre 0,97 e 1,04 nos anos completos. Isso confirma a regra "um VIIRS por período".
-8. **Calibrar contra o Aqua é duas vezes mais estável que contra o Terra** (variação mensal de 0,20 contra 0,44), e o Terra repete a série do Aqua (correlação de 0,977).
-9. **S-NPP/Aqua caiu para 4,8 em 2025**, contra ~6 nos anos anteriores. Pode ser efeito da deriva da órbita do Aqua (saiu do A-Train em 2022) ou só um ano de fogo diferente. Precisa ser investigado antes de congelar o fator.
-6. No MODIS, **8.331 pares (4%)** de focos na mesma passagem ficam a menos de ~1 km um do outro. Pode ser o efeito "bow-tie" na borda da faixa ou fogos vizinhos de verdade. Não foram removidos.
+6. **Os três VIIRS são equivalentes:** NOAA-20/S-NPP e NOAA-21/NOAA-20 ficam entre 0,97 e 1,04 nos anos completos. Isso confirma a regra "um VIIRS por período".
+7. **Calibrar contra o Aqua é duas vezes mais estável que contra o Terra** (variação mensal de 0,20 contra 0,44), e o Terra repete a série do Aqua (correlação de 0,977).
+8. **S-NPP/Aqua caiu para 4,8 em 2025**, contra ~6 nos anos anteriores. Pode ser efeito da deriva da órbita do Aqua (saiu do A-Train em 2022) ou só um ano de fogo diferente. Precisa ser investigado antes de congelar o fator.
+9. No MODIS, **8.331 pares (4%)** de focos na mesma passagem ficam a menos de ~1 km um do outro. Pode ser o efeito "bow-tie" na borda da faixa ou fogos vizinhos de verdade. Não foram removidos.
 
 ## Como rodar
 
@@ -178,13 +181,14 @@ Comandos em bash, a partir de `data-pipeline/`:
 ```bash
 pip install -r requirements.txt
 python test_pipeline.py          # self-check dos filtros
+python pipeline.py cadastrar     # precisa do banco com a migration aplicada
 python pipeline.py download      # ~3,5 GB; retoma de onde parou
 python pipeline.py stage
 python eda.py                    # reports/eda.html
 python pipeline.py clean
 ```
 
-Para adicionar uma região: acrescente uma entrada em `regioes.json` e rode `stage` de novo. O código não muda.
+Para adicionar uma região de calibração: acrescente uma entrada em `regioes.json` e rode `cadastrar`. Para outro país: troque `config.cobertura_pais` e rode `download` e `stage`. O código não muda.
 
 ## Diferenças em relação aos outros documentos
 
@@ -193,7 +197,8 @@ Para adicionar uma região: acrescente uma entrada em `regioes.json` e rode `sta
 | Fonte do histórico | Archive Download (pedido) | Resumos anuais por país | Mesmo dado SP, sem fila de aprovação (A1) |
 | NOAA-21 | Só reserva no NRT | Baixa também o SP desde 03/2023 | Extra, não atrapalha. É só não usar |
 | Terra | Fora do cálculo | Baixado e mantido separado (`satellite=Terra`) | Confirmado: só Aqua |
-| Banco e H3 | Tabelas `focos`, `regioes`, `cobertura` com H3 | Ainda em parquet | A4–A6 pendentes |
+| Banco e H3 | Tabelas `focos`, `regioes`, `cobertura` com H3 | Schema pronto (A4), `regioes` com os 6 biomas (A6). `focos` ainda em parquet | A5 e A7 pendentes |
+| Regiões | Amazônia (e Pantanal) | Cobertura = Brasil inteiro; regiões de calibração = 6 biomas | Decidido no PR #2 |
 
 ## Pendências e decisões em aberto
 

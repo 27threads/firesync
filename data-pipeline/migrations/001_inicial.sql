@@ -5,7 +5,18 @@
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 
--- Um foco detectado. Brasil inteiro, todos os satélites (Terra fica guardado, mas fora do cálculo).
+-- Fonte única de configuração. O pipeline e a API leem daqui, sem número fixo no código.
+CREATE TABLE IF NOT EXISTS config (
+    chave TEXT PRIMARY KEY,
+    valor TEXT NOT NULL
+);
+INSERT INTO config (chave, valor) VALUES
+    ('h3_resolucao', '6'),        -- mudar exige migration nova: refazer agregados e regioes.celulas_h3
+    ('cobertura_pais', 'Brazil')  -- unidade de download do FIRMS (arquivo anual por país)
+ON CONFLICT (chave) DO NOTHING;
+
+-- Um foco detectado. Tudo o que foi baixado (cobertura), sem recorte por região.
+-- Terra fica guardado, mas fora do cálculo.
 CREATE TABLE IF NOT EXISTS focos (
     id             BIGSERIAL PRIMARY KEY,
     sensor         TEXT        NOT NULL CHECK (sensor IN ('MODIS', 'VIIRS')),
@@ -21,13 +32,15 @@ CREATE TABLE IF NOT EXISTS focos (
     scan           REAL,                           -- tamanho do pixel; o time de dados usa no modelo
     track          REAL,
     arquivo_origem TEXT        NOT NULL,
-    h3             BIGINT      NOT NULL,           -- resolução definida em docs/banco.md
+    -- a resolução fica nos bits 52-55 do ID: carga na resolução errada falha aqui
+    h3             BIGINT      NOT NULL CHECK (((h3 >> 52) & 15) = 6),
     UNIQUE (satelite, lat, lon, datahora_utc)      -- chave única do upsert
 );
 CREATE INDEX IF NOT EXISTS focos_h3_data ON focos (h3, datahora_utc);
 CREATE INDEX IF NOT EXISTS focos_sat_data ON focos (satelite, datahora_utc);
 
--- Regiões são dado, não código.
+-- Regiões de calibração (hoje: os 6 biomas do IBGE). Fonte de verdade para API, calibração e agregação.
+-- Preenchida pelo comando `python pipeline.py cadastrar` a partir de regioes.json.
 CREATE TABLE IF NOT EXISTS regioes (
     id             SERIAL PRIMARY KEY,
     nome           TEXT   NOT NULL UNIQUE,
@@ -47,26 +60,29 @@ CREATE TABLE IF NOT EXISTS cobertura (
     PRIMARY KEY (regiao_id, satelite)
 );
 
--- Fatores de harmonização por região (frente B). Colunas conforme importacao-regioes.md;
--- podem mudar quando o método de harmonização for decidido.
+-- Um fator por região × par de satélites × mês × dia/noite × ano de calibração.
+-- Cada ano é um cenário: a mediana é o fator central e o P10-P90 é a faixa (calculados na API).
 CREATE TABLE IF NOT EXISTS fatores_harmonizacao (
-    regiao_id          INTEGER   NOT NULL REFERENCES regioes (id) ON DELETE CASCADE,
-    satelite_origem    TEXT      NOT NULL,
-    satelite_destino   TEXT      NOT NULL,
-    fator              REAL      NOT NULL,
-    periodo_calibracao DATERANGE NOT NULL,
-    n_meses            INTEGER   NOT NULL,
-    PRIMARY KEY (regiao_id, satelite_origem, satelite_destino)
+    regiao_id        INTEGER  NOT NULL REFERENCES regioes (id) ON DELETE CASCADE,
+    satelite_origem  TEXT     NOT NULL,
+    satelite_destino TEXT     NOT NULL,
+    mes              SMALLINT NOT NULL CHECK (mes BETWEEN 1 AND 12),
+    periodo          CHAR(1)  NOT NULL CHECK (periodo IN ('D', 'N')),
+    ano_calibracao   SMALLINT NOT NULL,
+    fator            REAL     NOT NULL,
+    PRIMARY KEY (regiao_id, satelite_origem, satelite_destino, mes, periodo, ano_calibracao)
 );
 
--- Contrato 1 (T01): o que a API lê. Uma linha por célula H3 × ano × mês, só células com dado.
+-- Contrato 1 (T01): o que a API lê. Contagem BRUTA por célula × mês × satélite × dia/noite;
+-- a API soma a área e só depois aplica os fatores. Mês sem focos não tem linha (a API preenche zero).
 CREATE TABLE IF NOT EXISTS agregados (
-    h3                 BIGINT   NOT NULL,
-    ano                SMALLINT NOT NULL,
-    mes                SMALLINT NOT NULL CHECK (mes BETWEEN 1 AND 12),
-    focos_harmonizados REAL     NOT NULL,
-    focos_brutos       INTEGER  NOT NULL,
-    frp_soma           REAL     NOT NULL,
-    sem_dados          BOOLEAN  NOT NULL DEFAULT false,
-    PRIMARY KEY (h3, ano, mes)   -- também é o índice da consulta da API
+    h3           BIGINT   NOT NULL CHECK (((h3 >> 52) & 15) = 6),
+    ano          SMALLINT NOT NULL,
+    mes          SMALLINT NOT NULL CHECK (mes BETWEEN 1 AND 12),
+    regiao_id    INTEGER  NOT NULL REFERENCES regioes (id) ON DELETE CASCADE,
+    satelite     TEXT     NOT NULL,
+    periodo      CHAR(1)  NOT NULL CHECK (periodo IN ('D', 'N')),
+    focos_brutos INTEGER  NOT NULL,
+    frp_soma     REAL     NOT NULL,
+    PRIMARY KEY (h3, ano, mes, satelite, periodo)   -- também é o índice da consulta da API
 );
