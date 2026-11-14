@@ -36,7 +36,7 @@ A e B dividem `data-pipeline/`. Antes de começar, combinem a estrutura de subpa
 
 | ID | Tarefa | Status | Pronto quando |
 | --- | --- | --- | --- |
-| T00 | Decidir os pontos 1, 2, 4, 5 e 12 de [arquitetura.md](arquitetura.md) e escrever as justificativas | fazendo (1, 2 e 12 decididos; faltam 4 e 5) | Os 5 pontos preenchidos |
+| T00 | Decidir os pontos 1, 2, 4, 5 e 12 de [arquitetura.md](arquitetura.md) e escrever as justificativas | fazendo (1, 2, 5 e 12 decididos; falta o 4) | Os 5 pontos preenchidos |
 | T01 | Fechar o formato de `agregados` (colunas, tipos, resolução H3) | feito ([banco.md](banco.md), PR #2) | Seção escrita em [importacao-regioes.md](importacao-regioes.md) |
 | T02 | Escrever `docs/api.md` com endpoints, pedido, resposta, erros e um JSON de exemplo | fazendo (na `main`, falta A e D confirmarem) | A e D leram e concordaram |
 | T03 | Preencher responsáveis desta página e criar as 4 branches | a fazer | Tabela de frentes preenchida |
@@ -63,7 +63,7 @@ B1 e B2 podem começar direto nos CSVs de 2024, sem esperar o importador.
 
 | ID | Tarefa | Depende de | Status | Pronto quando |
 | --- | --- | --- | --- | --- |
-| B1 | Protótipo do cálculo do fator Aqua → S-NPP (escala VIIRS) **por bioma, mês e dia/noite**, em contagens por célula H3, só confiança nominal ou alta e `type = 0`. Primeiro nos CSVs de 2024, depois nos anos de sobreposição disponíveis. Ver [decisoes-harmonizacao.md](decisoes-harmonizacao.md) | — | feito (`data-pipeline/harmonizacao/prototipo_fator.py`, branch `trabalho/harmonizacao`; Amazônia 2024: razão anual 6,23, dia 2,4 a 4,5, noite 12 a 25) | Fatores da Amazônia calculados, com razão média perto de 6 e variação mensal visível |
+| B1 | Protótipo do cálculo do fator Aqua → S-NPP (escala VIIRS) **por bioma, mês e dia/noite**, em contagens por célula H3, só confiança nominal ou alta e `type = 0`. Primeiro nos CSVs de 2024, depois nos anos de sobreposição disponíveis. Ver [decisoes-harmonizacao.md](decisoes-harmonizacao.md) | — | feito (protótipo nos CSVs de 2024: Amazônia com razão anual 6,23, dia 2,4 a 4,5, noite 12 a 25. Cumprido o papel, o código saiu no PR #26 e ficou no histórico do git, commit `6ca3ac9`; os números que vão para a tela de Método saem do `calibrar.py`, com o histórico completo) | Fatores da Amazônia calculados, com razão média perto de 6 e variação mensal visível |
 | B2 | Definir a escolha do satélite por mês (Aqua, S-NPP, NOAA-20), como aplicar a cadeia de fatores e como rotular cada mês como observado ou estimado | — | feito (tabela de períodos e origem pela data em `importacao-regioes.md`) | Regra escrita em [importacao-regioes.md](importacao-regioes.md) |
 | B3 | Job de calibração gravando em `fatores_harmonizacao`, com um cenário por ano de calibração (base 2012 a 2024; o próprio job roda a validação deixando um ano de fora e aplica o critério de 1,5× para escolher os anos) e só confiança nominal e alta | A5, B1 | feito no banco de teste (`data-pipeline/harmonizacao/calibrar.py`, branch `trabalho/harmonizacao`; 13 anos, 1.860 fatores gravados, cobertura da faixa P5 a P95 de 0,68 a 0,80 por bioma; ver [decisoes-harmonizacao.md](decisoes-harmonizacao.md)) | Fatores dos 6 biomas no banco |
 | B4 | Job de agregação gravando a contagem bruta em `agregados` (célula × ano × mês × satélite × dia/noite), só do satélite que vale em cada mês e só com confiança nominal e alta, no formato do `banco.md` (PR #2) | T01, B3 | feito pela frente A (`data-pipeline/agregar.py`, PR #2) | `agregados` preenchida para as duas regiões |
