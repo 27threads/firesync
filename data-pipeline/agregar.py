@@ -57,7 +57,10 @@ def proximo_mes(d):
     return date(d.year + d.month // 12, d.month % 12 + 1, 1)
 
 
-def agregar(de=date(2003, 1, 1), ate=date(9999, 1, 1)):
+INICIO, FIM = date(2003, 1, 1), date(9999, 1, 1)
+
+
+def agregar(de=INICIO, ate=FIM):
     conn = db()
     with conn.transaction():
         conn.execute("DELETE FROM agregados WHERE make_date(ano, mes, 1) >= %s AND make_date(ano, mes, 1) < %s",
@@ -65,6 +68,10 @@ def agregar(de=date(2003, 1, 1), ate=date(9999, 1, 1)):
         for sat, ini, fim in janelas(de, ate):
             n = conn.execute(SQL, {"sat": sat, "ini": ini, "fim": fim}).rowcount
             print(f"agregar: {sat} {ini} a {fim}: {n:,} linhas", flush=True)
+        if (de, ate) == (INICIO, FIM):
+            # tabela inteira refeita: é o `data_version` da API (quando os dados foram carregados)
+            conn.execute("""INSERT INTO config (chave, valor) VALUES ('data_version', CURRENT_DATE::text)
+                            ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor""")
 
 
 if __name__ == "__main__":

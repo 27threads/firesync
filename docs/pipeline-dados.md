@@ -202,7 +202,7 @@ python pipeline.py download      # ~3,5 GB; retoma de onde parou
 python pipeline.py stage
 python pipeline.py sem_dados     # dias sem dado de satélite (FIRMS) -> dias_sem_dados
 python agregar.py                # focos -> agregados (ou: agregar.py 2026-10 2026-11 para refazer só esses meses)
-python eda.py                    # reports/eda.html
+python eda.py                    # reports/eda.html (antes: pip install matplotlib)
 python pipeline.py clean
 ```
 
