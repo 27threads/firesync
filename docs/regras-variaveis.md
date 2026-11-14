@@ -7,7 +7,7 @@ Origem: documento de contexto do Weberson, revisado com os dados brutos de 2024 
 | Coluna | MODIS (Aqua) | VIIRS | Observação |
 | --- | --- | --- | --- |
 | latitude, longitude | sim | sim | graus decimais |
-| brightness, bright_t31 | sim | sim (nomes do arquivo NRT) | no VIIRS SP aparecem como bright_ti4 e bright_ti5 |
+| brightness, bright_t31 | sim | sim | o nome no VIIRS depende da fonte: no Archive Download (inclusive os arquivos SP de 2024) vem `brightness`/`bright_t31`; segundo o `pipeline-dados.md`, outras fontes trazem `bright_ti4`/`bright_ti5`. O importador normaliza |
 | scan, track | sim | sim | tamanho do pixel no chão, em km. Não filtrar |
 | acq_date, acq_time | sim | sim | acq_time em UTC, HHMM (a API manda sem zero à esquerda) |
 | satellite | Aqua, Terra | SNPP, N20, N21 | só o Aqua entra no cálculo |
@@ -57,14 +57,15 @@ Ideia futura, fora do prazo: agrupar detecções em **eventos** para a visão de
 - Calculado em contagens por célula H3, um cenário por ano. Base 2012 a 2024, com os anos escolhidos pela validação deixando um ano de fora: se o erro de 2022 a 2024 passar de 1,5× o de 2012 a 2021, ficam só 2012 a 2021 (10 cenários); senão, os 13 anos. 2025 em diante fica fora.
 - NOAA-20 tratado como igual ao S-NPP (fator 1).
 - Só confiança nominal e alta (arquivo principal). Os 6 biomas do IBGE são calibrados.
-- Faixa de incerteza: P10 e P90 entre os cenários.
-- Nunca comparar a contagem bruta de pontos do VIIRS com a do MODIS. Sempre por célula da grade ou por evento.
+- Faixa de incerteza: P5 e P95 entre os cenários (cerca de 8 em 10; ver o resultado da calibração em decisoes-harmonizacao.md).
+- Fator = razão das somas por bioma, mês e período. Sem os dias em `dias_sem_dados` de qualquer um dos dois satélites e sem janeiro de 2012. Fusão quando faltar foco: meses vizinhos no mesmo período, depois o ano inteiro no mesmo período, e só em último caso o ano inteiro com dia e noite juntos. Detalhes em [decisoes-harmonizacao.md](decisoes-harmonizacao.md).
+- Nunca comparar a contagem bruta de pontos do VIIRS com a do MODIS. Sempre pelo fator ou por célula da grade.
 
 **Classificador complementar (decidido):**
 
 - Rótulo: `modis_viu` (1 ou 0), só onde o Aqua estava observando a área.
 - Pistas: frp, temperatura, confiança, dia/noite, mês, bioma, `modis_scan_mediano`.
-- Treino 2019 a 2021 e teste 2022 a 2024 (os mesmos anos de teste do fator), em volume pequeno. **ESCOLHA DA EQUIPE**
+- Treino 2019 a 2021 e teste 2022 a 2024, em volume pequeno. **ESCOLHA DA EQUIPE**
 - Com só os arquivos de 2024: corte no espaço (metade das células H3 para treino, metade para teste, todos os meses dos dois lados).
 
 ## 6. Perguntas já respondidas
