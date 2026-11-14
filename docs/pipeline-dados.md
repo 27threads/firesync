@@ -119,7 +119,7 @@ Na VPS, reservar ~30 GB livres para o banco.
 
 ## Série do INPE (`pipeline.py inpe`, tarefa A2)
 
-Baixa o histórico mensal de focos do INPE (Programa Queimadas) e soma por **bioma × ano × mês** em [`data-pipeline/referencia/inpe_mensal_biomas.csv`](../data-pipeline/referencia/inpe_mensal_biomas.csv) (versionado, 45 KB, 6 biomas, 1998 até a véspera). É o JSON que a página `data.inpe.br/queimadas/estatisticas` carrega. O satélite de referência do INPE é o **AQUA_M-T desde 04/07/2002** (NOAA-12 antes), o mesmo que a gente usa.
+Baixa o histórico mensal de focos do INPE (Programa Queimadas) e soma por **bioma × ano × mês**, com o satélite de referência de cada mês (`satelite`: NOAA-12 até jun/2002, AQUA_M-T depois; comparar só dentro do mesmo satélite) e `parcial` no mês que ainda não acabou, em [`data-pipeline/referencia/inpe_mensal_biomas.csv`](../data-pipeline/referencia/inpe_mensal_biomas.csv) (versionado, 45 KB, 6 biomas, 1998 até a véspera). É o JSON que a página `data.inpe.br/queimadas/estatisticas` carrega. O satélite de referência do INPE é o **AQUA_M-T desde 04/07/2002** (NOAA-12 antes), o mesmo que a gente usa.
 
 Conferência com o nosso Aqua na Amazônia (2003–2025, mesmos filtros dos `agregados`):
 
