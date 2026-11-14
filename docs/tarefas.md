@@ -16,8 +16,8 @@ Divisão do trabalho entre as 4 pessoas da equipe, até a submissão (domingo, 1
 | Frente | Responsável | Branch | Pastas |
 | --- | --- | --- | --- |
 | A. Importador e dados | | `a-importador` | `data-pipeline/` (importação) |
-| B. Harmonização | | `b-harmonizacao` | `data-pipeline/` (calibração e agregação, em módulo separado do importador) |
-| C. API, deploy e submissão | | `c-api` | `backend/`, configuração de deploy, `docs/api.md` |
+| B. Harmonização | | `b-harmonizacao` | `data-pipeline/` (calibração e agregação, em módulo separado do importador), `config/` (regras do alerta) |
+| C. API, deploy e submissão | | `c-api` | `backend/`, `infra/` (deploy), `docs/api.md` |
 | D. Frontend e demo | | `d-frontend` | `frontend/` |
 
 A e B dividem `data-pipeline/`. Antes de começar, combinem a estrutura de subpastas para não editarem os mesmos arquivos.
