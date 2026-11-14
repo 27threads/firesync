@@ -58,7 +58,7 @@ Ideia futura, fora do prazo: agrupar detecções em **eventos** para a visão de
 - NOAA-20 tratado como igual ao S-NPP (fator 1).
 - Só confiança nominal e alta (arquivo principal). Os 6 biomas do IBGE são calibrados.
 - Faixa de incerteza: P10 e P90 entre os cenários.
-- Fator = razão das somas por bioma, mês e período. Sem os dias em `dias_sem_dados` de qualquer um dos dois satélites e sem janeiro de 2012. Fusão quando faltar foco: meses vizinhos, depois dia e noite juntos, depois o ano inteiro. Detalhes em [decisoes-harmonizacao.md](decisoes-harmonizacao.md).
+- Fator = razão das somas por bioma, mês e período. Sem os dias em `dias_sem_dados` de qualquer um dos dois satélites e sem janeiro de 2012. Fusão quando faltar foco: meses vizinhos no mesmo período, depois o ano inteiro no mesmo período, e só em último caso o ano inteiro com dia e noite juntos. Detalhes em [decisoes-harmonizacao.md](decisoes-harmonizacao.md).
 - Nunca comparar a contagem bruta de pontos do VIIRS com a do MODIS. Sempre pelo fator ou por célula da grade.
 
 **Classificador complementar (decidido):**
