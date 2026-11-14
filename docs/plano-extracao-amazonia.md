@@ -13,17 +13,21 @@ Três sensores do FIRMS cobrem a série de 2000 até hoje. As datas de início e
 | Sensor | Satélite | Resolução | Disponível de | Disponível até | Período que usamos | Papel na série |
 | --- | --- | --- | --- | --- | --- | --- |
 | MODIS C6.1 | Terra | 1 km | 01/11/2000 | hoje | não entra no cálculo | Baixado junto com o Aqua, descartado na harmonização |
-| MODIS C6.1 | Aqua | 1 km | 04/07/2002 | hoje | 01/01/2003 até hoje | Referência histórica (mesma do INPE) |
-| VIIRS C2 | S-NPP | 375 m | 20/01/2012 | 02/11/2026 (encerrado) | 20/01/2012 a 02/11/2026 | Ponte entre MODIS e VIIRS. Calibrado contra o Aqua |
-| VIIRS C2 | NOAA-20 | 375 m | 01/04/2018 | hoje | 01/04/2018 até hoje | Continuidade após o fim do S-NPP. Calibrado contra o S-NPP |
+| MODIS C6.1 | Aqua | 1 km | 04/07/2002 | hoje | 01/01/2003 até 31/01/2012, e na calibração | Única fonte de 2003 a janeiro de 2012, convertida para a escala do VIIRS |
+| VIIRS C2 | S-NPP | 375 m | 20/01/2012 | 02/11/2026 (encerrado) | 01/02/2012 a 31/10/2026 | Escala de referência da série. Base da calibração do Aqua |
+| VIIRS C2 | NOAA-20 | 375 m | 01/04/2018 | hoje | 01/11/2026 até hoje | Continuidade após o fim do S-NPP, com fator 1 (igual ao S-NPP) |
 | VIIRS C2 | NOAA-21 | 375 m | 01/03/2023 | hoje | só no job diário (NRT) | Reserva caso o NOAA-20 falhe. Não entra na carga histórica |
 
 O calendário começa em **janeiro de 2003**, o primeiro ano completo do Aqua. Somar Terra e Aqua criaria um salto artificial em julho de 2002, quando o Aqua entra.
 
-**Períodos de sobreposição usados na calibração:**
+**Escala da série: VIIRS (S-NPP).** De fevereiro de 2012 em diante, o calendário mostra a contagem real do VIIRS. De 2003 a janeiro de 2012, mostra o Aqua convertido para a escala do VIIRS, com faixa de incerteza.
 
-- Aqua × S-NPP: 20/01/2012 a 02/11/2026 (quase 15 anos)
-- S-NPP × NOAA-20: 01/04/2018 a 02/11/2026 (mais de 8 anos)
+**Calibração:**
+
+- Aqua → S-NPP: fator por bioma × mês × dia/noite, um cenário por ano. Os anos saem da validação deixando um ano de fora (2012–2024, ou 2012–2021 se a deriva da órbita do Aqua pesar). 2025 em diante fica fora.
+- NOAA-20 → S-NPP: fator 1. As razões anuais ficaram entre 0,97 e 1,04 na sobreposição de 2018 a 2026.
+
+Regras completas em [importacao-regioes.md](importacao-regioes.md) e [decisoes-harmonizacao.md](decisoes-harmonizacao.md).
 
 Os três VIIRS veem praticamente os mesmos focos. Em cada período usamos **um VIIRS só**, nunca a soma.
 
@@ -62,14 +66,14 @@ Usamos o bioma, e não a Amazônia Legal, porque é o mesmo recorte das estatís
 
 ## Atualização depois da carga
 
-A carga histórica é feita uma vez. Depois disso, dois jobs mantêm a base em dia pela [API do FIRMS](https://firms.modaps.eosdis.nasa.gov/api), que exige uma MAP\_KEY gratuita e tem limite de 5000 transações a cada 10 minutos.
+A carga histórica é feita uma vez. Depois disso, um job mantém a base em dia pela [API do FIRMS](https://firms.modaps.eosdis.nasa.gov/api), que exige uma MAP\_KEY gratuita e tem limite de 5000 transações a cada 10 minutos.
 
 | Job | Frequência | Fontes | Janela | O que faz |
 | --- | --- | --- | --- | --- |
-| Atualização NRT | A cada poucas horas | `VIIRS_NOAA20_NRT`, `VIIRS_NOAA21_NRT`, `MODIS_NRT` | Últimos 2–3 dias | Upsert dos focos novos, recalcula os agregados do mês corrente e invalida o cache desse mês |
-| Recarga SP | Mensal | `MODIS_SP`, `VIIRS_NOAA20_SP` | Últimos \~6 meses | Substitui os dados NRT pelos dados de qualidade científica, que chegam com cerca de 5 meses de defasagem |
+| Atualização NRT | A cada 3 h | `VIIRS_NOAA20_NRT`, `VIIRS_NOAA21_NRT` | Últimas 48 h | Upsert dos focos novos, recalcula os dias e o mês atuais em `agregados` e renova o cache da API |
+| Recarga SP | Mensal | `VIIRS_NOAA20_SP` | Últimos \~6 meses | **Fora do escopo da submissão.** Substituiria os dados NRT pelos de qualidade científica, que chegam com cerca de 5 meses de defasagem |
 
-O NOAA-21 entra só como reserva no job NRT. O fator de calibração fica congelado depois da carga histórica. Os jobs só aplicam o fator, nunca recalibram. Os dados NRT não trazem a coluna `type`, então as fontes estáticas são filtradas pelas células H3 marcadas como `type = 2` no histórico SP.
+O MODIS não entra no job NRT, porque o Aqua só é usado até janeiro de 2012. O NOAA-21 entra só como reserva. O fator de calibração fica congelado depois da carga histórica. Os jobs só aplicam o fator, nunca recalibram. Os dados NRT não trazem a coluna `type`, então as fontes estáticas são filtradas pelas células H3 marcadas como `type = 2` no histórico SP.
 
 ## Dados de teste já baixados
 
