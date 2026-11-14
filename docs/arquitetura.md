@@ -2,7 +2,7 @@
 
 Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir" precisa de um responsável e de uma escolha antes de alguém escrever código naquela parte.
 
-**Status:** pipeline, banco, hospedagem, mapa e cores decididos. Faltam a API (ponto 4), o front (ponto 5) e os gráficos (ponto 7).
+**Status:** falta só o cálculo da anomalia (ponto 13).
 
 ## Já decidido (vem dos outros documentos)
 
@@ -23,7 +23,7 @@ Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir"
 | 1 | Linguagem do pipeline | Python | Python (pandas, geopandas, pyarrow) | frente A |
 | 2 | Banco de dados | PostgreSQL + PostGIS + h3-pg; DuckDB | PostgreSQL + PostGIS (H3 calculado no Python, ver [banco.md](banco.md)) | frente A |
 | 3 | Resolução H3 | 5, 6, 7 | 6 (aprovado no PR #2, ver [banco.md](banco.md)) | frentes A e C |
-| 4 | Linguagem e framework da API | | a decidir | |
+| 4 | Linguagem e framework da API | Python | Python 3.12 + FastAPI, com psycopg 3 para o banco | frente C |
 | 5 | Framework do front | HTML/JS sem build; Vite + React; Vite + Svelte | Vite + React + TypeScript | frente D |
 | 6 | Biblioteca de mapa e desenho de área (RD01) | Leaflet; MapLibre GL | Leaflet com renderizador canvas + Leaflet-Geoman para desenhar | frente C, confirmado pela frente D |
 | 7 | Biblioteca de gráficos do calendário | ECharts; D3 + SVG; Observable Plot | D3 + SVG próprio (módulos `d3-scale`, `d3-scale-chromatic`, `d3-shape`, `d3-array`) | frente D |
@@ -40,6 +40,7 @@ Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases,
 
 - **1. Python no pipeline:** preferência do time de dados. Tem as bibliotecas de dado geoespacial prontas (geopandas para o recorte por polígono, pyarrow para parquet) e já roda o download e a análise ([pipeline-dados.md](pipeline-dados.md)).
 - **2. PostgreSQL:** escolha do time de dados. Tem PostGIS para os polígonos de `regioes`. O H3 é calculado no Python e guardado como `BIGINT`, então qualquer Postgres serve ([banco.md](banco.md)). Serve tanto para o pipeline quanto para a API, e tem hospedagem gratuita em vários provedores.
+- **4. Python + FastAPI:** a API usa a mesma linguagem do pipeline, então o cálculo dos cenários e do H3 usa as mesmas bibliotecas (`h3`, `shapely`) e a mesma equipe revisa os dois lados. O domínio e os casos de uso já estão em Python no PR #41. O FastAPI fica só no adaptador HTTP da arquitetura hexagonal e valida pedido e resposta pelos tipos.
 - **5. Vite + React + TypeScript:** a ferramenta tem estado que muda junto (área, período, resposta da API, estados de erro e downloads), e componentes React organizam isso melhor que JS solto. O Leaflet e o GSAP têm exemplos prontos com React. A esteira E2E já sobe o front com `npm run build` e `npm run preview` na porta 5173, que é o padrão do Vite.
 - **6. Leaflet (canvas):** num teste lado a lado com os mesmos pontos (14/11/2026), Leaflet e MapLibre ficaram a 61 fps ao arrastar com até 60.000 focos, e o Leaflet desenhou mais rápido (141 ms contra 309 ms com 60.000). Com o desempenho empatado no nosso volume, ganhou o mais simples de colocar no ar: mais exemplos prontos e desenho de polígono, retângulo e círculo pelo Geoman. Os focos usam o renderizador canvas (`preferCanvas`), não marcadores DOM. A camada de focos recentes vem da nossa API, porque as camadas de fogo do GIBS são vector tiles (o Leaflet não lê sem plugin) e deram erro nos testes. A camada de nomes do GIBS (`Reference_Labels_15m`) deixou blocos pretos no mapa e não deve ser usada.
 - **7. D3 + SVG próprio:** o calendário é a peça que o jurado vê primeiro, e um heatmap de biblioteca pronta tem a cara de qualquer painel. Com D3 desenhando SVG, a gente controla cada célula: hachura nos meses estimados, borda nos incompletos, estado próprio para sem dados e fora da cobertura, a marca da troca de sensor em fev/2012 e a animação com GSAP. O SVG também é acessível (foco por teclado, rótulo por célula). O D3 só calcula escalas e formas e não substitui o React no DOM. O ECharts foi descartado por isso, mesmo sendo mais rápido de montar. O PNG do download sai serializando o SVG num canvas.
