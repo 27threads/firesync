@@ -111,7 +111,6 @@ def mensal(diario):
 
 def fatores_por_ano(m, minimo):
     """Um fator por regiao x ano x mes x periodo, com a fusão quando o Aqua não atinge o mínimo."""
-    idx = m.set_index(["regiao", "ano", "mes", "periodo"])[["A", "S"]]
     linhas = []
     for (regiao, ano), g in m.groupby(["regiao", "ano"]):
         g = g.set_index(["mes", "periodo"])[["A", "S"]]
