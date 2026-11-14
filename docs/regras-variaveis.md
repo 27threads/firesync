@@ -24,8 +24,9 @@ Origem: documento de contexto do Weberson, revisado com os dados brutos de 2024 
 2. `frp` vazio, zero ou negativo sai (nos dois).
 3. MODIS: `confidence < 30` vai para arquivo à parte.
 4. VIIRS: `confidence = l` com `daynight = N` sai (Anomalia Magnética do Atlântico Sul). `l` de dia vai para arquivo à parte.
-5. O recorte por bioma (Amazônia e Pantanal) vale só para o conjunto de treino e para os agregados. A tabela `focos` guarda o Brasil inteiro.
-6. `scan` e `track` não são filtrados.
+5. **O arquivo de baixa confiança fica guardado, mas não entra no fator nem no calendário** (nem em `agregados`). O fator e o calendário precisam usar o mesmo filtro, senão a série fica distorcida.
+6. O recorte por bioma vale só para a calibração. A tabela `focos` guarda o Brasil inteiro.
+7. `scan` e `track` não são filtrados.
 
 ## 3. Regras de duplicata
 
@@ -43,7 +44,8 @@ Origem: documento de contexto do Weberson, revisado com os dados brutos de 2024 
 **Fator da série (decidido):**
 
 - Condições: bioma × mês × dia/noite. O FRP não entra.
-- Calculado em contagens por célula H3, na sobreposição de 2012 a 2024, com um cenário por ano.
+- Calculado em contagens por célula H3, com calibração em 2012 a 2021 (um cenário por ano, 10 cenários) e teste em 2022 a 2024. 2025 em diante fica fora.
+- Só confiança nominal e alta (arquivo principal). Os 6 biomas do IBGE são calibrados.
 - Faixa de incerteza: P10 e P90 entre os cenários.
 - Nunca comparar a contagem bruta de pontos do VIIRS com a do MODIS. Sempre por célula da grade ou por evento.
 
@@ -51,16 +53,17 @@ Origem: documento de contexto do Weberson, revisado com os dados brutos de 2024 
 
 - Rótulo: `modis_viu` (1 ou 0), só onde o Aqua estava observando a área.
 - Pistas: frp, temperatura, confiança, dia/noite, mês, bioma, `modis_scan_mediano`.
-- Treino 2019 a 2022 e teste 2023 e 2024, em volume pequeno. **ESCOLHA DA EQUIPE**
+- Treino 2019 a 2021 e teste 2022 a 2024 (os mesmos anos de teste do fator), em volume pequeno. **ESCOLHA DA EQUIPE**
 - Com só os arquivos de 2024: corte no espaço (metade das células H3 para treino, metade para teste, todos os meses dos dois lados).
 
 ## 6. Perguntas já respondidas
 
 1. Suomi NPP depois de 02/11/2026: não entra. A série segue com NOAA-20.
-2. Tamanho da célula: grade H3 (resolução definida com a frente C).
-3. Dados NRT (provisórios): entram só no mês corrente, marcados como provisórios, fora do cálculo do fator.
+2. Tamanho da célula: grade H3 resolução 6 (`banco.md`, PR #2).
+3. Dados NRT (provisórios): marcados com `qualidade = NRT` (PR #2), fora do cálculo do fator.
 
 ## 7. Perguntas em aberto
 
 1. Mínimo de focos por condição (definir com a base limpa).
-2. Faixas de FRP para o classificador e para os indicadores de áreas críticas (sugestão inicial a partir dos dados brutos de 2024: 2, 5, 10 e 25 MW, a reconferir depois da limpeza).
+2. Duplicatas do MODIS (seção 3): juntar vizinhos ou remover só as linhas idênticas, como no VIIRS. Em discussão.
+3. Faixas de FRP para o classificador e para os indicadores de áreas críticas (sugestão inicial a partir dos dados brutos de 2024: 2, 5, 10 e 25 MW, a reconferir depois da limpeza).

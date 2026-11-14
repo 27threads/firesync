@@ -57,7 +57,7 @@ O fator de harmonização é calculado para cada região, porque a razão VIIRS/
 Cadeia de calibração, aplicada a cada região:
 
 1. **Escala final: VIIRS (S-NPP como referência).** Decisão do Weberson em 14/11/2026. Os anos só-MODIS (2003 a 2011) são convertidos para a escala do VIIRS, e cada mês fica rotulado como observado ou estimado (`origem`).
-2. **Aqua → S-NPP:** fator por **bioma × mês × dia/noite**, calculado em contagens por célula H3 na sobreposição de 2012 a 2024. Cada ano da sobreposição é um cenário. O fator da série é a mediana dos cenários, e a faixa de incerteza é o P10 e o P90 entre eles, calculados na API depois de somar a área. Só o Aqua entra (Terra fora, calendário a partir de 2003). 2025 fica fora até a queda da razão S-NPP/Aqua (4,8) ser investigada. A frente A propõe 2012 a 2021 para fugir da deriva do Aqua: **em aberto**, ver [decisoes-harmonizacao.md](decisoes-harmonizacao.md).
+2. **Aqua → S-NPP:** fator por **bioma × mês × dia/noite**, calculado em contagens por célula H3, com calibração em 2012 a 2021 (10 cenários) e teste em 2022 a 2024. Cada ano de calibração é um cenário. Só confiança nominal e alta entra. Os 6 biomas do IBGE são calibrados. O fator da série é a mediana dos cenários, e a faixa de incerteza é o P10 e o P90 entre eles, calculados na API depois de somar a área. Só o Aqua entra (Terra fora, calendário a partir de 2003). 2025 em diante fica fora, porque a razão S-NPP/Aqua cai para 4,8, provavelmente pela deriva de órbita do Aqua. Ver [decisoes-harmonizacao.md](decisoes-harmonizacao.md).
 3. **NOAA-20 → S-NPP:** fator calculado na sobreposição de 01/04/2018 a 02/11/2026 (as razões ficam entre 0,97 e 1,04). Mantém a continuidade do VIIRS depois do fim do S-NPP.
 4. **NOAA-21:** só se o NOAA-20 falhar, calibrado contra o NOAA-20 a partir de 01/03/2023.
 
@@ -66,7 +66,7 @@ Regras:
 - O fator é calculado só com focos de confiança nominal ou alta e `tipo = 0`.
 - O FRP não é condição do fator, porque nos anos só-MODIS os fogos que o MODIS não viu não têm FRP.
 - Cada condição precisa de um mínimo de focos do Aqua. Abaixo disso, junta com a condição vizinha e registra em `fusao_com`. O valor do mínimo é definido com a base limpa.
-- Suposição declarada no Método: a razão entre os sensores em 2003 a 2011 é parecida com a de 2012 a 2024. Não há como testar, porque não há VIIRS antes de 2012.
+- Suposição declarada no Método: a razão entre os sensores em 2003 a 2011 é parecida com a de 2012 a 2021. Não há como testar, porque não há VIIRS antes de 2012.
 - O fator fica congelado depois da carga histórica. Os jobs de atualização só aplicam o fator.
 - Região sem sobreposição suficiente (menos de 24 meses com focos nos dois sensores) usa o fator da região vizinha mais parecida, e isso fica registrado em `fatores_harmonizacao`.
 
