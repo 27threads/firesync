@@ -117,6 +117,22 @@ A diferença são focos fora dos 6 biomas (mar e ilhas). A reimportação do MOD
 
 Na VPS, reservar ~30 GB livres para o banco.
 
+## Série do INPE (`pipeline.py inpe`, tarefa A2)
+
+Baixa o histórico mensal de focos do INPE (Programa Queimadas) e soma por **bioma × ano × mês** em [`data-pipeline/referencia/inpe_mensal_biomas.csv`](../data-pipeline/referencia/inpe_mensal_biomas.csv) (versionado, 45 KB, 6 biomas, 1998 até a véspera). É o JSON que a página `data.inpe.br/queimadas/estatisticas` carrega. O satélite de referência do INPE é o **AQUA_M-T desde 04/07/2002** (NOAA-12 antes), o mesmo que a gente usa.
+
+Conferência com o nosso Aqua na Amazônia (2003–2025, mesmos filtros dos `agregados`):
+
+| Medida | Resultado |
+| --- | --- |
+| Correlação mês a mês (276 meses) | 0,998 |
+| Correlação ano a ano | 0,997 |
+| Mês de pico igual | 23 de 23 anos |
+| Nossa contagem / INPE | 1,05 (0,94 a 1,10 por ano) |
+| 5 anos mais altos | INPE: 2004, 2005, 2007, 2003, 2006. Nosso: 2005, 2004, 2007, 2003, 2024 |
+
+A forma da curva é a mesma, que é o critério do plano de extração. Os ~5% a mais vêm de o FIRMS e o INPE processarem o Aqua de jeitos diferentes. A validação da série **harmonizada** (B6) é da frente B e usa este mesmo CSV.
+
 ## Job NRT (`job_nrt.py`, issue #5)
 
 Mantém o banco atualizado sem a carga inteira. Cada rodada leva ~30 s:
@@ -277,6 +293,7 @@ python pipeline.py cadastrar     # precisa do banco com a migration aplicada
 python pipeline.py download      # ~3,5 GB; retoma de onde parou
 python pipeline.py stage
 python pipeline.py sem_dados     # dias sem dado de satélite (FIRMS) -> dias_sem_dados
+python pipeline.py inpe          # série mensal do INPE por bioma -> referencia/inpe_mensal_biomas.csv
 python pipeline.py importar      # data/staged/ -> focos + cobertura (ou: importar arquivo.csv|.zip ...)
 python agregar.py                # focos -> agregados (ou: agregar.py 2026-10 2026-11 para refazer só esses meses)
 python eda.py                    # reports/eda.html (antes: pip install matplotlib)

@@ -84,7 +84,7 @@ def curl(url, dest=None):
             subprocess.run(args + ["-o", str(tmp)], check=True)
             tmp.replace(dest)
             return None
-        return subprocess.run(args, check=True, capture_output=True, text=True).stdout
+        return subprocess.run(args, check=True, capture_output=True, text=True, encoding="utf-8").stdout
     except subprocess.CalledProcessError as e:
         # a MAP_KEY vai na URL (/csv/<chave>/...): nunca deixar ela chegar ao log
         raise RuntimeError(f"curl falhou ({e.returncode}): {mask_key(url)}") from None
@@ -477,10 +477,35 @@ def drop_nrt_under_sp(conn, satelites):
     return n
 
 
+# ---------------------------------------------------------------- inpe (A2)
+INPE_JSON = "https://data.inpe.br/queimadas/estatisticas/media/estatistica/paises/brasil.json"
+INPE_CSV = ROOT / "referencia" / "inpe_mensal_biomas.csv"
+
+
+def inpe_mensal(d):
+    """JSON de estatísticas do INPE (histórico mensal por estado × bioma) -> bioma × ano × mês."""
+    rows = [(h["bioma"]["nome_bioma"], h["ano"], int(m), n)
+            for h in d["historico_mensal"] for m, n in h["meses"].items() if n is not None]
+    df = pd.DataFrame(rows, columns=["bioma", "ano", "mes", "focos"])
+    return df.groupby(["bioma", "ano", "mes"], as_index=False).focos.sum()
+
+
+def inpe():
+    """Série mensal de focos do INPE por bioma (satélite de referência AQUA_M-T desde 04/07/2002), para validar (B6)."""
+    # shortcut: é o JSON que a página data.inpe.br/queimadas/estatisticas carrega (não documentado);
+    # se mudar de formato, a leitura falha em vez de gravar dado errado.
+    d = json.loads(curl(INPE_JSON))
+    df = inpe_mensal(d)
+    INPE_CSV.parent.mkdir(exist_ok=True)
+    df.to_csv(INPE_CSV, index=False)
+    sat = "; ".join(f"{f['satelite']} {f['inicio']} a {f['fim']}" for f in d["meta"]["faixas_de_satelite"])
+    print(f"inpe: {len(df):,} linhas até {d['meta']['data_limite']} ({sat}) -> {INPE_CSV.name}", flush=True)
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1]
     if cmd == "importar":
         importar(sys.argv[2:])
     else:
         {"cadastrar": cadastrar, "download": download, "stage": stage, "clean": clean,
-         "sem_dados": sem_dados}[cmd]()
+         "sem_dados": sem_dados, "inpe": inpe}[cmd]()

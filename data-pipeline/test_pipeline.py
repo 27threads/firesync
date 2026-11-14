@@ -111,4 +111,11 @@ assert mask_key("https://x/api/area/csv/abc123/MODIS_SP/1,2,3,4/5/2026-01-01") =
 from job_nrt import meses_da_janela  # noqa: E402
 assert meses_da_janela(date(2026, 11, 14)) == (date(2026, 11, 1), date(2026, 12, 1))
 assert meses_da_janela(date(2026, 12, 1)) == (date(2026, 11, 1), date(2027, 1, 1))   # janela cruza o mês
+# INPE (A2): histórico mensal por estado × bioma -> bioma × ano × mês (soma os estados; mês vazio sai)
+from pipeline import inpe_mensal  # noqa: E402
+js = {"historico_mensal": [
+    {"ano": 2020, "bioma": {"nome_bioma": "Amazônia"}, "meses": {"1": 10, "2": None}},
+    {"ano": 2020, "bioma": {"nome_bioma": "Amazônia"}, "meses": {"1": 5, "2": 7}},
+    {"ano": 2020, "bioma": {"nome_bioma": "Cerrado"}, "meses": {"1": 1, "2": None}}]}
+assert inpe_mensal(js).values.tolist() == [["Amazônia", 2020, 1, 15], ["Amazônia", 2020, 2, 7], ["Cerrado", 2020, 1, 1]]
 print("ok")

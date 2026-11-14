@@ -159,6 +159,21 @@ volumes:
 - O `job-nrt` roda `job_nrt.py` a cada 3 h: baixa as últimas 48 h de `VIIRS_NOAA20_NRT` e `VIIRS_NOAA21_NRT`, importa, refaz `agregados` dos meses da janela, atualiza `dias_sem_dados` e grava `config.atualizado_em`. Tem trava no banco (`pg_try_advisory_lock`), então duas rodadas nunca correm juntas. Uma rodada que falha não grava `atualizado_em`, e a próxima tenta de novo.
 - **`config.atualizado_em`** (texto ISO 8601 em UTC, ex.: `2026-11-14T18:43:16Z`, igual ao `updated_at` do `api.md`) é a hora da última rodada que deu certo: é o `meta.updated_at` da API.
 
+## Carga na VPS (roteiro)
+
+O banco local já tem tudo carregado e conferido. Na VPS, em vez de baixar e processar de novo (~1 h), leva-se o banco pronto (comandos em bash):
+
+1. Na VPS, subir só o `db` do compose: `docker compose up -d db`. As migrations rodam no primeiro boot.
+2. Na máquina local, gerar o dump comprimido (~12 GB de banco; o arquivo fica bem menor):
+   `docker exec firesync-db-test pg_dump -U postgres -d firesync -Fc --no-owner -f /tmp/firesync.dump && docker cp firesync-db-test:/tmp/firesync.dump .`
+3. Copiar para a VPS: `scp firesync.dump usuario@vps:/tmp/`
+4. Restaurar por cima do schema que as migrations criaram:
+   `docker compose cp /tmp/firesync.dump db:/tmp/ && docker compose exec db pg_restore -U firesync -d firesync --clean --if-exists --no-owner /tmp/firesync.dump`
+5. Conferir: `SELECT satelite, count(*) FROM focos GROUP BY 1` deve dar os números de [pipeline-dados.md](pipeline-dados.md), e `SELECT * FROM config` deve ter `data_version`.
+6. Subir o job: `docker compose up -d job-nrt`. A primeira rodada traz as últimas 48 h e grava `atualizado_em`.
+
+Reservar ~30 GB livres (banco + dump + folga). Roteiro testado em 14/11/2026: dump de um banco com dados, restauração por cima de um banco recém-criado pelas migrations, sem erro e com `focos`, `agregados` e `config` conferidos. No Git Bash do Windows, rodar antes `export MSYS_NO_PATHCONV=1`, senão ele troca `/tmp` por um caminho do Windows dentro dos comandos do Docker.
+
 ## Variáveis de ambiente
 
 | Variável | Quem usa | Exemplo |
