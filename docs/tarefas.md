@@ -16,8 +16,8 @@ Divisão do trabalho entre as 4 pessoas da equipe, até a submissão (domingo, 1
 | Frente | Responsável | Branch | Pastas |
 | --- | --- | --- | --- |
 | A. Importador e dados | | `a-importador` | `data-pipeline/` (importação) |
-| B. Harmonização | | `b-harmonizacao` | `data-pipeline/` (calibração e agregação, em módulo separado do importador) |
-| C. API, deploy e submissão | | `c-api` | `backend/`, configuração de deploy, `docs/api.md` |
+| B. Harmonização | | `b-harmonizacao` | `data-pipeline/` (calibração e agregação, em módulo separado do importador), `config/` (regras do alerta) |
+| C. API, deploy e submissão | | `c-api` | `backend/`, `infra/` (deploy), `docs/api.md` |
 | D. Frontend e demo | | `d-frontend` | `frontend/` |
 
 A e B dividem `data-pipeline/`. Antes de começar, combinem a estrutura de subpastas para não editarem os mesmos arquivos.
@@ -38,7 +38,7 @@ A e B dividem `data-pipeline/`. Antes de começar, combinem a estrutura de subpa
 | --- | --- | --- | --- |
 | T00 | Decidir os pontos 1, 2, 4, 5 e 12 de [arquitetura.md](arquitetura.md) e escrever as justificativas | a fazer | Os 5 pontos preenchidos |
 | T01 | Fechar o formato de `agregados` (colunas, tipos, resolução H3) | a fazer | Seção escrita em [importacao-regioes.md](importacao-regioes.md) |
-| T02 | Escrever `docs/api.md` com endpoints, pedido, resposta, erros e um JSON de exemplo | a fazer | A e D leram e concordaram |
+| T02 | Escrever `docs/api.md` com endpoints, pedido, resposta, erros e um JSON de exemplo | fazendo (rascunho na branch `c-api`, falta A e D lerem) | A e D leram e concordaram |
 | T03 | Preencher responsáveis desta página e criar as 4 branches | a fazer | Tabela de frentes preenchida |
 
 ## A. Importador e dados
@@ -48,12 +48,12 @@ Ler antes: [firms-extracao-dados.md](firms-extracao-dados.md), [plano-extracao-a
 | ID | Tarefa | Depende de | Status | Pronto quando |
 | --- | --- | --- | --- | --- |
 | A1 | Conferir o pedido do FIRMS. Se o histórico não chegar a tempo, baixar os resumos anuais por país (Brasil, 2003 até hoje), que não passam por aprovação | — | feito (resumos anuais 2000–2025 + API para 2026, ver [pipeline-dados.md](pipeline-dados.md)) | Histórico em mãos, ou decisão registrada de demo só com 2024 |
-| A2 | Baixar o shapefile de biomas do IBGE e a série mensal do bioma Amazônia do INPE | — | fazendo (IBGE feito, falta INPE) | Arquivos em `data-pipeline/data/`, fora do git se forem grandes |
+| A2 | Baixar o shapefile de biomas do IBGE e a série mensal do bioma Amazônia do INPE | — | feito (IBGE em `cadastrar`; INPE em `pipeline.py inpe` -> `referencia/inpe_mensal_biomas.csv`, conferido: correlação 0,998 com o nosso Aqua) | Arquivos em `data-pipeline/data/`, fora do git se forem grandes |
 | A3 | Criar `.gitignore` para CSVs descompactados e arquivos gerados | — | feito | `git status` limpo depois de descompactar os ZIPs |
-| A4 | Criar o banco com as tabelas `focos`, `regioes` e `cobertura` | T00 | feito (`data-pipeline/migrations/001_inicial.sql`, em PR) | Script de criação versionado |
-| A5 | Importador: normalizar colunas, calcular H3, upsert com a chave única, atualizar `cobertura` | A4 | a fazer | `importar` carrega os 5 arquivos de 2024 e as contagens batem com a tabela do plano de extração |
+| A4 | Criar o banco com as tabelas `focos`, `regioes` e `cobertura` | T00 | feito (`data-pipeline/migrations/` 001 a 003) | Script de criação versionado |
+| A5 | Importador: normalizar colunas, calcular H3, upsert com a chave única, atualizar `cobertura` | A4 | feito (`pipeline.py importar`; 2024 bate com o plano, diferença < 0,2% = fora dos biomas) | `importar` carrega os 5 arquivos de 2024 e as contagens batem com a tabela do plano de extração |
 | A6 | Cadastrar as regiões Amazônia e Pantanal em `regioes`, com as células em `celula_regiao` | A2, A4 | feito (os 6 biomas, `pipeline.py cadastrar`) | As duas regiões com polígono e células |
-| A7 | Carregar o histórico completo | A1, A5 | a fazer | `cobertura` mostra cada satélite no período esperado |
+| A7 | Carregar o histórico completo | A1, A5 | feito no banco de teste (46,4 mi de focos, ver `pipeline-dados.md`) | `cobertura` mostra cada satélite no período esperado |
 
 ## B. Harmonização
 
@@ -63,9 +63,9 @@ B1 e B2 podem começar direto nos CSVs de 2024, sem esperar o importador.
 
 | ID | Tarefa | Depende de | Status | Pronto quando |
 | --- | --- | --- | --- | --- |
-| B1 | Protótipo do cálculo do fator Aqua → S-NPP (escala VIIRS) **por bioma, mês e dia/noite**, em contagens por célula H3, só confiança nominal ou alta e `type = 0`. Primeiro nos CSVs de 2024, depois nos anos de sobreposição disponíveis. Ver [decisoes-harmonizacao.md](decisoes-harmonizacao.md) | — | a fazer | Fatores da Amazônia calculados, com razão média perto de 6 e variação mensal visível |
-| B2 | Definir a escolha do satélite por mês (Aqua, S-NPP, NOAA-20), como aplicar a cadeia de fatores e como rotular cada mês como observado ou estimado | — | a fazer | Regra escrita em [importacao-regioes.md](importacao-regioes.md) |
-| B3 | Job de calibração gravando em `fatores_harmonizacao`, com um cenário por ano de calibração (base 2012 a 2024; o próprio job roda a validação deixando um ano de fora e aplica o critério de 1,5× para escolher os anos) e só confiança nominal e alta | A5, B1 | a fazer | Fatores dos 6 biomas no banco |
+| B1 | Protótipo do cálculo do fator Aqua → S-NPP (escala VIIRS) **por bioma, mês e dia/noite**, em contagens por célula H3, só confiança nominal ou alta e `type = 0`. Primeiro nos CSVs de 2024, depois nos anos de sobreposição disponíveis. Ver [decisoes-harmonizacao.md](decisoes-harmonizacao.md) | — | feito (`data-pipeline/harmonizacao/prototipo_fator.py`, branch `trabalho/harmonizacao`; Amazônia 2024: razão anual 6,23, dia 2,4 a 4,5, noite 12 a 25) | Fatores da Amazônia calculados, com razão média perto de 6 e variação mensal visível |
+| B2 | Definir a escolha do satélite por mês (Aqua, S-NPP, NOAA-20), como aplicar a cadeia de fatores e como rotular cada mês como observado ou estimado | — | feito (tabela de períodos e origem pela data em `importacao-regioes.md`) | Regra escrita em [importacao-regioes.md](importacao-regioes.md) |
+| B3 | Job de calibração gravando em `fatores_harmonizacao`, com um cenário por ano de calibração (base 2012 a 2024; o próprio job roda a validação deixando um ano de fora e aplica o critério de 1,5× para escolher os anos) e só confiança nominal e alta | A5, B1 | feito no banco de teste (`data-pipeline/harmonizacao/calibrar.py`, branch `trabalho/harmonizacao`; 13 anos, 1.860 fatores gravados, cobertura da faixa P5 a P95 de 0,68 a 0,80 por bioma; ver [decisoes-harmonizacao.md](decisoes-harmonizacao.md)) | Fatores dos 6 biomas no banco |
 | B4 | Job de agregação gravando a contagem bruta em `agregados` (célula × ano × mês × satélite × dia/noite), só do satélite que vale em cada mês e só com confiança nominal e alta, no formato do `banco.md` (PR #2) | T01, B3 | feito pela frente A (`data-pipeline/agregar.py`, PR #2) | `agregados` preenchida para as duas regiões |
 | B5 | Comando `recalcular <regiao>` (fatores + agregados da região) | B3, B4 | a fazer | Rodar duas vezes dá o mesmo resultado |
 | B6 | Validar a série harmonizada contra a do INPE (só forma da curva, anos altos, meses de pico) e registrar o resultado da validação do B3 (erro por ano, decisão dos anos e cobertura da faixa) | A2, A7, B4 | a fazer | Gráficos de comparação salvos, para usar na página do projeto |
@@ -108,6 +108,6 @@ D1 a D5 começam com o JSON de exemplo do `api.md`, sem esperar a API.
 
 | ID | Tarefa | Motivo |
 | --- | --- | --- |
-| X1 | Job de atualização NRT pela API do FIRMS | Não cabe no prazo. A demo usa dados carregados uma vez |
+| X1 | Job de atualização NRT pela API do FIRMS | Voltou pela issue #5 e foi feito: `data-pipeline/job_nrt.py` + `Dockerfile` (a cada 3 h) |
 | X2 | Recarga SP mensal | Depende do X1 |
 | X3 | Região da Califórnia | Precisa de pedido novo no FIRMS |
