@@ -31,6 +31,8 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 15 | [Pitch e vídeo](docs/pitch.md) | Roteiro de 30 s, legenda em inglês e como gravar | Antes de montar a demo |
 | 16 | [Testes e esteira](docs/testes.md) | TDD, regra dos bugs, cobertura, jornadas e jobs do GitHub Actions | Antes de escrever código |
 | 17 | [Versionamento (SemVer)](docs/versionamento.md) | Tipo no commit e no título do PR, como lançar uma versão | Antes do primeiro commit |
+| 18 | [Validação do nível de alerta](docs/validacao-alerta.md) | Solução A + B da issue #9: teste retroativo com "o que veio depois" e eventos conhecidos, no lugar da área queimada | Antes de mexer no alerta ou no `alert_rules.json` |
+| 19 | [RFC 0001: backtest do alerta](docs/rfcs/0001-backtest-alerta.md) | Como implementar a solução A + B: consultas, janelas, contas, saídas, autoteste e plano | Antes de implementar o backtest do alerta |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
@@ -50,7 +52,7 @@ firesync/
 └── infra/                 deploy na VPS: docker-compose, servidor web, .env.example (frente C)
 ```
 
-Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/` e `frontend/` têm, por enquanto, os testes escritos antes do código (especificação TDD e jornadas). `infra/` ainda não tem arquivos de deploy. `data-pipeline/data/` tem os quatro ZIPs de teste:
+Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/` tem, por enquanto, os testes escritos antes do código (especificação TDD); `frontend/` já traz o esqueleto (D1), a seleção de área e período (D2–D3), o calendário (D4), os indicadores/gráficos (D5) e os testes E2E em `frontend/e2e/`. `infra/` ainda não tem arquivos de deploy. `data-pipeline/data/` tem os quatro ZIPs de teste:
 
 | Arquivo | Conteúdo |
 | --- | --- |
@@ -90,12 +92,12 @@ Detalhes de cada etapa: [importacao-regioes.md](docs/importacao-regioes.md).
 - [x] Levantamento do FIRMS e plano de extração
 - [x] Modelo de dados e processo de importação
 - [x] Dados de teste (Brasil, 2024)
-- [ ] Stack e arquitetura definidas (pipeline e banco decididos; faltam API, front e gráficos em [arquitetura.md](docs/arquitetura.md))
+- [x] Stack e arquitetura definidas (pipeline, banco, API, front, mapa e gráficos decididos em [arquitetura.md](docs/arquitetura.md); falta só o ponto 13)
 - [ ] Contrato da API ([api.md](docs/api.md) na `main`; falta A e D confirmarem, tarefa T02)
 - [x] Histórico do FIRMS baixado e análise por satélite ([pipeline-dados.md](docs/pipeline-dados.md))
 - [x] Importador, pipeline, agregação, job NRT e série do INPE ([pipeline-dados.md](docs/pipeline-dados.md))
 - [ ] API
-- [ ] Frontend
+- [ ] Frontend (D1–D5 feitos; faltam downloads D6, integração com a API real D7 e demo D8)
 - [ ] Deploy público
 - [ ] Demo e página do projeto
 
@@ -110,12 +112,13 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `docs/pipeline-dados.md` | Claude Code (Claude Opus 5.5) | Redação do relatório do que foi feito e dos achados da análise exploratória |
 | `docs/prompt-frontend.md` | Claude Code (Claude Opus 5.5) | Prompt do front escrito a partir dos docs do repo. A equipe aprova antes de usar |
 | `docs/api.md`, `docs/api-exemplo.json` (issues #22 e #29) | Claude Code (Claude Opus 5.5) | Correções do contrato escritas a partir das issues da auditoria. Revisado pela equipe |
+| `docs/validacao-alerta.md`, `docs/rfcs/0001-backtest-alerta.md` | Claude Code (Claude Opus 5.5) | Proposta de validação do alerta e RFC de implementação, escritos a partir da issue #9 e da revisão do PR #42. Revisado pela equipe |
 | `data-pipeline/validacao/backtest_alerta.py`, `data-pipeline/tests/test_backtest_alerta.py`, `data-pipeline/referencia/eventos_conhecidos.csv` | Claude Code (Claude Opus 5.5) | Backtest do alerta escrito a partir do RFC 0001, com TDD. As fontes dos eventos foram conferidas nas páginas oficiais. Revisado pela equipe |
 | Limpeza dos `.md` (README, CLAUDE.md, `docs/`, READMEs das pastas) | Claude Code (Claude Opus 5.5) | Levantamento do que estava desatualizado, comparando os docs com o código da `main`, e correção dos trechos. Revisado pela equipe no PR |
 | `.github/workflows/ci.yml` (job "Só documentação?"), `.github/scripts/roda_testes.sh`, `test_roda_testes.sh` | Claude Code (Claude Opus 5.5) | Filtro que pula os testes de código em PR só de `.md`. Revisado pela equipe |
 | Decisões do front em `docs/arquitetura.md` (pontos 5 a 8) e `frontend/README.md` | Claude Code (Claude Opus 5.5) | Levantamento das opções e redação das justificativas. As escolhas foram feitas pela equipe |
 | Ponto 4 de `docs/arquitetura.md` e responsáveis em `docs/tarefas.md` | Claude Code (Claude Opus 5.5) | Redação da justificativa e levantamento dos responsáveis pelos autores dos commits. As escolhas foram feitas pela equipe |
-| `frontend/` (esqueleto D1, calendário D4 e indicadores D5: `index.html`, `src/`, configuração do Vite e testes) | Claude Code (Claude Opus 5.5) | Esqueleto gerado a partir do `prompt-frontend.md` e dos docs do repo; textos de Method tirados de `decisoes-harmonizacao.md` e `tarefas.md`. Indicadores, janela recente, sazonalidade e ranking (D5) gerados a partir do `api.md` e do `ux-telas.md`, com testes escritos antes. A equipe revisa no PR |
+| `frontend/` (D1–D5: `index.html`, `src/`, configuração do Vite, testes unitários e E2E) | Claude Code (Claude Opus 5.5) em D1, D4 e D5; Antigravity em D2 e D3 | Esqueleto (D1), calendário (D4) e indicadores/gráficos (D5) gerados a partir do `prompt-frontend.md`, `api.md` e `ux-telas.md`. Seleção de área e período (D2–D3: mapa Leaflet + Geoman em `src/controls/`, cliente API `src/api/client.ts`, validação UTC, fallback demo e destravamento de `e2e/jornadas.spec.ts`) escrita em TDD a partir dos docs. A equipe revisa no PR |
 
 ## Dados e créditos
 

@@ -29,9 +29,20 @@ describe('index.html (static page shell)', () => {
     expect(headings).toContain('Data & credits');
   });
 
-  it('lists every data source in Data & credits', () => {
+  it('lists every data source and mapping library in Data & credits', () => {
     const credits = doc.getElementById('credits')?.textContent ?? '';
-    for (const source of ['NASA FIRMS', 'MODIS C6.1', 'VIIRS C2', 'IBGE', 'INPE']) {
+    for (const source of [
+      'NASA FIRMS',
+      'MODIS C6.1',
+      'VIIRS C2',
+      'IBGE',
+      'INPE',
+      'NASA EOSDIS GIBS',
+      'OpenStreetMap',
+      'CARTO',
+      'Leaflet',
+      'Leaflet-Geoman',
+    ]) {
       expect(credits).toContain(source);
     }
   });

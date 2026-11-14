@@ -1,31 +1,152 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
 import example from '../../docs/api-exemplo.json';
-import type { CalendarResponse } from './api/types';
+import { ApiClientError, fetchCalendar, fetchHealth, fetchRegions } from './api/client';
+import type { AreaInput, CalendarApiResult, CalendarRequest, CalendarResponse, RegionOption } from './api/types';
 import { FireCalendar } from './calendar/FireCalendar';
+import { AreaPeriodControls } from './controls/AreaPeriodControls';
+import { DEFAULT_END_MONTH, isDataStale } from './controls/areaPeriodModel';
 import { KeyIndicators } from './summary/KeyIndicators';
 import { RecentPanel } from './summary/RecentPanel';
 import { SeasonalPattern } from './summary/SeasonalPattern';
 import { YearRanking } from './summary/YearRanking';
 
-// Até a API existir (D7), a ferramenta mostra o JSON de exemplo do contrato, com aviso na tela.
-const data = example as unknown as CalendarResponse;
-const includesEstimatedYears = data.years.some((y) => y.complete && y.source !== 'observed_viirs');
+const exampleData = example as unknown as CalendarResponse;
+const CONTRACT_ERROR_CODES = new Set([
+  'invalid_geometry',
+  'area_too_large',
+  'invalid_period',
+  'region_not_found',
+  'rate_limited',
+  'internal_error',
+]);
+
+function isNoCoverage(result: CalendarApiResult): boolean {
+  return result.coverage?.status === 'none' || !('months' in result);
+}
 
 // Ordem da tela (docs/ux-telas.md): primeiro o agora, depois a história, por último o detalhe.
 export function App() {
+  const [regions, setRegions] = useState<RegionOption[]>([]);
+  const [lastMonth, setLastMonth] = useState<string>(exampleData.meta.last_month || DEFAULT_END_MONTH);
+  const [activeArea, setActiveArea] = useState<AreaInput | null>(null);
+  const [apiResult, setApiResult] = useState<CalendarApiResult | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [apiUnavailableFallback, setApiUnavailableFallback] = useState<boolean>(false);
+  const requestAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void Promise.allSettled([fetchHealth(controller.signal), fetchRegions(controller.signal)]).then(
+      ([healthRes, regionsRes]) => {
+        if (controller.signal.aborted) return;
+        if (healthRes.status === 'fulfilled' && healthRes.value.last_month) {
+          setLastMonth(healthRes.value.last_month);
+        }
+        if (regionsRes.status === 'fulfilled') {
+          setRegions(regionsRes.value);
+        }
+      },
+    );
+
+    return () => {
+      controller.abort();
+      requestAbortRef.current?.abort();
+    };
+  }, []);
+
+  const handleSubmitRequest = useCallback(async (request: CalendarRequest) => {
+    requestAbortRef.current?.abort();
+    const controller = new AbortController();
+    requestAbortRef.current = controller;
+
+    setActiveArea(request.area);
+    setIsLoading(true);
+    setRequestError(null);
+    setApiUnavailableFallback(false);
+
+    try {
+      const response = await fetchCalendar(request, controller.signal);
+      if (controller.signal.aborted) return;
+      setApiResult(response);
+      setIsLoading(false);
+    } catch (err) {
+      if (controller.signal.aborted) return;
+      setIsLoading(false);
+      if (err instanceof ApiClientError && (err.status === 429 || CONTRACT_ERROR_CODES.has(err.code))) {
+        setRequestError(err.message);
+        return;
+      }
+      // Sem API no ar, mantém o JSON de exemplo em modo demo (D7 liga na API real).
+      setApiUnavailableFallback(true);
+    }
+  }, []);
+
+  const isDemo = apiResult === null;
+  const noCoverage = apiResult !== null && isNoCoverage(apiResult);
+  const data = !isDemo && !noCoverage ? (apiResult as CalendarResponse) : exampleData;
+  const includesEstimatedYears = data.years.some((y) => y.complete && y.source !== 'observed_viirs');
+  const stale = !isDemo && !requestError && isDataStale(apiResult.meta.updated_at);
+
   return (
     <section className="tool-panel" aria-labelledby="tool-title">
       <h2 id="tool-title">Explore an area</h2>
       <p>Choose an area and a period to see its monthly fire calendar since 2003.</p>
-      <p className="example-notice" role="note">
-        Showing example data for an area in the Amazon while area selection is being built.
-      </p>
-      <KeyIndicators data={data} />
-      <RecentPanel recent={data.recent} updatedAt={data.meta.updated_at} />
-      <FireCalendar months={data.months} />
-      <div className="history-grid">
-        <SeasonalPattern seasonality={data.seasonality} includesEstimatedYears={includesEstimatedYears} />
-        <YearRanking years={data.years} />
-      </div>
+
+      <AreaPeriodControls
+        regions={regions}
+        lastMonth={lastMonth}
+        activeArea={activeArea}
+        onSubmitRequest={handleSubmitRequest}
+      />
+
+      {isLoading && (
+        <p className="tool-status" role="status" aria-live="polite">
+          Loading fire calendar…
+        </p>
+      )}
+
+      {requestError && (
+        <p className="tool-alert" role="alert">
+          {requestError}
+        </p>
+      )}
+
+      {!requestError && stale && (
+        <p className="tool-alert" role="alert">
+          Data may be out of date (more than 6 hours old).
+        </p>
+      )}
+
+      {isDemo && !requestError && (
+        <p className="example-notice" role="note">
+          {apiUnavailableFallback
+            ? 'API unavailable — showing example data for an area in the Amazon (demo mode).'
+            : 'Showing example data for an area in the Amazon (demo mode). Select a region, draw on the map, or enter coordinates.'}
+        </p>
+      )}
+
+      {noCoverage ? (
+        <p className="coverage-notice" role="status">
+          {apiResult.coverage?.message ?? 'No data for this area yet.'}
+        </p>
+      ) : (
+        <>
+          {!isDemo && apiResult.coverage?.status === 'partial' && apiResult.coverage.message && (
+            <p className="coverage-notice" role="note">
+              {apiResult.coverage.message}
+            </p>
+          )}
+          <KeyIndicators data={data} />
+          <RecentPanel recent={data.recent} updatedAt={data.meta.updated_at} />
+          <FireCalendar months={data.months} />
+          <div className="history-grid">
+            <SeasonalPattern seasonality={data.seasonality} includesEstimatedYears={includesEstimatedYears} />
+            <YearRanking years={data.years} />
+          </div>
+        </>
+      )}
     </section>
   );
 }
