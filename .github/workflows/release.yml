@@ -1,0 +1,48 @@
+# Release com SemVer (docs/versionamento.md). Rodar à mão: aba Actions > Release > Run workflow.
+# Calcula a versão pelos commits desde a última tag, cria a tag vX.Y.Z e a release no GitHub com as notas
+# geradas pelos PRs. Não faz commit na main (ela é protegida): a versão vive na tag e na release.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tipo:
+        description: "auto = pelos commits (fix: PATCH, feat: MINOR). Use major para o 1.0.0."
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Criar release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Testar o cálculo da versão
+        run: bash .github/scripts/test_proxima_versao.sh
+      - name: Calcular a próxima versão
+        id: versao
+        env:
+          TIPO: ${{ inputs.tipo }}
+        run: |
+          v=$(bash .github/scripts/proxima_versao.sh "$TIPO")
+          if [ -z "$v" ]; then
+            echo "::error::Nenhum commit fix, feat ou com mudança que quebra desde a última tag. Nada para lançar."
+            exit 1
+          fi
+          echo "versao=v$v" >> "$GITHUB_OUTPUT"
+          echo "Próxima versão: v$v" >> "$GITHUB_STEP_SUMMARY"
+      - name: Criar a tag e a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSAO: ${{ steps.versao.outputs.versao }}
+        run: |
+          git tag "$VERSAO"
+          git push origin "$VERSAO"
+          gh release create "$VERSAO" --title "$VERSAO" --generate-notes --verify-tag
