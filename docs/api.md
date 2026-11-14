@@ -83,7 +83,7 @@ indicators      números de destaque (RD06)
 
 | Campo | Tipo | Exemplo | Significado |
 | --- | --- | --- | --- |
-| `data_version` | data | `"2026-11-14"` | Quando os dados foram carregados |
+| `data_version` | data e hora UTC | `"2026-11-14T19:48:30Z"` | Quando os dados foram carregados. Tem a hora para duas cargas no mesmo dia não ficarem com a mesma versão (issue #15). A tela pode mostrar só a data. A comparação usa o valor inteiro |
 | `scale` | texto | `"VIIRS"` | Escala da série harmonizada |
 | `last_month` | `YYYY-MM` | `"2026-11"` | Último mês com dado |
 | `updated_at` | data e hora UTC | `"2026-11-14T15:00:00Z"` | Última atualização NRT. A tela mostra quão fresco é o dado |
@@ -209,7 +209,7 @@ A fórmula é a de [importacao-regioes.md](importacao-regioes.md). Resumo do que
 5. Preenche com zero os meses sem linha e junta os dias sem dado.
 6. Para `recent`, soma as contagens diárias da área na janela atual e em todas as janelas de mesmo tamanho num raio de ±15 dias da mesma data, em cada ano de referência, e tira a mediana e o P25–P75 entre essas janelas.
 
-Os fatores ficam na memória da API (a tabela inteira tem poucos milhares de linhas) e são recarregados quando `data_version` muda.
+Os fatores ficam na memória da API (a tabela inteira tem poucos milhares de linhas) e são recarregados quando `data_version` muda. A comparação usa o valor inteiro, com a hora: cortar para a data perde a segunda carga do dia.
 
 ### Faixa de incerteza
 
@@ -327,10 +327,13 @@ Sempre GeoJSON, que o Leaflet desenha direto, sem precisar da biblioteca H3 no f
 
 A consulta filtra **primeiro pelo tempo**, pelo índice parcial `focos_nrt ON focos (datahora_utc) WHERE qualidade = 'NRT'` (migration 003 da frente A), e depois pelo bbox. Os últimos dias são sempre NRT, porque o SP chega meses depois.
 
+**Um satélite só.** O banco tem NRT de 4 satélites olhando os mesmos fogos (últimos 7 dias no banco de teste: NOAA-21 26.196, NOAA-20 24.576, Aqua 5.806, Terra 3.543). Sem o filtro, cada fogo aparece de 2 a 4 vezes no mapa. A consulta usa a mesma regra do satélite do mês dos `agregados` ([pipeline-dados.md](pipeline-dados.md)): um VIIRS por período, nunca a soma. Hoje é o NOAA-20 (`N20`), porque o S-NPP encerrou em 02/11/2026. O satélite vem dessa regra, não fica fixo na consulta. O filtro roda em cima do mesmo índice `focos_nrt`, então o tempo medido abaixo não muda (issue #22).
+
 ```sql
 SELECT h3, count(*) AS n
 FROM focos
 WHERE qualidade = 'NRT'
+  AND satelite = %s              -- o VIIRS do período atual (hoje 'N20'), nunca a soma
   AND datahora_utc >= now() - %s::interval
   AND confianca IN ('nominal', 'alta')
   AND lon BETWEEN %s AND %s AND lat BETWEEN %s AND %s   -- bbox visível
@@ -372,7 +375,7 @@ A tela não mostra o FRP em MW. Cada detecção recebe uma classe, para quem dec
 ## `GET /health`
 
 ```json
-{ "status": "ok", "data_version": "2026-11-14", "last_month": "2026-11", "updated_at": "2026-11-14T15:00:00Z", "h3_resolution": 6 }
+{ "status": "ok", "data_version": "2026-11-14T19:48:30Z", "last_month": "2026-11", "updated_at": "2026-11-14T15:00:00Z", "h3_resolution": 6 }
 ```
 
 ## Erros
