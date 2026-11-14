@@ -66,7 +66,7 @@ B1 e B2 podem começar direto nos CSVs de 2024, sem esperar o importador.
 | B1 | Protótipo do cálculo do fator Aqua → S-NPP (escala VIIRS) **por bioma, mês e dia/noite**, em contagens por célula H3, só confiança nominal ou alta e `type = 0`. Primeiro nos CSVs de 2024, depois nos anos de sobreposição disponíveis. Ver [decisoes-harmonizacao.md](decisoes-harmonizacao.md) | — | a fazer | Fatores da Amazônia calculados, com razão média perto de 6 e variação mensal visível |
 | B2 | Definir a escolha do satélite por mês (Aqua, S-NPP, NOAA-20), como aplicar a cadeia de fatores e como rotular cada mês como observado ou estimado | — | a fazer | Regra escrita em [importacao-regioes.md](importacao-regioes.md) |
 | B3 | Job de calibração gravando em `fatores_harmonizacao`, com um cenário por ano de sobreposição (proposta, a confirmar) | A5, B1 | a fazer | Fatores e faixa P10 e P90 da Amazônia e do Pantanal no banco |
-| B4 | Job de agregação gravando em `agregados`, incluindo `sem_dados`, `origem` e a contagem harmonizada por cenário (formato a fechar no M0) | T01, B3 | a fazer | `agregados` preenchida para as duas regiões |
+| B4 | Job de agregação gravando a contagem bruta em `agregados` (célula × ano × mês × satélite × dia/noite), no formato do `banco.md` (PR #2) | T01, B3 | a fazer | `agregados` preenchida para as duas regiões |
 | B5 | Comando `recalcular <regiao>` (fatores + agregados da região) | B3, B4 | a fazer | Rodar duas vezes dá o mesmo resultado |
 | B6 | Validar a série harmonizada contra a do INPE (só forma da curva, anos altos, meses de pico) e validar o fator por ano deixado de fora (erro e cobertura da faixa) | A2, A7, B4 | a fazer | Gráficos de comparação salvos, para usar na página do projeto |
 

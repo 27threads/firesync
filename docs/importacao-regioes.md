@@ -35,11 +35,18 @@ Cinco tabelas separam o dado bruto, as regiões, a cobertura, a calibração e o
 | `focos` | Foco detectado | Campos normalizados do importador + `h3` | Importador e jobs de atualização |
 | `regioes` | Região | `id`, `nome`, `geom` (polígono), `celulas_h3`, `fonte_poligono` | Cadastro manual |
 | `cobertura` | Região × satélite | `regiao_id`, `satelite`, `data_inicio`, `data_fim`, `atualizado_em` | Importador |
-| `fatores_harmonizacao` | Região × par de satélites × bioma × mês × dia/noite × cenário (ano de sobreposição) | `regiao_id`, `satelite_origem`, `satelite_destino`, `bioma`, `mes`, `periodo`, `cenario_ano`, `fator`, `n_focos_origem`, `fusao_com` | Job de calibração |
-| `agregados` (contrato 1) | Célula H3 × ano × mês | `h3`, `ano`, `mes`, `focos_harmonizados`, `focos_brutos`, `frp_soma`, `sem_dados`, `origem` | Job de agregação |
-| `agregados_cenarios` (formato a fechar no M0) | Célula H3 × ano × mês × cenário | `h3`, `ano`, `mes`, `cenario_ano`, `focos_harmonizados` | Job de agregação |
+| `fatores_harmonizacao` | Região (bioma) × par de satélites × mês × dia/noite × ano de calibração | `regiao_id`, `satelite_origem`, `satelite_destino`, `mes`, `periodo`, `ano_calibracao`, `fator` (proposta: + `n_focos_origem`, `fusao_com`) | Job de calibração |
+| `agregados` (contrato 1) | Célula H3 × ano × mês × satélite × dia/noite | `h3`, `ano`, `mes`, `regiao_id`, `satelite`, `periodo`, `focos_brutos`, `frp_soma` | Job de agregação |
 
-`origem` vale `observado_viirs` ou `estimado_modis`. Só os meses estimados (2003 a 2011) têm linhas em `agregados_cenarios`, uma por cenário (ano de sobreposição, 2012 a 2024). A API soma os cenários das células da área e só depois calcula o P10 e o P90, porque a soma dos P10 das células não é o P10 da soma. `frp_soma` só é preenchida no período do VIIRS, porque o FRP do MODIS e o do VIIRS não são comparáveis. Detalhes e decisões em [decisoes-harmonizacao.md](decisoes-harmonizacao.md).
+O formato segue o `docs/banco.md` e a migration `001_inicial.sql` da frente A (PR #2). Pontos principais:
+
+- `agregados` guarda a contagem **bruta**, sem harmonizar. Mês sem focos não tem linha, e a API preenche com zero.
+- Cada ano de calibração é um **cenário**. A API soma as contagens brutas da área, multiplica pelos fatores de cada cenário e só então calcula a mediana e o P10 e o P90, porque a soma dos P10 das células não é o P10 da soma. Mudar um fator não exige refazer `agregados`.
+- **Origem de cada mês (regra da API):** mês com focos do VIIRS na área é `observado_viirs`, sem faixa. Mês só com Aqua é `estimado_modis`, com mediana e faixa. A coluna não é gravada no banco.
+- **FRP:** a API só mostra `frp_soma` das linhas do VIIRS, porque o FRP do MODIS e o do VIIRS não são comparáveis.
+- **Proposta para a frente A (migration 002):** acrescentar `n_focos_origem` e `fusao_com` em `fatores_harmonizacao`, para registrar o mínimo de focos por condição e a fusão com a condição vizinha.
+
+Detalhes e decisões em [decisoes-harmonizacao.md](decisoes-harmonizacao.md).
 
 A API usa a `cobertura` para responder "sem dados para esta área" quando a área desenhada cai fora das regiões carregadas, em vez de devolver um calendário vazio. A coluna `sem_dados` marca os meses em que o FIRMS informa falha de satélite (`missing_data`), para não confundir com zero focos.
 
@@ -50,7 +57,7 @@ O fator de harmonização é calculado para cada região, porque a razão VIIRS/
 Cadeia de calibração, aplicada a cada região:
 
 1. **Escala final: VIIRS (S-NPP como referência).** Decisão do Weberson em 14/11/2026. Os anos só-MODIS (2003 a 2011) são convertidos para a escala do VIIRS, e cada mês fica rotulado como observado ou estimado (`origem`).
-2. **Aqua → S-NPP:** fator por **bioma × mês × dia/noite**, calculado em contagens por célula H3 na sobreposição de 2012 a 2024. Cada ano da sobreposição é um cenário. O fator da série é a mediana dos cenários, e a faixa de incerteza é o P10 e o P90 entre eles. Só o Aqua entra (Terra fora, calendário a partir de 2003). 2025 fica fora até a queda da razão S-NPP/Aqua (4,8) ser investigada.
+2. **Aqua → S-NPP:** fator por **bioma × mês × dia/noite**, calculado em contagens por célula H3 na sobreposição de 2012 a 2024. Cada ano da sobreposição é um cenário. O fator da série é a mediana dos cenários, e a faixa de incerteza é o P10 e o P90 entre eles, calculados na API depois de somar a área. Só o Aqua entra (Terra fora, calendário a partir de 2003). 2025 fica fora até a queda da razão S-NPP/Aqua (4,8) ser investigada. A frente A propõe 2012 a 2021 para fugir da deriva do Aqua: **em aberto**, ver [decisoes-harmonizacao.md](decisoes-harmonizacao.md).
 3. **NOAA-20 → S-NPP:** fator calculado na sobreposição de 01/04/2018 a 02/11/2026 (as razões ficam entre 0,97 e 1,04). Mantém a continuidade do VIIRS depois do fim do S-NPP.
 4. **NOAA-21:** só se o NOAA-20 falhar, calibrado contra o NOAA-20 a partir de 01/03/2023.
 

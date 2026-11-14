@@ -17,7 +17,7 @@ Este documento incorpora a revisão feita no PR 1 (comentário de nogran). Onde 
 
 ## 2. Cuidados para não misturar as escalas
 
-1. Todo número carrega a escala e a origem: **observado pelo VIIRS** ou **estimado a partir do MODIS, com faixa**. Nunca aparece um número sem rótulo. No banco, `agregados` ganha a coluna `origem`.
+1. Todo número carrega a escala e a origem: **observado pelo VIIRS** ou **estimado a partir do MODIS, com faixa**. Nunca aparece um número sem rótulo. A API deduz a origem: mês com focos do VIIRS na área é observado, mês só com Aqua é estimado.
 2. O calendário marca a troca de sensor (2012), para ninguém ler a diferença entre 2011 e 2012 como aumento real de fogo.
 3. Nunca somar nem comparar a contagem bruta do MODIS com a do VIIRS. Toda comparação entre sensores passa pelo fator ou é feita por célula da grade.
 4. O INPE só se compara pela **forma da curva** (anos altos, meses de pico), nunca pelo valor absoluto, porque o INPE conta na escala de um satélite só.
@@ -49,7 +49,11 @@ Condições do fator: **bioma × mês × dia/noite**. Essas são as condições 
 
 Por que contagens por célula e não o classificador ponto a ponto: é mais barato, usa 13 pontos para a faixa em vez de 4, e dispensa a regra "MODIS estava olhando", que gerava viés (descartava justamente as áreas onde o VIIRS viu fogo e o MODIS nada).
 
-**Contrato para a API:** a soma dos percentis 10 das células não é o percentil 10 da soma. Por isso a contagem harmonizada é guardada **por cenário** (um valor por ano de sobreposição). A API soma as células da área e só depois calcula o P10 e o P90. Formato exato a fechar no M0 com a frente C (ver `importacao-regioes.md`).
+**Contrato para a API (DECIDIDO, Weberson, 14/11/2026):** adotamos o formato da frente A (`docs/banco.md`, PR #2). `agregados` guarda a contagem **bruta** por célula × ano × mês × satélite × dia/noite, e `fatores_harmonizacao` guarda um fator por cenário (ano de calibração). A API soma as contagens da área, multiplica pelos fatores de cada cenário e só então calcula a mediana e o P10 e o P90, porque a soma dos P10 das células não é o P10 da soma. Mudar um fator não exige refazer `agregados`.
+
+Pedido à frente A (migration 002): acrescentar `n_focos_origem` e `fusao_com` em `fatores_harmonizacao`, para a salvaguarda do mínimo de focos.
+
+**Em aberto com a frente A: anos de calibração.** Nós decidimos 2012 a 2024 (13 cenários, 2025 fora). A frente A propõe 2012 a 2021 (10 cenários), antes de o Aqua sair da órbita original em 2022. As razões de 2022, 2023 e 2024 (5,9, 6,1 e 6,2) parecem normais, e só 2025 cai (4,8). Sugestão: a validação deixando um ano de fora mostra se os anos depois de 2022 erram mais, e a escolha final sai desse resultado.
 
 ## 5. DECIDIDO (Weberson, 14/11/2026): o classificador (modelo A) como análise complementar
 
@@ -69,7 +73,7 @@ O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, 
 
 ## 7. Pendências
 
-1. Fechar com a frente C o formato de `agregados` por cenário (M0).
+1. Decidir com a frente A os anos de calibração (2012 a 2024 ou 2012 a 2021) e pedir a migration 002.
 2. Definir o mínimo de focos por condição com a base limpa.
 3. Investigar a queda de S-NPP/Aqua em 2025.
 4. Esta decisão muda o que o contexto do projeto dizia sobre o modelo A (o classificador deixa de gerar o fator da série). A equipe deve concordar com a mudança.
