@@ -1,60 +1,75 @@
-# Decisões da harmonização (rascunho)
+# Decisões da harmonização
 
-Responsável pela decisão: Weberson. Itens marcados como **ESCOLHA DA EQUIPE** são decisões nossas, não fatos. Itens marcados como **PROPOSTA** esperam confirmação.
+Responsável pelas decisões: Weberson. Itens marcados como **ESCOLHA DA EQUIPE** são decisões nossas, não fatos. Itens marcados como **PROPOSTA** esperam confirmação da equipe.
 
-## 1. Decisão
+Este documento incorpora a revisão feita no PR 1 (comentário de nogran). Onde a revisão corrigiu um erro da primeira versão, isso está indicado.
 
-Seguimos um caminho do meio entre o plano de fatores por região (`importacao-regioes.md`) e o modelo A (chance de o MODIS ver cada fogo do VIIRS).
+## 1. Decidido
 
-- Mantemos o **modelo A** e a **faixa de incerteza**, como diferencial.
-- Treinamos com **volume menor de dados** e **período mais curto**. Para a apresentação, o modelo mostra o método e não precisa ser robusto. **ESCOLHA DA EQUIPE.**
-- A faixa de incerteza fica menos confiável por usar poucos anos. Isso aparece escrito na tela de Método.
-
-## 2. Condições de conversão (vêm do modelo A)
-
-O fator de conversão é calculado por condição, e não um só por região:
-
-| Condição | Valores |
-| --- | --- |
-| Bioma | Amazônia (Pantanal só se sobrar tempo) |
-| Mês do ano | 1 a 12 |
-| Dia ou noite | D e N |
-| Faixa de potência (FRP) | faixas definidas na tabela por faixa de FRP |
-
-Cada fator diz quantos fogos do VIIRS cada foco do MODIS representa naquela condição.
-
-## 3. Recorte reduzido (CONFIRMADO pelo Weberson em 14/11/2026, ESCOLHA DA EQUIPE)
-
-| Ponto | Proposta | Motivo |
+| Tema | Decisão | Origem |
 | --- | --- | --- |
-| Área | Bioma Amazônia | Pantanal é o primeiro corte, como já está no `CLAUDE.md` |
-| Satélites no treino | Aqua e S-NPP | NOAA-20 e Terra ficam fora do treino |
-| Anos de treino | 2019 a 2022 (4 anos) | Poucos anos, mas com variação entre anos para a faixa |
-| Anos de teste | 2023 e 2024 | Anos que o modelo não vê |
-| Faixa de incerteza | Percentis 10 e 90 do fator entre os 4 anos de treino | Com poucos anos, vira faixa de demonstração |
-| Pistas do modelo | frp, bright_ti4, confidence, daynight, mês, bioma, `modis_scan_mediano` | As mesmas do modelo A |
+| Escala da série final | **Escala VIIRS.** Os anos só-MODIS são convertidos para a escala do VIIRS. ESCOLHA DA EQUIPE | Weberson, 14/11/2026 |
+| Cuidado com as escalas | Ver seção 2 | Weberson, 14/11/2026 |
+| Satélite do MODIS | Só o Aqua. Terra fora do cálculo, calendário a partir de 2003 | Time de dados (`pipeline-dados.md`) |
+| Grade | H3. A resolução é decidida com a frente C (sugestão do time de dados: 6) | `importacao-regioes.md` |
+| FRP | Fica no projeto, mas **fora das condições do fator** (seção 3) | Revisão do PR 1 |
+| Áreas críticas | Diferencial do app: contagem de focos mais energia (`frp_soma`) por célula, no período do VIIRS | Weberson, 14/11/2026 |
 
-Plano reserva, se só os arquivos de 2024 estiverem disponíveis: treinar com os meses de janeiro a junho de 2024 e testar de julho a dezembro. Nesse caso a faixa mostra só a variação entre meses, e isso precisa ser dito na tela de Método.
+## 2. Cuidados para não misturar as escalas
 
-## 4. O que muda nas tarefas da parte B
+1. Todo número carrega a escala e a origem: **observado pelo VIIRS** ou **estimado a partir do MODIS, com faixa**. Nunca aparece um número sem rótulo. No banco, `agregados` ganha a coluna `origem`.
+2. O calendário marca a troca de sensor (2012), para ninguém ler a diferença entre 2011 e 2012 como aumento real de fogo.
+3. Nunca somar nem comparar a contagem bruta do MODIS com a do VIIRS. Toda comparação entre sensores passa pelo fator ou é feita por célula da grade.
+4. O INPE só se compara pela **forma da curva** (anos altos, meses de pico), nunca pelo valor absoluto, porque o INPE conta na escala de um satélite só.
+5. A faixa de incerteza aparece só nos números estimados. Os meses observados pelo VIIRS não ganham faixa de conversão.
+6. No teste do modelo, o MODIS convertido é comparado só com o VIIRS real do mesmo ano.
 
-| Tarefa | Ajuste |
-| --- | --- |
-| B1 | Protótipo calcula o fator por condição (mês, dia/noite, faixa de FRP), e não um só |
-| B2 | Regra de escolha do satélite por mês continua. Acrescenta a conversão por condição e a faixa |
-| B3 | Grava os fatores com colunas de condição e de faixa (mínimo e máximo) |
-| B6 | Além da comparação com o INPE, reportar o erro nos anos de teste e quantas vezes o valor real caiu dentro da faixa |
+## 3. O papel do FRP
 
-## 5. Limites a declarar no método
+O FRP (potência do fogo, em MW) continua no projeto, em quatro usos: pista do classificador, coluna `frp_soma` em `agregados`, indicador de áreas críticas e regra de limpeza (FRP vazio, zero ou negativo sai).
 
-- O modelo foi treinado com poucos anos e uma região. Mostra o método e não vale para outros biomas.
-- A faixa de incerteza com poucos anos é aproximada.
-- A geometria do MODIS onde ele não detectou é aproximada pela mediana do `scan`.
-- A deriva de órbita do Aqua pode afetar 2023 e 2024.
-- O uso de IA neste trabalho será declarado no campo "Use of Super Intelligence".
+Ele **sai só das condições do fator de conversão**. Motivo (correção da primeira versão): o fator precisa de condições que existam também nos anos só-MODIS, e os fogos que o MODIS não viu não têm FRP registrado.
 
-## 6. Pendências
+Cuidado: o FRP do MODIS e o do VIIRS não são comparáveis, porque o pixel do MODIS é muito maior. A intensidade por célula só é mostrada no período do VIIRS (2012 em diante). Para 2003 a 2011, a intensidade não é mostrada na demonstração. ESCOLHA DA EQUIPE.
 
-1. Anos de treino (2019 a 2022) e de teste (2023 e 2024) confirmados. Se os dados desses anos não chegarem do FIRMS, vale o plano reserva.
-2. Confirmar as faixas de FRP.
-3. Autorizar rodar o Python (ainda não foi autorizado).
+## 4. DECIDIDO (Weberson, 14/11/2026): como calcular o fator e a faixa
+
+Condições do fator: **bioma × mês × dia/noite**. Essas são as condições que existem nos dois períodos.
+
+1. Contar, por célula H3 e mês, os focos do Aqua e os do S-NPP, nos anos de sobreposição (2012 a 2024, 13 anos).
+2. Somar por bioma, mês e dia/noite e calcular o fator Aqua para S-NPP (quantos focos do VIIRS cada foco do Aqua representa).
+3. Cada ano da sobreposição gera um fator, e cada fator é um **cenário**. A faixa de incerteza é o percentil 10 e o percentil 90 entre os 13 cenários.
+4. Validação por ano deixado de fora: o fator vem dos outros 12 anos, é aplicado ao Aqua do ano deixado de fora e comparado ao S-NPP real. Reportar o erro e quantas vezes o real cai dentro da faixa de 80%.
+5. 2025 fica fora do cálculo. A razão S-NPP/Aqua caiu para 4,8 (contra cerca de 6), possivelmente pela deriva de órbita do Aqua, e isso precisa ser investigado antes de congelar o fator.
+
+**Salvaguardas obrigatórias (aceitas junto com a decisão):**
+
+- **Suposição declarada no Método:** o fator supõe que a razão entre os sensores em 2003 a 2011 é parecida com a de 2012 a 2024. Isso não pode ser testado, porque não há VIIRS antes de 2012. A queda de 2025 mostra que a razão pode mudar. A faixa mede só a variação entre anos, e não esse risco.
+- **Mínimo de focos por condição:** cada combinação de bioma, mês e dia/noite precisa de um mínimo de focos do Aqua para ter fator próprio. Abaixo disso, junta com a condição vizinha e registra a fusão em `fatores_harmonizacao`. O valor do mínimo é definido com a base limpa. ESCOLHA DA EQUIPE.
+
+Por que contagens por célula e não o classificador ponto a ponto: é mais barato, usa 13 pontos para a faixa em vez de 4, e dispensa a regra "MODIS estava olhando", que gerava viés (descartava justamente as áreas onde o VIIRS viu fogo e o MODIS nada).
+
+**Contrato para a API:** a soma dos percentis 10 das células não é o percentil 10 da soma. Por isso a contagem harmonizada é guardada **por cenário** (um valor por ano de sobreposição). A API soma as células da área e só depois calcula o P10 e o P90. Formato exato a fechar no M0 com a frente C (ver `importacao-regioes.md`).
+
+## 5. DECIDIDO (Weberson, 14/11/2026): o classificador (modelo A) como análise complementar
+
+O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, temperatura, confiança, mês, dia/noite, bioma e `modis_scan_mediano`. Ele **não gera o fator da série**. Serve para a tela de Método mostrar quais fogos o MODIS perde por potência (fraco ou forte).
+
+- Roda em volume pequeno (treino 2019 a 2022, teste 2023 e 2024, confirmado pelo Weberson como recorte para esta análise).
+- A regra "MODIS estava olhando" (foco do Aqua a até 50 km) vale só aqui, e o viés que ela causa é declarado.
+- Se só houver os arquivos de 2024, o corte é **no espaço**: metade das células H3 para treino e metade para teste, com todos os meses dos dois lados.
+
+## 6. Limites a declarar no método
+
+- O fator é por bioma, mês e dia/noite. Não corrige por potência do fogo.
+- A faixa de incerteza reflete a variação entre anos de sobreposição e não cobre outras fontes de erro.
+- A deriva de órbita do Aqua pode afetar os anos recentes.
+- Treinado com Amazônia e Pantanal. Não vale automaticamente para outros biomas.
+- O uso de IA neste trabalho é declarado no campo "Use of Super Intelligence" e no README.
+
+## 7. Pendências
+
+1. Fechar com a frente C o formato de `agregados` por cenário (M0).
+2. Definir o mínimo de focos por condição com a base limpa.
+3. Investigar a queda de S-NPP/Aqua em 2025.
+4. Esta decisão muda o que o contexto do projeto dizia sobre o modelo A (o classificador deixa de gerar o fator da série). A equipe deve concordar com a mudança.

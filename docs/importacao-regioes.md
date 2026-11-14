@@ -35,8 +35,11 @@ Cinco tabelas separam o dado bruto, as regiões, a cobertura, a calibração e o
 | `focos` | Foco detectado | Campos normalizados do importador + `h3` | Importador e jobs de atualização |
 | `regioes` | Região | `id`, `nome`, `geom` (polígono), `celulas_h3`, `fonte_poligono` | Cadastro manual |
 | `cobertura` | Região × satélite | `regiao_id`, `satelite`, `data_inicio`, `data_fim`, `atualizado_em` | Importador |
-| `fatores_harmonizacao` | Região × par de satélites | `regiao_id`, `satelite_origem`, `satelite_destino`, `fator`, `periodo_calibracao`, `n_meses` | Job de calibração |
-| `agregados` (contrato 1) | Célula H3 × ano × mês | `h3`, `ano`, `mes`, `focos_harmonizados`, `focos_brutos`, `frp_soma`, `sem_dados` | Job de agregação |
+| `fatores_harmonizacao` | Região × par de satélites × bioma × mês × dia/noite × cenário (ano de sobreposição) | `regiao_id`, `satelite_origem`, `satelite_destino`, `bioma`, `mes`, `periodo`, `cenario_ano`, `fator`, `n_focos_origem`, `fusao_com` | Job de calibração |
+| `agregados` (contrato 1) | Célula H3 × ano × mês | `h3`, `ano`, `mes`, `focos_harmonizados`, `focos_brutos`, `frp_soma`, `sem_dados`, `origem` | Job de agregação |
+| `agregados_cenarios` (formato a fechar no M0) | Célula H3 × ano × mês × cenário | `h3`, `ano`, `mes`, `cenario_ano`, `focos_harmonizados` | Job de agregação |
+
+`origem` vale `observado_viirs` ou `estimado_modis`. Só os meses estimados (2003 a 2011) têm linhas em `agregados_cenarios`, uma por cenário (ano de sobreposição, 2012 a 2024). A API soma os cenários das células da área e só depois calcula o P10 e o P90, porque a soma dos P10 das células não é o P10 da soma. `frp_soma` só é preenchida no período do VIIRS, porque o FRP do MODIS e o do VIIRS não são comparáveis. Detalhes e decisões em [decisoes-harmonizacao.md](decisoes-harmonizacao.md).
 
 A API usa a `cobertura` para responder "sem dados para esta área" quando a área desenhada cai fora das regiões carregadas, em vez de devolver um calendário vazio. A coluna `sem_dados` marca os meses em que o FIRMS informa falha de satélite (`missing_data`), para não confundir com zero focos.
 
@@ -46,14 +49,17 @@ O fator de harmonização é calculado para cada região, porque a razão VIIRS/
 
 Cadeia de calibração, aplicada a cada região:
 
-1. **Referência:** MODIS Aqua, de 2003 em diante.
-2. **S-NPP → Aqua:** fator calculado na sobreposição de 20/01/2012 a 02/11/2026.
-3. **NOAA-20 → S-NPP:** fator calculado na sobreposição de 01/04/2018 a 02/11/2026. Aplicado depois do fator anterior, leva o NOAA-20 à escala Aqua.
+1. **Escala final: VIIRS (S-NPP como referência).** Decisão do Weberson em 14/11/2026. Os anos só-MODIS (2003 a 2011) são convertidos para a escala do VIIRS, e cada mês fica rotulado como observado ou estimado (`origem`).
+2. **Aqua → S-NPP:** fator por **bioma × mês × dia/noite**, calculado em contagens por célula H3 na sobreposição de 2012 a 2024. Cada ano da sobreposição é um cenário. O fator da série é a mediana dos cenários, e a faixa de incerteza é o P10 e o P90 entre eles. Só o Aqua entra (Terra fora, calendário a partir de 2003). 2025 fica fora até a queda da razão S-NPP/Aqua (4,8) ser investigada.
+3. **NOAA-20 → S-NPP:** fator calculado na sobreposição de 01/04/2018 a 02/11/2026 (as razões ficam entre 0,97 e 1,04). Mantém a continuidade do VIIRS depois do fim do S-NPP.
 4. **NOAA-21:** só se o NOAA-20 falhar, calibrado contra o NOAA-20 a partir de 01/03/2023.
 
 Regras:
 
 - O fator é calculado só com focos de confiança nominal ou alta e `tipo = 0`.
+- O FRP não é condição do fator, porque nos anos só-MODIS os fogos que o MODIS não viu não têm FRP.
+- Cada condição precisa de um mínimo de focos do Aqua. Abaixo disso, junta com a condição vizinha e registra em `fusao_com`. O valor do mínimo é definido com a base limpa.
+- Suposição declarada no Método: a razão entre os sensores em 2003 a 2011 é parecida com a de 2012 a 2024. Não há como testar, porque não há VIIRS antes de 2012.
 - O fator fica congelado depois da carga histórica. Os jobs de atualização só aplicam o fator.
 - Região sem sobreposição suficiente (menos de 24 meses com focos nos dois sensores) usa o fator da região vizinha mais parecida, e isso fica registrado em `fatores_harmonizacao`.
 
