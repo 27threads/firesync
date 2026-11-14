@@ -118,9 +118,9 @@ Medido com o formato anterior de `agregados` (uma linha por célula × mês, só
 
 Carga com `COPY`: 3,8 s para ~1 milhão de linhas. Conclusão: o Postgres dá conta sem cache. Só a conversão de polígonos grandes precisa ser feita antes, no `cadastrar`.
 
-## Compose sugerido para o serviço do banco
+## Compose sugerido para o banco e o job NRT
 
-O backend é dono do `docker-compose.yml`. Este trecho é só a configuração recomendada para o serviço `db`:
+O backend é dono do `docker-compose.yml`. Este trecho é só a configuração recomendada para os serviços `db` e `job-nrt`:
 
 ```yaml
 services:
@@ -139,12 +139,23 @@ services:
       test: ["CMD-SHELL", "pg_isready -U firesync -d firesync"]
       interval: 5s
       retries: 10
+  job-nrt:                                         # issue #5: focos NRT a cada 3 h
+    build: ./data-pipeline                         # Dockerfile da frente A
+    environment:
+      DATABASE_URL: postgresql://firesync:${POSTGRES_PASSWORD}@db:5432/firesync
+      FIRMS_MAP_KEY: ${FIRMS_MAP_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
 volumes:
   db-data:
 ```
 
 - O `docker-entrypoint-initdb.d` só roda com o volume vazio. Migrations novas (`002_...sql`) precisam ser aplicadas à mão ou por um passo de deploy.
 - A API deve esperar o `healthcheck` (`depends_on: db: condition: service_healthy`).
+- O `job-nrt` roda `job_nrt.py` a cada 3 h: baixa as últimas 48 h de `VIIRS_NOAA20_NRT` e `VIIRS_NOAA21_NRT`, importa, refaz `agregados` dos meses da janela, atualiza `dias_sem_dados` e grava `config.atualizado_em`. Tem trava no banco (`pg_try_advisory_lock`), então duas rodadas nunca correm juntas. Uma rodada que falha não grava `atualizado_em`, e a próxima tenta de novo.
+- **`config.atualizado_em`** (texto ISO 8601 em UTC, ex.: `2026-11-14T18:43:16+00:00`) é a hora da última rodada que deu certo: é o `meta.updated_at` da API.
 
 ## Variáveis de ambiente
 

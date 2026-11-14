@@ -107,4 +107,8 @@ assert proximo_mes(mes("2026-12")) == date(2027, 1, 1)
 from pipeline import mask_key  # noqa: E402
 assert mask_key("https://x/api/area/csv/abc123/MODIS_SP/1,2,3,4/5/2026-01-01") == \
     "https://x/api/area/csv/***/MODIS_SP/1,2,3,4/5/2026-01-01"
+# job NRT: meses refeitos pela janela de 48 h
+from job_nrt import meses_da_janela  # noqa: E402
+assert meses_da_janela(date(2026, 11, 14)) == (date(2026, 11, 1), date(2026, 12, 1))
+assert meses_da_janela(date(2026, 12, 1)) == (date(2026, 11, 1), date(2027, 1, 1))   # janela cruza o mês
 print("ok")

@@ -117,6 +117,24 @@ A diferença são focos fora dos 6 biomas (mar e ilhas). A reimportação do MOD
 
 Na VPS, reservar ~30 GB livres para o banco.
 
+## Job NRT (`job_nrt.py`, issue #5)
+
+Mantém o banco atualizado sem a carga inteira. Cada rodada leva ~30 s:
+
+1. baixa as últimas 48 h de `VIIRS_NOAA20_NRT` e `VIIRS_NOAA21_NRT` no bbox da cobertura;
+2. `importar` (upsert: o que já está no banco vira "atualizado"; SP substitui NRT);
+3. `agregar` só dos meses da janela (dois meses quando a janela cruza a virada);
+4. `sem_dados`;
+5. grava `config.atualizado_em`.
+
+Trava no banco: se uma rodada ainda está rodando, a próxima sai sem fazer nada. Testado: rodada real (739 focos novos), segunda rodada sem duplicar (0 novos), trava ocupada e uma rodada dentro do container, ligada ao banco pela rede do Docker.
+
+Na VPS ele roda no container do `Dockerfile` desta pasta, com um laço de 3 h (compose em [banco.md](banco.md)). Em bash, local:
+
+```bash
+python job_nrt.py
+```
+
 ## Agregação (`agregar.py`, tarefa B4)
 
 Monta `agregados` a partir de `focos`, em SQL, dentro do banco. É a contagem **bruta**: os fatores são aplicados na API. Fica num módulo separado do importador, como pede o `tarefas.md`.

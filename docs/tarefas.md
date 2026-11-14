@@ -108,6 +108,6 @@ D1 a D5 começam com o JSON de exemplo do `api.md`, sem esperar a API.
 
 | ID | Tarefa | Motivo |
 | --- | --- | --- |
-| X1 | Job de atualização NRT pela API do FIRMS | Não cabe no prazo. A demo usa dados carregados uma vez |
+| X1 | Job de atualização NRT pela API do FIRMS | Voltou pela issue #5 e foi feito: `data-pipeline/job_nrt.py` + `Dockerfile` (a cada 3 h) |
 | X2 | Recarga SP mensal | Depende do X1 |
 | X3 | Região da Califórnia | Precisa de pedido novo no FIRMS |
