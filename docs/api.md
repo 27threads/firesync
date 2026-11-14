@@ -54,7 +54,8 @@ Como a área vira células: entra a célula cujo **centro** cai dentro da área 
 
 Limites:
 
-- No máximo **150.000 células** (~5,4 milhões de km², mais que a Amazônia inteira). Acima disso: erro `area_too_large`.
+- No máximo **250.000 células** (~9 milhões de km²). O Brasil inteiro tem cerca de 220 mil células, então cabe. Acima disso: erro `area_too_large`.
+- **Tempo de áreas grandes ainda não medido.** A Amazônia (110 mil células) leva ~0,8 s no banco. O Brasil inteiro deve levar perto de 1,6 s pela proporção, mas isso é estimativa (medição pedida na issue #5). Para o mundo, áreas grandes vão usar uma tabela agregada em resolução mais grossa (depois da submissão).
 - Geometria inválida (anel aberto, auto-interseção): erro `invalid_geometry`.
 
 ### `start` e `end`
@@ -361,7 +362,7 @@ Formato único:
 | 400 | `invalid_period` | Data fora de `2003-01` a `last_month`, ou `start` depois de `end` |
 | 400 | `invalid_bbox`, `invalid_hours`, `invalid_mode` | Parâmetro inválido em `GET /detections/recent` |
 | 404 | `region_not_found` | `region_id` não existe |
-| 413 | `area_too_large` | Mais de 150.000 células |
+| 413 | `area_too_large` | Mais de 250.000 células |
 | 500 | `internal_error` | Qualquer outro. A mensagem não expõe detalhes do servidor |
 
 Área fora da cobertura **não** é erro: é `200` com `coverage.status = "none"`.
