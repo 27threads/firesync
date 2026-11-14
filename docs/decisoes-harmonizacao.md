@@ -198,7 +198,13 @@ O modelo aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, tempera
 | 25 MW ou mais | 71% | 87% |
 
 - O MODIS perde a maior parte dos fogos fracos e vê a maior parte dos fortes. Isso explica, sem jargão, por que juntar as séries sem tratamento infla ou esconde fogo.
-- **De noite, a maior parte dos fogos do VIIRS é fraca:** 162 mil dos 333 mil fogos noturnos têm menos de 2 MW, e o MODIS vê 18% deles. Isso é o que torna o fator noturno (cerca de 5 vezes o diurno) muito maior que o diurno.
+- **De noite, quase metade dos fogos do VIIRS é fraca:** 162 mil dos 369 mil fogos noturnos (nas áreas que o MODIS estava olhando) têm menos de 2 MW, e o MODIS vê 18% deles. Isso ajuda a explicar por que o fator noturno (cerca de 5 vezes o diurno) é muito maior que o diurno. **Para a mesma potência, o MODIS vê mais fogos de noite do que de dia** (sem o brilho do sol); o fator noturno é maior pela mistura de fogos, e não por o MODIS ser pior de noite.
+
+**Gráfico para a tela de Método:** [`docs/img/modelo/curva_deteccao_2024.png`](img/modelo/curva_deteccao_2024.png), com os dados em [`curva_deteccao_2024.csv`](img/modelo/curva_deteccao_2024.csv) (por bioma, período e faixa de potência, para a frente D redesenhar se quiser). Ele explica **por que** as duas séries discordam; não é usado no cálculo do calendário. Legenda sugerida para a tela, em inglês:
+
+> **Why the two satellites disagree.** When VIIRS detects a fire, how often does MODIS also detect it? MODIS misses most weak fires (under 2 MW: seen 15 to 18% of the time) and sees most strong ones (25 MW or more: 71 to 87%). Because VIIRS sees many more small fires, the two raw counts cannot be compared directly. firesync converts MODIS to the VIIRS scale before building the calendar. *Based on 2024 data, areas where MODIS was observing, and a 90-minute window between passes. It explains the gap and is not used to compute the calendar.*
+
+Limites do gráfico, a declarar junto dele: (1) ele provavelmente **subestima** o quanto o MODIS perde, porque só entram áreas onde o Aqua viu algum fogo, e as áreas de fogo fraco que o MODIS não viu ficam de fora (viés da regra dos 50 km); (2) a janela de 90 minutos mistura a sensibilidade do sensor com a mudança do fogo ao longo da hora que separa as passagens; (3) são dados de um ano só (2024), com o Aqua já fora da órbita original.
 
 **Medidas nos blocos de teste** (AUC: 1 é perfeito e 0,5 é sorteio; Brier: menor é melhor):
 
