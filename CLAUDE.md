@@ -48,7 +48,9 @@ A equipe quer ganhar um prêmio global do Space Apps. Leia o [docs/premiacao.md]
 - Nunca adicione `Co-Authored-By` (nem outra linha de coautoria ou atribuição) nas mensagens de commit. O uso de IA é registrado só na tabela "Uso de IA" do README.
 - Nunca adicione "🤖 Generated with [Claude Code](https://claude.com/claude-code)" (nem outra atribuição de ferramenta) na descrição ou nos comentários de pull requests.
 - **Nunca faça push numa branch cujo PR já foi mergeado.** O commit fica fora da `main` e se perde sem aviso (já aconteceu: o `alert_rules.json` 0.2 ficou na branch do PR #14). Antes de cada push, confira o PR da branch com `gh pr view --json state`. Se estiver `MERGED`, crie uma branch nova a partir da `main` atualizada e abra outro PR.
-- A `main` é protegida: só entra por PR, e só com a esteira verde.
+- **Nunca faça commit direto na `main`. Sempre por PR**, numa branch a partir da `main` atualizada, com a esteira verde.
+- **Exceção: hotfix urgente.** Só quando o site no ar está quebrado e não dá para esperar a esteira. Só um administrador pode, porque a proteção deixa administradores passarem por cima. Depois do hotfix, abra um PR com o teste que reproduz o bug, como manda a regra dos bugs, para a correção ficar protegida.
+- A `main` é protegida no GitHub: exige PR e os 5 jobs da esteira verdes.
 
 ## Uso de IA
 
