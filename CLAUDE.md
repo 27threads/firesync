@@ -27,6 +27,11 @@ Leia o [README.md](README.md) antes de qualquer tarefa. Ele tem a ordem de leitu
 - Não commite CSVs descompactados nem arquivos grandes gerados pelo pipeline. Os ZIPs de teste em `data-pipeline/data/` já estão versionados.
 - Para testar, use os arquivos de 2024 (Brasil, SP). O histórico completo ainda não chegou.
 
+## Git
+
+- Nunca adicione `Co-Authored-By` (nem outra linha de coautoria ou atribuição) nas mensagens de commit. O uso de IA é registrado só na tabela "Uso de IA" do README.
+- Nunca adicione "🤖 Generated with [Claude Code](https://claude.com/claude-code)" (nem outra atribuição de ferramenta) na descrição ou nos comentários de pull requests.
+
 ## Uso de IA
 
 Toda parte gerada ou assistida por IA precisa entrar na tabela "Uso de IA" do README, no mesmo commit do código.
