@@ -185,6 +185,10 @@ def download():
         sp_end = date.fromisoformat(avail.loc[sp, "max_date"])
         nrt_end = date.fromisoformat(avail.loc[nrt, "max_date"])
         jobs = [(sp, date.fromisoformat(start), sp_end), (nrt, sp_end + timedelta(days=1), nrt_end)]
+        for old in (RAW / "api" / nrt).glob("*.csv"):  # o SP chegou: o NRT desses dias sai (e o staged dele)
+            if date.fromisoformat(old.stem) + timedelta(days=4) <= sp_end:
+                old.unlink()
+                (STAGE / ("viirs" if "VIIRS" in nrt else "modis") / f"{nrt}_{old.stem}.parquet").unlink(missing_ok=True)
         for source, d0, d1 in jobs:
             d = d0
             while d <= d1:
@@ -207,11 +211,12 @@ def raw_files(kind):
 
 
 def read_raw(p, bbox):
-    src = p
+    dtype = {"acq_time": str, "version": str, "confidence": str}
     if str(p).endswith(".zip"):  # ZIP do Archive Download: CSV + Readme.txt
-        z = zipfile.ZipFile(p)
-        src = z.open(next(n for n in z.namelist() if n.endswith(".csv")))
-    df = pd.read_csv(src, dtype={"acq_time": str, "version": str, "confidence": str})
+        with zipfile.ZipFile(p) as z, z.open(next(n for n in z.namelist() if n.endswith(".csv"))) as f:
+            df = pd.read_csv(f, dtype=dtype)
+    else:
+        df = pd.read_csv(p, dtype=dtype)
     w, s, e, n = bbox
     return df[df.longitude.between(w, e) & df.latitude.between(s, n)]
 
@@ -412,6 +417,8 @@ def importar(paths=()):
     res = int(config(conn, "h3_resolucao"))
     if paths:
         regions = load_regions(conn)
+        if regions.empty:
+            raise SystemExit("tabela regioes vazia: rode `python pipeline.py cadastrar` antes")
         bbox = bbox_of(regions)
         jobs = [(Path(p), None) for p in paths]
     else:
@@ -431,7 +438,7 @@ def importar(paths=()):
         buf = StringIO()
         f.to_csv(buf, index=False, header=False)
         with conn.transaction():
-            conn.execute(f"CREATE TEMP TABLE focos_tmp (LIKE focos INCLUDING DEFAULTS) ON COMMIT DROP")
+            conn.execute(f"CREATE TEMP TABLE focos_tmp ON COMMIT DROP AS SELECT {cols} FROM focos WITH NO DATA")
             with conn.cursor().copy(f"COPY focos_tmp ({cols}) FROM STDIN WITH (FORMAT csv)") as cp:
                 cp.write(buf.getvalue())
             ins, upd_n = conn.execute(f"""
@@ -450,7 +457,24 @@ def importar(paths=()):
                 ON CONFLICT (regiao_id, satelite) DO UPDATE
                 SET data_inicio = least(cobertura.data_inicio, EXCLUDED.data_inicio),
                     data_fim = greatest(cobertura.data_fim, EXCLUDED.data_fim), atualizado_em = now()""")
-        print(f"importar: {p.name}: {ins:,} novos, {upd_n:,} atualizados", flush=True)
+            sub = drop_nrt_under_sp(conn, sorted(f.satelite.unique()))
+        print(f"importar: {p.name}: {ins:,} novos, {upd_n:,} atualizados, {sub:,} NRT substituídos pelo SP", flush=True)
+
+
+def drop_nrt_under_sp(conn, satelites):
+    """O NRT só vale depois do último dia SP do satélite: quando o SP chega, ele substitui o NRT daqueles dias.
+
+    As coordenadas mudam um pouco no reprocessamento, então a chave única não junta os dois; sem isto o
+    mesmo fogo contaria duas vezes. Roda depois de cada arquivo, então a ordem de importação não importa.
+    """
+    n = 0
+    for sat in satelites:
+        n += conn.execute("""
+            DELETE FROM focos
+            WHERE satelite = %(s)s AND qualidade = 'NRT'
+              AND datahora_utc < (SELECT date_trunc('day', max(datahora_utc)) + interval '1 day'
+                                  FROM focos WHERE satelite = %(s)s AND qualidade = 'SP')""", {"s": sat}).rowcount
+    return n
 
 
 if __name__ == "__main__":

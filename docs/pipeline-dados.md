@@ -89,6 +89,8 @@ Lê o `stage` (ou um CSV/ZIP do FIRMS passado como argumento) e grava em `focos`
 
 Reimportar o mesmo arquivo não duplica: tudo vira "atualizado".
 
+**SP substitui NRT.** O NRT só vale depois do último dia SP de cada satélite. Depois de cada arquivo, o importador apaga os focos NRT de dias que já têm SP (as coordenadas mudam um pouco no reprocessamento, então a chave única não junta os dois e o mesmo fogo contaria duas vezes). O `download` também apaga o arquivo NRT que ficou todo dentro do período SP. A migration `003_focos_nrt.sql` cria o índice que deixa isso rápido.
+
 Teste com os ZIPs de 2024 do repo (Brasil, SP), em ~3 min:
 
 | Satélite | Plano de extração | Importado | Diferença |
@@ -229,6 +231,7 @@ Comandos em bash, a partir de `data-pipeline/`:
 ```bash
 pip install -r requirements.txt
 python test_pipeline.py          # self-check dos filtros
+TEST_DATABASE_URL=... python test_banco.py   # importar, SP x NRT, cobertura e agregar num Postgres descartável
 python pipeline.py cadastrar     # precisa do banco com a migration aplicada
 python pipeline.py download      # ~3,5 GB; retoma de onde parou
 python pipeline.py stage
