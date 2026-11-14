@@ -1,0 +1,8 @@
+# Checagem de código morto e erros óbvios (docs/testes.md, "Sem código morto").
+# A esteira roda `ruff check` em todo PR. Ignore uma linha só com `# noqa: <regra>` e um motivo.
+extend-exclude = ["node_modules", "frontend/e2e"]
+
+[lint]
+# F = pyflakes: import sem uso (F401), variável sem uso (F841), redefinição (F811), nome indefinido (F821),
+# f-string sem variável (F541), entre outros.
+select = ["F"]

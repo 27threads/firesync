@@ -9,6 +9,8 @@ Nov 14, 2026 · vale para todo código do projeto
 3. **Todo PR com código roda a esteira** e só entra na `main` se ela passar (RNF08).
 4. **A cobertura só sobe.** O mínimo fica no arquivo de configuração. Quando a cobertura medida passar do mínimo, suba o mínimo no mesmo PR.
 5. **Testes testam comportamento, não implementação.** Entrada e saída pela interface pública. Nada de testar função privada ou contar chamadas internas. Assim dá para refatorar sem quebrar teste.
+6. **Sem código morto.** Import, variável, função ou classe sem uso, e código comentado, não entram. A esteira checa com o `ruff` (regras F, configuradas no `ruff.toml`) e com o `vulture`. Se for um falso positivo, ignore só aquela linha (`# noqa: <regra>`) e escreva o motivo. No front, quando existir, o mesmo vale com `noUnusedLocals` e `noUnusedParameters` no TypeScript.
+7. **A `main` é protegida.** Só entra por PR e só com todos os jobs da esteira verdes.
 
 ## Tipos de teste
 
@@ -57,7 +59,7 @@ Cada jornada roda no desktop e no celular. Os seletores usam papéis e textos ac
 
 | Parte | Medida | Mínimo | Onde fica o mínimo |
 | --- | --- | --- | --- |
-| `data-pipeline/` | Linhas e ramos, juntando unidade e integração | 35% hoje (unidade sozinha: 36%). Sobe para o valor medido na esteira | `data-pipeline/.coveragerc` |
+| `data-pipeline/` | Linhas e ramos, juntando unidade e integração | **56%**, o medido na primeira esteira (PR #24): `agregar.py` 80%, `job_nrt.py` 85%, `pipeline.py` 51% | `data-pipeline/.coveragerc` |
 | `backend/src/` | Linhas e ramos | **94%**, após a integração do backend | `.github/workflows/ci.yml` |
 
 O `eda.py` (análise exploratória) fica fora da cobertura. Download, `stage`, `clean` e `cadastrar` dependem do FIRMS e do IBGE, e são as próximas partes a ganhar teste.
@@ -68,6 +70,7 @@ Arquivo: `.github/workflows/ci.yml`. Roda em todo PR e em todo push na `main`.
 
 | Job | O que roda |
 | --- | --- |
+| **Código morto** | `ruff check .` (imports, variáveis e redefinições sem uso) e `vulture` (funções, classes e variáveis nunca usadas), fora dos testes |
 | **Pipeline · unidade** | `test_pipeline.py` |
 | **Pipeline · integração com PostGIS** | Migrations aplicadas duas vezes (precisam rodar de novo sem erro), `test_banco.py`, job NRT com o FIRMS simulado e o relatório de cobertura, que aparece no resumo do job |
 | **API · contrato e especificação TDD** | Contrato do `api-exemplo.json` e do `alert_rules.json`, mais a especificação do domínio. As especificações já implementadas não usam `xfail`. Com código em `backend/src/`, também a cobertura mínima de 94% com PostGIS |
@@ -101,3 +104,8 @@ cd frontend/e2e && npm ci && npx playwright test --list
 ```
 
 O teste do job NRT (`data-pipeline/tests/`) precisa de um banco próprio, com "teste" no nome, porque apaga as tabelas.
+
+```bash
+# código morto (a partir da raiz)
+pip install ruff vulture && ruff check . && vulture data-pipeline --exclude "tests,test_*.py" --min-confidence 60
+```

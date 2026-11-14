@@ -110,7 +110,7 @@ O pacote Python continua chamado `backend`, mapeado para `backend/src/` pelo `py
 - **Funções pequenas, que fazem uma coisa só.** Se precisa de um comentário para explicar o que um bloco faz, ele vira uma função com esse nome.
 - **Sem número mágico:** limites, percentis e janelas vêm do `alert_rules.json` ou de uma constante com nome.
 - **Comentário explica o porquê**, não o quê. O "o quê" fica no nome.
-- **Sem código morto nem comentado.** O histórico está no git.
+- **Sem código morto nem comentado.** O histórico está no git. A esteira checa (`ruff` e `vulture`, ver [testes.md](testes.md)).
 - **Erro explícito**, com mensagem clara. Nada de engolir exceção.
 - **Deixe o código melhor do que encontrou**, mas refatoração grande vai num PR separado.
 

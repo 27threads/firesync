@@ -104,7 +104,7 @@ def test_falha_no_download_nao_grava_atualizado_em(banco, monkeypatch):
 
 
 def test_falha_depois_de_agregar_nao_muda_o_que_a_api_le(banco, monkeypatch):
-    """Se a rodada falha depois de agregar, a API não pode ler agregados novos com o atualizado_em velho."""
+    """A API nunca lê agregados novos com o atualizado_em velho (bug da issue #15, corrigido no PR #23)."""
     conn, hoje = banco["conn"], banco["hoje"]
 
     def sem_dados_falha():
@@ -114,4 +114,4 @@ def test_falha_depois_de_agregar_nao_muda_o_que_a_api_le(banco, monkeypatch):
     with pytest.raises(RuntimeError):
         banco["job"].rodada()
     assert atualizado_em(conn) is None
-    assert soma_do_mes(conn, hoje) == 0  # uma rodada incompleta não publica agregados
+    assert soma_do_mes(conn, hoje) == 0  # a agregação e a versão vão no mesmo commit, depois do sem_dados
