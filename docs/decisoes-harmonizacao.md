@@ -22,7 +22,7 @@ Este documento incorpora a revisão feita no PR 1 (comentário de nogran). Onde 
 
 ## 2. Cuidados para não misturar as escalas
 
-1. Todo número carrega a escala e a origem: **observado pelo VIIRS** ou **estimado a partir do MODIS, com faixa**. Nunca aparece um número sem rótulo. A API deduz a origem: mês com focos do VIIRS na área é observado, mês só com Aqua é estimado.
+1. Todo número carrega a escala e a origem: **observado pelo VIIRS** ou **estimado a partir do MODIS, com faixa**. Nunca aparece um número sem rótulo. A origem depende só da data: até janeiro de 2012 é estimado (Aqua × fator), de fevereiro de 2012 em diante é observado pelo VIIRS. Uma área sem fogo continua com origem definida.
 2. O calendário marca a troca de sensor (2012), para ninguém ler a diferença entre 2011 e 2012 como aumento real de fogo.
 3. Nunca somar nem comparar a contagem bruta do MODIS com a do VIIRS. Toda comparação entre sensores passa pelo fator ou é feita por célula da grade.
 4. O INPE só se compara pela **forma da curva** (anos altos, meses de pico), nunca pelo valor absoluto, porque o INPE conta na escala de um satélite só.
