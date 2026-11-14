@@ -2,7 +2,19 @@
 
 Nov 14, 2026 · fonte: [Judging & Awards Guide 2026](https://www.spaceappschallenge.org/resources/judging-awards-guide/) (versão de 13/11/2026)
 
-**Objetivo da equipe: ganhar um prêmio global.** Toda decisão de produto, código, documentação e apresentação deve aumentar a nota nos 5 critérios abaixo e mirar as categorias-alvo. Na dúvida entre duas opções, escolha a que vale mais nota.
+**Objetivo da equipe: ganhar um prêmio global.** Toda decisão de produto, código, documentação e apresentação deve aumentar a nota nos 5 critérios abaixo. Na dúvida entre duas opções, escolha a que vale mais nota.
+
+## Critérios primeiro, categorias depois
+
+**As categorias só são decididas na fase 3, e só entre os finalistas.** Para chegar lá, o projeto precisa passar pelas fases 1 e 2, e nelas conta **apenas a nota de 1 a 5 em cada um dos 5 critérios**. Um projeto pensado para uma categoria que tira nota baixa em Presentation não chega à fase em que as categorias são escolhidas.
+
+Por isso:
+
+1. **A ordem do trabalho segue os critérios.** Cada tarefa precisa subir a nota em pelo menos um dos 5 (Impact, Creativity, Validity, Relevance, Presentation). Nenhum critério pode ficar fraco.
+2. **As categorias-alvo servem para contar a história** na página do projeto e no vídeo, para os executivos da fase 3 enxergarem o projeto nelas. Elas não definem o que fazer primeiro.
+3. **As três categorias-alvo combinam com critérios fortes nossos:** Best Use of Data com Relevance, Best Use of Science com Validity, Local Impact com Impact.
+
+A ordem de prioridade da frente A, por critério, está na issue #19.
 
 ## Como funciona o julgamento
 

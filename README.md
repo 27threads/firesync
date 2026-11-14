@@ -6,7 +6,7 @@ O usuário escolhe uma área e um período e vê um calendário meses × anos co
 
 **Prazo da submissão:** domingo, 15/11/2026, 23h59 (horário do evento local).
 
-**Objetivo: ganhar um prêmio global.** Os critérios de julgamento, as categorias-alvo (Best Use of Data, Best Use of Science e Local Impact) e o que fazer para cada uma estão em [docs/premiacao.md](docs/premiacao.md). Leia antes de qualquer tarefa.
+**Objetivo: ganhar um prêmio global.** Primeiro, nota alta nos 5 critérios de julgamento, que decidem quem chega à final. Depois, as categorias-alvo (Best Use of Data, Best Use of Science e Local Impact), que guiam a história na página e no vídeo. Tudo em [docs/premiacao.md](docs/premiacao.md). Leia antes de qualquer tarefa.
 
 ## Para agentes: ordem de leitura
 
