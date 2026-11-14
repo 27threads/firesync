@@ -1,0 +1,18 @@
+[
+  {
+    "nome": "Amazonia",
+    "fonte_poligono": "IBGE, Biomas do Brasil 1:250.000",
+    "url": "https://geoftp.ibge.gov.br/informacoes_ambientais/estudos_ambientais/biomas/vetores/Biomas_250mil.zip",
+    "arquivo": "ibge/Biomas_250mil.zip",
+    "campo": "CD_Bioma",
+    "valor": 1
+  },
+  {
+    "nome": "Pantanal",
+    "fonte_poligono": "IBGE, Biomas do Brasil 1:250.000",
+    "url": "https://geoftp.ibge.gov.br/informacoes_ambientais/estudos_ambientais/biomas/vetores/Biomas_250mil.zip",
+    "arquivo": "ibge/Biomas_250mil.zip",
+    "campo": "CD_Bioma",
+    "valor": 6
+  }
+]

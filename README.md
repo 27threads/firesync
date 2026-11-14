@@ -18,6 +18,7 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 4 | [Importação de novas regiões](docs/importacao-regioes.md) | Importador, tabelas, chave única, fatores de harmonização por região, como adicionar região | Antes de mexer no banco, no pipeline ou na API |
 | 5 | [Arquitetura e stack](docs/arquitetura.md) | Stack de cada componente, o que já está decidido e o que falta decidir | Antes de escrever qualquer código |
 | 6 | [Tarefas](docs/tarefas.md) | Frentes, responsáveis, branches, pastas de cada um, marcos e status | Antes de começar qualquer tarefa |
+| 7 | [Pipeline de dados — o que já foi feito](docs/pipeline-dados.md) | Download do histórico, filtros de qualidade, análise por satélite, achados | Antes de mexer em `data-pipeline/` |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
@@ -76,6 +77,7 @@ Detalhes de cada etapa: documento 4.
 - [x] Dados de teste (Brasil, 2024)
 - [ ] Stack e arquitetura definidas
 - [ ] Contrato da API
+- [x] Histórico do FIRMS baixado e análise por satélite ([pipeline-dados.md](docs/pipeline-dados.md))
 - [ ] Importador e pipeline
 - [ ] API
 - [ ] Frontend
@@ -88,7 +90,8 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 
 | Parte | Ferramenta | Como foi usada |
 | --- | --- | --- |
-| | | |
+| `data-pipeline/pipeline.py`, `eda.py`, `test_pipeline.py` | Claude Code (Claude Opus 5.5) | Código gerado a partir das especificações de filtro escritas pelo time de dados. Revisado pela equipe |
+| `docs/pipeline-dados.md` | Claude Code (Claude Opus 5.5) | Redação do relatório do que foi feito e dos achados da análise exploratória |
 
 ## Dados e créditos
 

@@ -47,9 +47,9 @@ Ler antes: [firms-extracao-dados.md](firms-extracao-dados.md), [plano-extracao-a
 
 | ID | Tarefa | Depende de | Status | Pronto quando |
 | --- | --- | --- | --- | --- |
-| A1 | Conferir o pedido do FIRMS. Se o histórico não chegar a tempo, baixar os resumos anuais por país (Brasil, 2003 até hoje), que não passam por aprovação | — | a fazer | Histórico em mãos, ou decisão registrada de demo só com 2024 |
-| A2 | Baixar o shapefile de biomas do IBGE e a série mensal do bioma Amazônia do INPE | — | a fazer | Arquivos em `data-pipeline/data/`, fora do git se forem grandes |
-| A3 | Criar `.gitignore` para CSVs descompactados e arquivos gerados | — | a fazer | `git status` limpo depois de descompactar os ZIPs |
+| A1 | Conferir o pedido do FIRMS. Se o histórico não chegar a tempo, baixar os resumos anuais por país (Brasil, 2003 até hoje), que não passam por aprovação | — | feito (resumos anuais 2000–2025 + API para 2026, ver [pipeline-dados.md](pipeline-dados.md)) | Histórico em mãos, ou decisão registrada de demo só com 2024 |
+| A2 | Baixar o shapefile de biomas do IBGE e a série mensal do bioma Amazônia do INPE | — | fazendo (IBGE feito, falta INPE) | Arquivos em `data-pipeline/data/`, fora do git se forem grandes |
+| A3 | Criar `.gitignore` para CSVs descompactados e arquivos gerados | — | feito | `git status` limpo depois de descompactar os ZIPs |
 | A4 | Criar o banco com as tabelas `focos`, `regioes` e `cobertura` | T00 | a fazer | Script de criação versionado |
 | A5 | Importador: normalizar colunas, calcular H3, upsert com a chave única, atualizar `cobertura` | A4 | a fazer | `importar` carrega os 5 arquivos de 2024 e as contagens batem com a tabela do plano de extração |
 | A6 | Cadastrar as regiões Amazônia e Pantanal em `regioes`, com `celulas_h3` | A2, A4 | a fazer | As duas regiões com polígono e células |

@@ -1,0 +1,14 @@
+.env
+__pycache__/
+.venv/
+
+# dados gerados pelo pipeline (grandes, refeitos com `python pipeline.py ...`)
+data-pipeline/data/raw/
+data-pipeline/data/staged/
+data-pipeline/data/processed/
+data-pipeline/data/*.csv
+data-pipeline/data/*/
+!data-pipeline/data/*.zip
+data-pipeline/reports/eda.html
+*.part
+*.log
