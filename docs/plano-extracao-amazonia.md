@@ -31,27 +31,9 @@ Regras completas em [importacao-regioes.md](importacao-regioes.md) e [decisoes-h
 
 Os três VIIRS veem praticamente os mesmos focos. Em cada período usamos **um VIIRS só**, nunca a soma.
 
-## Como preencher o pedido no FIRMS
+## De onde veio o histórico
 
-O pedido é feito em [Archive Download](https://firms.modaps.eosdis.nasa.gov/download/create.php), com login do Earthdata ou código por e-mail. Não é preciso preencher polígono nem coordenadas.
-
-| Campo | Valor |
-| --- | --- |
-| Região | Country → Brazil |
-| Buffer | 0 km |
-| Fire Source | MODIS, VIIRS S-NPP e VIIRS NOAA-20 |
-| From | 2000-11-01 |
-| To | data de hoje |
-| Formato | Comma-Separated Text (.csv) |
-| E-mail de confirmação | Marcar |
-
-Cada sensor vem só no período em que existe, então um pedido único de 2000-11-01 até hoje já cobre os três. Se o formulário recusar um período tão longo, dividam assim:
-
-1. MODIS: 2000-11-01 até hoje
-2. VIIRS S-NPP: 2012-01-20 a 2026-11-02
-3. VIIRS NOAA-20: 2018-04-01 até hoje
-
-O formulário avisa que os pedidos são monitorados e aprovados pela equipe do FIRMS. O arquivo não sai na hora, então façam o pedido o quanto antes. Enquanto ele não chega, o pipeline é testado com os arquivos de 2024 que já temos.
+O histórico veio dos **resumos anuais por país** do FIRMS (Brasil, SP), que não passam por fila de aprovação, e da API para 2026 (tarefa A1, [pipeline-dados.md](pipeline-dados.md)). O pedido pelo [Archive Download](https://firms.modaps.eosdis.nasa.gov/download/create.php) não foi usado. Ele continua sendo o caminho para uma região fora do Brasil ([importacao-regioes.md](importacao-regioes.md), "Como adicionar uma região nova").
 
 ## Polígono da região e série de validação
 
@@ -77,17 +59,7 @@ O MODIS não entra no job NRT, porque o Aqua só é usado até janeiro de 2012. 
 
 ## Dados de teste já baixados
 
-Temos o Brasil inteiro de 01/01/2024 a 31/12/2024, dados de arquivo (SP), para testar o pipeline enquanto o pedido completo não chega.
-
-| Arquivo | Satélite | Focos no Brasil | Amazônia Legal (bbox aprox.) |
-| --- | --- | --- | --- |
-| `fire_archive_M-C61_848018.csv` | Aqua | 319.074 | 242.292 |
-| `fire_archive_M-C61_848018.csv` | Terra | 208.820 | 165.440 |
-| `fire_archive_SV-C2_848021.csv` | S-NPP | 1.935.740 | 1.524.471 |
-| `fire_archive_J1V-C2_848019.csv` | NOAA-20 | 1.988.404 | 1.564.429 |
-| `fire_archive_J2V-C2_848020.csv` | NOAA-21 | 1.948.842 | 1.531.634 |
-
-Na Amazônia, o S-NPP detecta cerca de 6,3× mais focos que o Aqua. Os três VIIRS têm contagens quase iguais em todos os meses, e todos os sensores têm o pico em setembro.
+Os arquivos de 2024 (Brasil inteiro, SP), usados nos testes do pipeline, e as contagens por satélite estão em [firms-extracao-dados.md](firms-extracao-dados.md), seção 4. Na Amazônia, o S-NPP detecta cerca de 6,3× mais focos que o Aqua. Os três VIIRS têm contagens quase iguais em todos os meses, e todos os sensores têm o pico em setembro.
 
 ## Checklist
 

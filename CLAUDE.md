@@ -29,6 +29,7 @@ A equipe quer ganhar um prêmio global do Space Apps. Leia o [docs/premiacao.md]
 
 - Todo documento novo vai em `docs/`, com nome em minúsculas, sem acento e com hífen (ex.: `docs/api.md`).
 - Ao criar ou renomear um documento, atualize a tabela de leitura do README.
+- **Sem texto lixo nos docs.** Ao terminar uma tarefa, corrija ou apague nos `.md` o que ela tornou falso: status, pendência, "a decidir", "ainda não existe". Não deixe item riscado, pergunta já respondida nem a mesma regra copiada em vários docs: a regra fica num doc só, e os outros põem o link. Decisão com o porquê não é lixo e fica.
 
 ## Regras de código
 
@@ -41,7 +42,7 @@ A equipe quer ganhar um prêmio global do Space Apps. Leia o [docs/premiacao.md]
 ## Dados
 
 - Não commite CSVs descompactados nem arquivos grandes gerados pelo pipeline. Os ZIPs de teste em `data-pipeline/data/` já estão versionados.
-- Para testar, use os arquivos de 2024 (Brasil, SP). O histórico completo ainda não chegou.
+- Para testar, use os arquivos de 2024 (Brasil, SP). O histórico completo fica só no banco de teste da frente A, fora do git ([docs/pipeline-dados.md](docs/pipeline-dados.md)).
 
 ## Git
 

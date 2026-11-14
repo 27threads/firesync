@@ -47,7 +47,7 @@ O formato segue o `docs/banco.md` e a migration `001_inicial.sql` da frente A (P
 - **Origem de cada mês: depende só da data** (regra da API, não gravada no banco). Assim, uma área sem fogo em um mês continua com origem definida.
 - **FRP:** a API só mostra `frp_soma` dos meses `observado_viirs`, porque o FRP do MODIS e o do VIIRS não são comparáveis.
 - **Falha de satélite:** as datas sem dado ficam na tabela `dias_sem_dados (data, satelite)`, preenchida pela API `missing_data` do FIRMS (migration 002 do PR #2), no lugar da coluna `sem_dados`. A falha é por data e vale para o mundo todo. A API devolve, para cada mês, quantos dias o satélite daquele mês ficou sem dado, e o front marca o mês como "dados incompletos" a partir de **3 dias** (cerca de 10% do mês). ESCOLHA DA EQUIPE.
-- **Pedido à frente A (migration 002):** acrescentar `n_focos_origem` e `fusao_com` em `fatores_harmonizacao`, para registrar o mínimo de focos por condição e a fusão com a condição vizinha.
+- **Mínimo de focos e fusão:** `fatores_harmonizacao` tem `n_focos_origem` e `fusao_com` (migration 002), para registrar o mínimo de focos por condição e a fusão com a condição vizinha.
 
 | Período | Satélite em `agregados` | `origem` | Valor mostrado |
 | --- | --- | --- | --- |
@@ -105,4 +105,4 @@ Adicionar uma região leva quatro passos e não muda nada no front nem na API.
 
 Depois disso, os jobs de atualização diária e de recarga mensal passam a incluir a região automaticamente, usando o bounding box do polígono.
 
-**Próximas regiões previstas:** Pantanal (sem download novo, já está no Brasil) e Califórnia (precisa de um pedido novo no FIRMS) para os casos de 2020 na demo.
+**Regiões:** os 6 biomas do IBGE já estão cadastrados, incluindo o Pantanal. A Califórnia ficou para depois da submissão (tarefa X3), porque precisa de um pedido novo no FIRMS.

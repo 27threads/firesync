@@ -2,7 +2,7 @@
 
 Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir" precisa de um responsável e de uma escolha antes de alguém escrever código naquela parte.
 
-**Status:** rascunho. Nenhuma stack foi decidida ainda.
+**Status:** pipeline, banco, hospedagem, mapa e cores decididos. Faltam a API (ponto 4), o front (ponto 5) e os gráficos (ponto 7).
 
 ## Já decidido (vem dos outros documentos)
 
@@ -11,8 +11,8 @@ Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir"
 | Fonte dos focos | NASA FIRMS: arquivo SP para o histórico, API NRT para a atualização | [plano-extracao-amazonia.md](plano-extracao-amazonia.md) |
 | Escopo inicial | Brasil baixado inteiro, Amazônia recortada pelo bioma do IBGE | [plano-extracao-amazonia.md](plano-extracao-amazonia.md) |
 | Índice espacial | H3 (célula calculada na carga) | [importacao-regioes.md](importacao-regioes.md) |
-| Modelo de dados | 5 tabelas: `focos`, `regioes`, `cobertura`, `fatores_harmonizacao`, `agregados` | [importacao-regioes.md](importacao-regioes.md) |
-| Granularidade guardada | Célula H3 × ano × mês | [importacao-regioes.md](importacao-regioes.md) |
+| Modelo de dados | 8 tabelas mais a `config`: `focos`, `regioes`, `celula_regiao`, `cobertura`, `fatores_harmonizacao`, `dias_sem_dados`, `agregados`, `agregados_diarios` | [importacao-regioes.md](importacao-regioes.md), [banco.md](banco.md) |
+| Granularidade guardada | Célula H3 × ano × mês × satélite × dia/noite (`agregados`); por dia só para a janela recente (`agregados_diarios`) | [banco.md](banco.md) |
 | Consulta | Pré-agregada. A API não consulta o FIRMS na hora | [requisitos.md](requisitos.md), RNF04 |
 | Início do calendário | Janeiro de 2003 | [plano-extracao-amazonia.md](plano-extracao-amazonia.md) |
 
@@ -28,11 +28,11 @@ Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir"
 | 6 | Biblioteca de mapa e desenho de área (RD01) | Leaflet; MapLibre GL | Leaflet com renderizador canvas + Leaflet-Geoman para desenhar | proposta da frente C, frente D revisa |
 | 7 | Biblioteca de gráficos do calendário | | a decidir | |
 | 8 | Paleta acessível (RD04) | viridis ou cividis; escala linear ou log | cividis com escala logarítmica | proposta da frente C, frente D revisa |
-| 9 | Formato do download (RF13) | PNG, PDF, CSV | a decidir | |
-| 10 | Granularidade mostrada no calendário | mensal ou diária | a decidir | |
-| 11 | Onde roda o job NRT e a recarga SP | | a decidir | |
+| 9 | Formato do download (RF13) | PNG, PDF, CSV | ZIP de auditoria com CSVs (`POST /export`); o PNG do calendário é gerado no front ([requisitos.md](requisitos.md), seção 4; [api.md](api.md)) | equipe |
+| 10 | Granularidade mostrada no calendário | mensal ou diária | Mensal no calendário; diária só na janela recente e no alerta ([requisitos.md](requisitos.md), seção 4) | equipe |
+| 11 | Onde roda o job NRT e a recarga SP | | Job NRT no serviço `job-nrt` do `docker compose` da VPS ([banco.md](banco.md)). A recarga SP ficou fora da submissão | frente A |
 | 12 | Hospedagem pública (front, API e banco) | VPS; Postgres gerenciado | VPS com `docker compose`, incluindo `focos` (decidido no PR #2, ver [banco.md](banco.md)) | frentes A e C |
-| 13 | Cálculo da anomalia (RF11, RF12) | mediana histórica, média de vários anos | a decidir | |
+| 13 | Cálculo da anomalia (RF11, RF12) | mediana histórica, média de vários anos | Diferença contra a mediana do mesmo mês; `indicators` usa a média (RD06). Os anos de referência ainda estão em aberto ([api.md](api.md), "Em aberto") | equipe |
 
 Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases, por que ela foi escolhida.
 
@@ -47,15 +47,15 @@ Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases,
 
 ### data-pipeline
 
-- **Faz:** importa os CSVs, recorta por região, calcula os fatores, gera os `agregados` e roda os jobs NRT e SP.
+- **Faz:** importa os CSVs, recorta por região, calcula os fatores, gera os `agregados` e roda o job NRT.
 - **Entrada:** CSVs do FIRMS e shapefile de biomas do IBGE.
 - **Saída:** tabelas preenchidas no banco.
-- **Comandos previstos:** `importar <arquivo.csv>`, `recalcular <regiao>`.
+- **Comandos:** `pipeline.py importar`, `agregar.py` e `job_nrt.py` ([pipeline-dados.md](pipeline-dados.md)). Falta o `recalcular <regiao>` (tarefa B5).
 
 ### backend
 
 - **Faz:** recebe área e período, soma os `agregados` das células H3 da área e devolve o calendário, a sazonalidade, o ranking de anos e as anomalias.
-- **Contrato:** ver `api.md` nesta pasta (a escrever).
+- **Contrato:** [api.md](api.md).
 
 ### frontend
 
@@ -66,8 +66,9 @@ Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases,
 
 | Variável | Uso | Onde fica |
 | --- | --- | --- |
-| `FIRMS_MAP_KEY` | API do FIRMS (jobs NRT e SP) | a decidir |
-| _(conexão com o banco)_ | Pipeline e API | a decidir |
+| `FIRMS_MAP_KEY` | API do FIRMS (download e job NRT) | `.env` da VPS, nunca no git ([banco.md](banco.md)) |
+| `DATABASE_URL` | Pipeline e API | `.env` da VPS, nunca no git ([banco.md](banco.md)) |
+| `POSTGRES_PASSWORD` | Serviço `db` do compose | `.env` da VPS, nunca no git |
 
 ## Princípios de código
 
