@@ -381,6 +381,7 @@ Formato único:
 | 400 | `invalid_bbox`, `invalid_hours`, `invalid_mode` | Parâmetro inválido em `GET /detections/recent` |
 | 404 | `region_not_found` | `region_id` não existe |
 | 413 | `area_too_large` | Mais de 250.000 células |
+| 429 | `rate_limited` | Passou do limite de pedidos por IP (RNF06). A resposta traz o cabeçalho `Retry-After`, com os segundos até poder tentar de novo |
 | 500 | `internal_error` | Qualquer outro. A mensagem não expõe detalhes do servidor |
 
 Área fora da cobertura **não** é erro: é `200` com `coverage.status = "none"`.
