@@ -19,7 +19,3 @@ def summarize(scenarios, estimated):
     return {"detections": percentile(values, 50),
             "band_low": percentile(values, 5) if estimated else None,
             "band_high": percentile(values, 95) if estimated else None}
-
-
-def difference(value, baseline):
-    return value - baseline, value / baseline - 1 if baseline else None

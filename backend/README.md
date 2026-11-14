@@ -104,6 +104,8 @@ A estrutura segue a arquitetura hexagonal da main: `application` depende de `dom
 
 Os testes TDD de percentis, seleção de satélite, IDs H3 e calendário agora chamam as interfaces implementadas e não usam `xfail`. As especificações de intensidade, alerta e janelas recentes continuam marcadas como pendentes da parte 4. Os valores esperados da especificação original foram preservados.
 
-O CI instala as dependências do `pyproject.toml`, inicia PostGIS e executa integração junto com unidade e contrato. A cobertura mínima de linhas e ramos foi elevada para 94%. O workflow separado de backend foi consolidado no CI principal, evitando duas esteiras com instalações diferentes.
+O CI instala as dependências do `pyproject.toml`, inicia PostGIS e executa integração junto com unidade e contrato. A cobertura mínima de linhas e ramos foi elevada para 94,2%. O workflow separado de backend foi consolidado no CI principal, evitando duas esteiras com instalações diferentes.
 
 O adaptador preserva `data_version` completo (inclusive hora, conforme o PR #23), aceita versões históricas contendo só a data e rejeita timestamps sem fuso horário. Assim, duas cargas no mesmo dia mantêm versões diferentes.
+
+Validação após integração: 76 testes aprovados, 13 especificações futuras em `xfail`, cobertura de linhas e ramos de 94,21%. Ruff e Vulture passaram. A instalação editável e a wheel foram verificadas. Os testes do pipeline e as migrations também passaram; as jornadas do frontend foram apenas listadas, sem execução de navegador.
