@@ -23,7 +23,7 @@ Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir"
 | 1 | Linguagem do pipeline | Python | Python (pandas, geopandas, pyarrow) | frente A |
 | 2 | Banco de dados | PostgreSQL + PostGIS + h3-pg; DuckDB | PostgreSQL + PostGIS (H3 calculado no Python, ver [banco.md](banco.md)) | frente A |
 | 3 | Resolução H3 | 5, 6, 7 | 6 (proposta em [banco.md](banco.md)) | frentes A e C |
-| 4 | Linguagem e framework da API | | a decidir | |
+| 4 | Linguagem e framework da API | Python + FastAPI | Python confirmado por Rafael para a primeira parte do backend; framework HTTP a decidir | frente C |
 | 5 | Framework do front | | a decidir | |
 | 6 | Biblioteca de mapa e desenho de área (RD01) | Leaflet; MapLibre GL | Leaflet com renderizador canvas + Leaflet-Geoman para desenhar | proposta da frente C, frente D revisa |
 | 7 | Biblioteca de gráficos do calendário | | a decidir | |
