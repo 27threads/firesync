@@ -32,7 +32,7 @@ A etapa A sozinha já entrega a curva e a prova cruzada. A etapa B reforça com 
 ## Proposta (etapa A)
 
 1. **Formar os pares**, com a regra já escrita em [regras-variaveis.md](../regras-variaveis.md), seção 4:
-   - mesma data e mesmo período (dia ou noite), com até 10 minutos de diferença;
+   - mesma data e mesmo período (dia ou noite), com até 10 minutos de diferença **quando o Aqua estava na órbita original (até 2021)**. Em 2024 a janela precisa ser de 90 minutos (ver "O que a etapa A mostrou");
    - **"o MODIS viu"**: a distância entre os dois focos é no máximo metade do maior entre `scan` e `track` do MODIS, mais metade do pixel do VIIRS (0,19 km);
    - **"o MODIS estava olhando"**: há algum foco do Aqua a até 50 km, na mesma passagem. Os fogos sem isso ficam fora do treino. ESCOLHA DA EQUIPE, com viés declarado (abaixo).
    - Só os filtros que já valem no projeto: `type = 0`, FRP maior que zero, confiança nominal e alta, biomas do IBGE.
@@ -117,6 +117,14 @@ O gradient boosting precisa do **scikit-learn** no `requirements.txt` do `data-p
 | **A (dados)** | Só a etapa B, opcional: rodar o script no banco de teste (sem gravar nada) e mandar os CSVs. Estimativa: cerca de 1 hora, com a execução |
 | **C (API)** | Nenhum campo novo. O modelo não entra no cálculo do calendário |
 | **D (front)** | A tela de Método ganha a curva de detecção (imagem ou dados) e uma frase sobre a prova cruzada. Os textos saem do relatório |
+
+## O que a etapa A mostrou (14/11/2026, dados de 2024)
+
+O código está no PR #53 e o resultado completo no `decisoes-harmonizacao.md`, seção 5. Em resumo:
+
+1. **A janela de 10 minutos não serve para 2024.** O Aqua passa 44 minutos (dia) e 63 minutos (noite) depois do S-NPP no mesmo lugar (deriva de órbita desde 2022), e só 6% a 9% dos pares ficam dentro de 10 minutos. A janela virou parâmetro, e o resultado usa 90 minutos. Com isso, "viu" mistura a sensibilidade do sensor com a mudança do fogo ao longo da hora que separa as passagens. **A etapa B (2019 a 2021 para treino, com o Aqua ainda na órbita original) passa a ser o experimento mais limpo**, e não só um reforço.
+2. **A curva de detecção funciona.** A chance de o MODIS ver um fogo do VIIRS sobe com a potência: de dia, de 15% (abaixo de 2 MW) a 71% (25 MW ou mais); de noite, de 18% a 87%. O gradient boosting separa melhor que a tabela (AUC 0,753 contra 0,708, com referência em 0,5).
+3. **A prova cruzada NÃO confirma o fator por contagens.** De dia concorda em Amazônia, Mata Atlântica e Cerrado (razão entre 0,76 e 1,05). De noite não concorda em nenhum bioma (razão de 0,29 a 0,44). Causa conhecida: o viés da regra dos 50 km, que descarta as áreas onde o VIIRS viu fogo fraco e o MODIS nada, e a diferença de conceito entre o pixel do MODIS (que cobre vários pixels do VIIRS) e o do VIIRS. **A promessa "dois métodos independentes concordando" não se sustenta com esta definição.** O que o modelo entrega com segurança é a curva, para áreas que o MODIS estava olhando.
 
 ## Relação com outros documentos
 
