@@ -13,7 +13,7 @@ Mudar este contrato exige avisar a equipe antes e atualizar este documento no me
 - **O front nunca vê células H3.** Ele manda a área e recebe o calendário pronto. A resolução H3 fica só no banco ([banco.md](banco.md)).
 - **IDs H3, quando aparecem, são texto.** Um ID da resolução 6 passa de 2⁵³, e o `JSON.parse` do navegador o arredonda sem erro. Ver "H3 IDs" abaixo.
 - **Zero, sem dados e fora da cobertura são coisas diferentes**, e a resposta sempre diz qual é o caso.
-- **A faixa de incerteza é calculada depois de somar.** Totais por ano, sazonalidade e anomalias são calculados por cenário, e só no fim saem a mediana e o P10–P90. A soma dos P10 não é o P10 da soma.
+- **A faixa de incerteza é calculada depois de somar.** Totais por ano, sazonalidade e anomalias são calculados por cenário, e só no fim saem a mediana e a faixa. A soma dos percentis das células não é o percentil da soma.
 - **O FRP (potência do fogo em MW) não aparece na tela.** Os fogos mais fortes saturam o VIIRS: 7% das detecções saturadas respondem por 22% da energia, e isso piora no pico da temporada. A soma em MW engana como indicador de gravidade. No lugar, a tela mostra uma **classe de intensidade** (`low`, `medium`, `high`, ver "Classe de intensidade"). O FRP em MW continua no pacote de auditoria (`counts.csv` e `detections.csv`).
 - **O número mostrado se chama `detections`** (detecções de fogo), a convenção do FIRMS. Um fogo grande ocupa vários pixels, então não é "número de incêndios".
 - **O papel do sistema:** o FIRMS mostra onde o fogo está agora. O firesync diz se isso é normal para esse lugar e essa época do ano. O público inclui equipes de alerta precoce e de resposta a emergências (RD07), então o indicador principal é a **janela recente** (últimos 7 dias), e não o mês inteiro.
@@ -120,7 +120,7 @@ Um item por mês do intervalo, sem buracos. Mês sem focos vem com `detections: 
 | --- | --- | --- |
 | `month` | `YYYY-MM` | |
 | `detections` | número | Detecções de fogo na escala VIIRS. Valor central |
-| `p10`, `p90` | número ou `null` | Faixa de incerteza. `null` quando `source = observed_viirs` |
+| `band_low`, `band_high` | número ou `null` | Faixa de incerteza (percentis 5 e 95 dos cenários, ver "Faixa de incerteza"). `null` quando `source = observed_viirs` |
 | `source` | texto | `estimated_modis` (até 2012-01) ou `observed_viirs` (a partir de 2012-02). **Depende só da data** |
 | `raw_count` | inteiro | Contagem bruta do satélite daquele mês, antes do fator. Para auditoria |
 | `missing_days` | inteiro | Dias do mês sem dado do satélite daquele mês (tabela `dias_sem_dados`) |
@@ -139,7 +139,7 @@ Um item por ano do intervalo, **ordenado por `detections`, do maior para o menor
 | --- | --- | --- |
 | `year` | inteiro | |
 | `detections` | número | Total do ano (soma dos meses, por cenário, mediana no fim) |
-| `p10`, `p90` | número ou `null` | Faixa do total do ano |
+| `band_low`, `band_high` | número ou `null` | Faixa de incerteza do total do ano |
 | `source` | texto | `estimated_modis`, `observed_viirs` ou `mixed` (2012) |
 | `complete` | booleano | `false` se o intervalo pega só parte do ano, ou se é o ano atual |
 | `rank` | inteiro ou `null` | Posição no ranking, contando só os anos completos. `null` nos incompletos |
@@ -204,12 +204,21 @@ A fórmula é a de [importacao-regioes.md](importacao-regioes.md). Resumo do que
 3. Para cada mês:
    - **`observed_viirs`:** `detections = soma das contagens brutas`. Sem faixa. De 2012-02 a 2026-10 é o S-NPP. De 2026-11 em diante é o NOAA-20, também somado **sem fator** (fator 1, decisão da frente B).
    - **`estimated_modis`:** para cada cenário `c` (ano de calibração), `detections_c = Σ bruto[bioma, periodo] × fator[bioma, Aqua→S-NPP, mes, periodo, c]`.
-4. Totais por ano, sazonalidade e anomalias são calculados **por cenário**. Só no fim: valor central = mediana dos cenários, faixa = P10 e P90 por **interpolação linear** (o padrão do `numpy.percentile`). Com 10 ou 13 cenários, o método muda o número, então ele vai escrito também no `metadata.json`.
+4. Totais por ano, sazonalidade e anomalias são calculados **por cenário**. Só no fim: valor central = mediana dos cenários, faixa = percentis 5 e 95 por **interpolação linear** (o padrão do `numpy.percentile`). Com 13 cenários, o método muda o número, então ele vai escrito também no `metadata.json`.
    - **O número de cenários não é fixo.** A API usa os anos de calibração que existem em `fatores_harmonizacao` (10 ou 13, conforme a validação, e janeiro tem um a menos). Nada no código assume uma quantidade.
 5. Preenche com zero os meses sem linha e junta os dias sem dado.
 6. Para `recent`, soma as contagens diárias da área na janela atual e em todas as janelas de mesmo tamanho num raio de ±15 dias da mesma data, em cada ano de referência, e tira a mediana e o P25–P75 entre essas janelas.
 
 Os fatores ficam na memória da API (a tabela inteira tem poucos milhares de linhas) e são recarregados quando `data_version` muda.
+
+### Faixa de incerteza
+
+Os meses `estimated_modis` trazem uma faixa (`band_low` a `band_high`) entre os cenários de calibração.
+
+- **Percentis 5 e 95.** Com 13 cenários, a faixa entre percentis cobre menos do que o nome sugere: numa simulação da frente B, um ano novo cai dentro de P10–P90 em ~69% dos casos, e dentro de P5–P95 em ~79%. A troca está registrada no `decisoes-harmonizacao.md`.
+- **Nomes neutros.** Os campos não dizem o percentil. Ele vai em `metadata.json` (`"band_percentiles": [5, 95]`). Assim, mudar os percentis no futuro não quebra o contrato.
+- **Texto da tela:** "o valor real fica dentro desta faixa em cerca de N de cada 10 casos", com **N medido** no teste da calibração, por bioma. Enquanto a cobertura real não for medida, a tela não promete número nenhum.
+- A faixa P25–P75 do bloco `recent` é outra coisa (a variação natural entre anos) e não muda.
 
 ## Resposta: `POST /export`
 
@@ -220,7 +229,7 @@ Devolve `application/zip` com o pacote de auditoria. Com `counts.csv` × `factor
 | `result.csv` | Os itens de `months[]`, uma linha por mês |
 | `counts.csv` | `region_id, biome, year, month, satellite, daynight, raw_count, frp_sum` |
 | `factors.csv` | Os fatores usados: `region_id, source_satellite, target_satellite, month, daynight, calibration_year, factor` |
-| `metadata.json` | O pedido, `meta`, a fórmula, o método do percentil (interpolação linear), os anos de calibração usados, os filtros (`type = 0`, confiança nominal e alta, duplicatas), as fontes do FIRMS e a data da exportação |
+| `metadata.json` | O pedido, `meta`, a fórmula, os percentis da faixa (`"band_percentiles": [5, 95]`), o método do percentil (interpolação linear), os anos de calibração usados, os filtros (`type = 0`, confiança nominal e alta, duplicatas), as fontes do FIRMS e a data da exportação |
 | `detections.csv` | Focos brutos da área no intervalo, até **500.000 linhas**: `satellite, latitude, longitude, acquired_utc, confidence, frp, daynight, quality, source_file` |
 
 Os valores também vão em inglês: `confidence` = `low`/`nominal`/`high`, `daynight` = `D`/`N` (como no FIRMS), `quality` = `SP`/`NRT`.
@@ -343,9 +352,9 @@ A tela não mostra o FRP em MW. Cada detecção recebe uma classe, para quem dec
 | --- | --- |
 | `low` | FRP abaixo de 5 MW |
 | `medium` | FRP de 5 a 25 MW |
-| `high` | FRP de 25 MW ou mais, **ou pixel saturado** |
+| `high` | FRP de 25 MW ou mais, **ou pixel saturado do VIIRS** |
 
-- **Por que o pixel saturado entra em `high`:** nos fogos mais fortes, o VIIRS satura, e o FRP sai **menor** do que o real. A mediana do FRP saturado é 18 MW (S-NPP, Amazônia, 2024). Só pelo FRP, mais da metade desses fogos cairia como `medium`. No VIIRS, a confiança alta (`confianca = 'alta'`) marca o pixel saturado.
+- **Por que o pixel saturado entra em `high`:** nos fogos mais fortes, o VIIRS satura, e o FRP sai **menor** do que o real. A mediana do FRP saturado é 18 MW (S-NPP, Amazônia, 2024). Só pelo FRP, mais da metade desses fogos cairia como `medium`. No VIIRS, a confiança alta (`confianca = 'alta'`) marca o pixel saturado. **Só no VIIRS:** no MODIS, confiança alta (80 ou mais) não indica saturação, então a regra não vale para ele.
 - **Limites fixos e configuráveis:** os valores (5 e 25 MW) vêm da distribuição do S-NPP em 2024 (mediana 5,4 MW, P90 26,6 MW) e ficam no mesmo arquivo de configuração versionado do alerta (`alert_rules.json`). A tela usa sempre os mesmos limites, então o mesmo fogo não muda de classe quando o usuário mexe no mapa. Mudar os limites não exige mudar o código. A versão vai no `metadata.json`.
 - **Só VIIRS:** a classe vale para detecções do VIIRS, que são todas as recentes. O FRP do MODIS não é comparável.
 - **Limites a declarar na tela de Método:** o FRP de pixels na borda da faixa do satélite tende a sair maior, e os fogos à noite tendem a ter FRP menor. A classe ajuda a priorizar, mas não substitui informação de campo, vento e avanço da frente.
