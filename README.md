@@ -18,7 +18,9 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 4 | [Importação de novas regiões](docs/importacao-regioes.md) | Importador, tabelas, chave única, fatores de harmonização por região, como adicionar região | Antes de mexer no banco, no pipeline ou na API |
 | 5 | [Arquitetura e stack](docs/arquitetura.md) | Stack de cada componente, o que já está decidido e o que falta decidir | Antes de escrever qualquer código |
 | 6 | [Tarefas](docs/tarefas.md) | Frentes, responsáveis, branches, pastas de cada um, marcos e status | Antes de começar qualquer tarefa |
-| 7 | [Contrato da API](docs/api.md) | Endpoints, pedido, resposta, erros, export de auditoria. JSON de exemplo em [api-exemplo.json](docs/api-exemplo.json) | Antes de mexer na API ou no front |
+| 7 | [Pipeline de dados — o que já foi feito](docs/pipeline-dados.md) | Download do histórico, filtros de qualidade, análise por satélite, achados | Antes de mexer em `data-pipeline/` |
+| 8 | [Banco de dados — decisões para o backend](docs/banco.md) | Imagem, H3, resolução, schema, consulta da API, compose sugerido, benchmark | Antes de mexer no banco ou na API |
+| 9 | [Contrato da API](docs/api.md) | Endpoints, pedido, resposta, erros, export de auditoria. JSON de exemplo em [api-exemplo.json](docs/api-exemplo.json) | Antes de mexer na API ou no front |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
@@ -62,10 +64,10 @@ Detalhes de cada etapa: documento 4.
 
 - O calendário começa em **janeiro de 2003**. Terra não entra no cálculo, só Aqua.
 - **Um VIIRS por período, nunca a soma.** S-NPP até 02/11/2026, NOAA-20 depois. NOAA-21 só como reserva no NRT.
-- Cadeia de calibração: NOAA-20 → S-NPP → Aqua. Fator calculado por região, com confiança nominal ou alta e `type = 0`.
+- Escala VIIRS: Aqua × fator (bioma × mês × dia/noite, um cenário por ano) de jan/2003 a jan/2012; S-NPP real de fev/2012 a out/2026; NOAA-20 real (fator 1) de nov/2026 em diante. Só confiança nominal ou alta e `type = 0`.
 - Fatores ficam congelados depois da carga histórica. Jobs de atualização só aplicam o fator.
 - Chave única do foco: (`satelite`, `lat`, `lon`, `datahora_utc`). Recarga SP apaga o NRT do período e insere o SP numa transação.
-- Mês sem dado de satélite (`sem_dados`) é diferente de mês com zero focos.
+- Mês com falha de satélite (tabela `dias_sem_dados`) é diferente de mês com zero focos.
 - Front e API não conhecem regiões específicas. Adicionar região é dado, não código.
 - Interface em inglês, com crédito ao FIRMS visível.
 
@@ -77,6 +79,7 @@ Detalhes de cada etapa: documento 4.
 - [x] Dados de teste (Brasil, 2024)
 - [ ] Stack e arquitetura definidas
 - [ ] Contrato da API
+- [x] Histórico do FIRMS baixado e análise por satélite ([pipeline-dados.md](docs/pipeline-dados.md))
 - [ ] Importador e pipeline
 - [ ] API
 - [ ] Frontend
@@ -89,7 +92,9 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 
 | Parte | Ferramenta | Como foi usada |
 | --- | --- | --- |
-| | | |
+| `data-pipeline/pipeline.py`, `agregar.py`, `eda.py`, `test_pipeline.py` | Claude Code (Claude Opus 5.5) | Código gerado a partir das especificações de filtro escritas pelo time de dados. Revisado pela equipe |
+| `docs/banco.md`, `data-pipeline/migrations/001_inicial.sql` | Claude Code (Claude Opus 5.5) | Schema e documento de decisões gerados a partir dos docs do repo e de um benchmark local. Revisado pela equipe |
+| `docs/pipeline-dados.md` | Claude Code (Claude Opus 5.5) | Redação do relatório do que foi feito e dos achados da análise exploratória |
 
 ## Dados e créditos
 

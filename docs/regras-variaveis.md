@@ -7,7 +7,7 @@ Origem: documento de contexto do Weberson, revisado com os dados brutos de 2024 
 | Coluna | MODIS (Aqua) | VIIRS | Observação |
 | --- | --- | --- | --- |
 | latitude, longitude | sim | sim | graus decimais |
-| brightness, bright_t31 | sim | sim (nomes do arquivo NRT) | no VIIRS SP aparecem como bright_ti4 e bright_ti5 |
+| brightness, bright_t31 | sim | sim | o nome no VIIRS depende da fonte: no Archive Download (inclusive os arquivos SP de 2024) vem `brightness`/`bright_t31`; segundo o `pipeline-dados.md`, outras fontes trazem `bright_ti4`/`bright_ti5`. O importador normaliza |
 | scan, track | sim | sim | tamanho do pixel no chão, em km. Não filtrar |
 | acq_date, acq_time | sim | sim | acq_time em UTC, HHMM (a API manda sem zero à esquerda) |
 | satellite | Aqua, Terra | SNPP, N20, N21 | só o Aqua entra no cálculo |
@@ -24,13 +24,24 @@ Origem: documento de contexto do Weberson, revisado com os dados brutos de 2024 
 2. `frp` vazio, zero ou negativo sai (nos dois).
 3. MODIS: `confidence < 30` vai para arquivo à parte.
 4. VIIRS: `confidence = l` com `daynight = N` sai (Anomalia Magnética do Atlântico Sul). `l` de dia vai para arquivo à parte.
-5. O recorte por bioma (Amazônia e Pantanal) vale só para o conjunto de treino e para os agregados. A tabela `focos` guarda o Brasil inteiro.
-6. `scan` e `track` não são filtrados.
+5. **O arquivo de baixa confiança fica guardado, mas não entra no fator nem no calendário** (nem em `agregados`). O fator e o calendário precisam usar o mesmo filtro, senão a série fica distorcida.
+6. O recorte por bioma vale só para a calibração. A tabela `focos` guarda o Brasil inteiro.
+7. `scan` e `track` não são filtrados.
 
 ## 3. Regras de duplicata
 
-- MODIS: mesmo satélite, mesma data, horário igual ou com até 1 minuto de diferença, distância menor que metade do `scan`. Fica o de maior confiança.
-- VIIRS: só linhas idênticas. Pontos vizinhos não se juntam.
+**DECIDIDO (Weberson, 14/11/2026):** nos dois sensores, remover **só as linhas idênticas** (`latitude`, `longitude`, `acq_date`, `acq_time`, `satellite`), como o `pipeline.py clean` já faz. Pontos vizinhos não se juntam.
+
+Motivos:
+
+- O calendário compara meses e anos. O que importa é contar sempre do mesmo jeito, e os pixels repetidos do MODIS (cerca de 4%, efeito bow-tie) entram no cálculo do fator e na aplicação, e se cancelam.
+- Uma frente de fogo ocupa vários pixels lado a lado. Juntar vizinhos pode apagar fogo de verdade.
+- A distância para juntar teria de ser diferente em cada sensor (pixel do MODIS de 1 km até quase 5 km, do VIIRS de 375 m), e qualquer escolha mudaria as contagens de forma arbitrária.
+- Cruzar milhões de focos por distância não cabe no prazo.
+
+Consequência na interface: o número do calendário se chama **"detecções de fogo"** (fire detections, convenção do FIRMS), com a nota "uma frente de fogo gera várias detecções".
+
+Ideia futura, fora do prazo: agrupar detecções em **eventos** para a visão de áreas críticas, só com o VIIRS e no período recente (localização pelo centro ponderado pelo FRP, FRP somado, primeira e última detecção).
 
 ## 4. Regras de ligação entre MODIS e VIIRS (só para o classificador complementar)
 
@@ -43,22 +54,25 @@ Origem: documento de contexto do Weberson, revisado com os dados brutos de 2024 
 **Fator da série (decidido):**
 
 - Condições: bioma × mês × dia/noite. O FRP não entra.
-- Calculado em contagens por célula H3, na sobreposição de 2012 a 2024, com um cenário por ano.
+- Calculado em contagens por célula H3, um cenário por ano. Base 2012 a 2024, com os anos escolhidos pela validação deixando um ano de fora: se o erro de 2022 a 2024 passar de 1,5× o de 2012 a 2021, ficam só 2012 a 2021 (10 cenários); senão, os 13 anos. 2025 em diante fica fora.
+- NOAA-20 tratado como igual ao S-NPP (fator 1).
+- Só confiança nominal e alta (arquivo principal). Os 6 biomas do IBGE são calibrados.
 - Faixa de incerteza: P10 e P90 entre os cenários.
-- Nunca comparar a contagem bruta de pontos do VIIRS com a do MODIS. Sempre por célula da grade ou por evento.
+- Fator = razão das somas por bioma, mês e período. Sem os dias em `dias_sem_dados` de qualquer um dos dois satélites e sem janeiro de 2012. Fusão quando faltar foco: meses vizinhos, depois dia e noite juntos, depois o ano inteiro. Detalhes em [decisoes-harmonizacao.md](decisoes-harmonizacao.md).
+- Nunca comparar a contagem bruta de pontos do VIIRS com a do MODIS. Sempre pelo fator ou por célula da grade.
 
 **Classificador complementar (decidido):**
 
 - Rótulo: `modis_viu` (1 ou 0), só onde o Aqua estava observando a área.
 - Pistas: frp, temperatura, confiança, dia/noite, mês, bioma, `modis_scan_mediano`.
-- Treino 2019 a 2022 e teste 2023 e 2024, em volume pequeno. **ESCOLHA DA EQUIPE**
+- Treino 2019 a 2021 e teste 2022 a 2024, em volume pequeno. **ESCOLHA DA EQUIPE**
 - Com só os arquivos de 2024: corte no espaço (metade das células H3 para treino, metade para teste, todos os meses dos dois lados).
 
 ## 6. Perguntas já respondidas
 
 1. Suomi NPP depois de 02/11/2026: não entra. A série segue com NOAA-20.
-2. Tamanho da célula: grade H3 (resolução definida com a frente C).
-3. Dados NRT (provisórios): entram só no mês corrente, marcados como provisórios, fora do cálculo do fator.
+2. Tamanho da célula: grade H3 resolução 6 (`banco.md`, PR #2).
+3. Dados NRT (provisórios): marcados com `qualidade = NRT` (PR #2), fora do cálculo do fator.
 
 ## 7. Perguntas em aberto
 

@@ -38,4 +38,10 @@ Toda parte gerada ou assistida por IA precisa entrar na tabela "Uso de IA" do RE
 
 ## Comandos
 
-A preencher quando a stack estiver definida: instalar dependências, rodar o importador, subir a API, subir o front, rodar os testes.
+Pipeline de dados (bash, a partir de `data-pipeline/`):
+
+- Instalar: `pip install -r requirements.txt`
+- Testes: `python test_pipeline.py`
+- Etapas: `python pipeline.py cadastrar|download|stage|sem_dados|clean`, `python agregar.py` e `python eda.py` (detalhes em [docs/pipeline-dados.md](docs/pipeline-dados.md))
+
+API e front: a preencher quando a stack estiver definida.
