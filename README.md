@@ -104,6 +104,8 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `docs/prompt-frontend.md` | Claude Code (Claude Opus 5.5) | Prompt do front escrito a partir dos docs do repo. A equipe aprova antes de usar |
 | `docs/api.md`, `docs/api-exemplo.json` (issues #22 e #29) | Claude Code (Claude Opus 5.5) | Correções do contrato escritas a partir das issues da auditoria. Revisado pela equipe |
 | `.github/workflows/ci.yml` (job "Só documentação?"), `.github/scripts/roda_testes.sh`, `test_roda_testes.sh` | Claude Code (Claude Opus 5.5) | Filtro que pula os testes de código em PR só de `.md`. Revisado pela equipe |
+| `data-pipeline/harmonizacao/` (`prototipo_fator.py`, `calibrar.py`, `validar_inpe.py`, `test_calibrar.py`, `test_validar_inpe.py`), `data-pipeline/tests/test_harmonizacao.py`, `test_calibrar_integracao.py` | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Código escrito a partir das decisões de método do Weberson (escala VIIRS, fator por bioma, mês e dia ou noite, cenários por ano, faixa P5 a P95, critério de 1,5× e regras de limpeza). Os três erros achados na revisão do PR #26 foram corrigidos com um teste para cada um. Revisado pelo Mateus |
+| `docs/decisoes-harmonizacao.md`, `docs/regras-variaveis.md`, `docs/ux-telas.md`, seção de harmonização de `docs/importacao-regioes.md` | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Redação e análise feitas a partir das decisões do Weberson e dos resultados rodados pela frente A. As escolhas de método são da equipe e estão marcadas como tal nos documentos. Revisado pela equipe |
 
 ## Dados e créditos
 

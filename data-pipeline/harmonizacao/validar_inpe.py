@@ -205,8 +205,10 @@ def graficos(s, anual_fs, saida, biomas):
         a2.plot(inpe_ano.index, inpe_ano.values, color="#c9a900", label="INPE (Aqua reference)")
         a.axvline(2012, color="gray", ls="--", lw=1)
         a.set_title(f"{bioma}: annual fire detections")
-        a.legend(loc="upper left", fontsize=8)
-        a2.legend(loc="upper right", fontsize=8)
+        # legenda única abaixo do gráfico: dentro dele, ela cobria o topo da faixa nos primeiros anos
+        h1, l1 = a.get_legend_handles_labels()
+        h2, l2 = a2.get_legend_handles_labels()
+        a.legend(h1 + h2, l1 + l2, loc="upper center", bbox_to_anchor=(0.5, -0.1), fontsize=8, frameon=False)
         b = ax[1]
         r = a_fs["firesync"].reindex(inpe_ano.index) / inpe_ano
         b.plot(r.index, r.values, marker="o", color="#00204d")
@@ -221,7 +223,7 @@ def graficos(s, anual_fs, saida, biomas):
         c.set_xlabel("month")
         fig.tight_layout()
         nome = saida / f"grafico_{bioma.replace(' ', '_')}.png"
-        fig.savefig(nome, dpi=130)
+        fig.savefig(nome, dpi=130, bbox_inches="tight")
         plt.close(fig)
         feitos.append(nome.name)
     return "Gráficos: " + ", ".join(feitos)
