@@ -1,5 +1,8 @@
 # Esteira de testes (RNF08). Roda em todo PR e em todo push na main.
 # Um PR só entra na main se todos os jobs passarem. Estratégia em docs/testes.md.
+# PR que só muda arquivos .md pula os testes de código: os jobs aparecem como "skipped", que a proteção
+# da main aceita. Não use paths-ignore no gatilho: sem o workflow rodar, os checks obrigatórios ficam
+# esperando e o PR trava. Os jobs só pulam com "false" explícito: se o filtro falhar, tudo roda.
 name: CI
 
 on:
@@ -15,8 +18,36 @@ permissions:
   contents: read
 
 jobs:
+  mudancas:
+    name: Só documentação?
+    runs-on: ubuntu-latest
+    outputs:
+      codigo: ${{ steps.filtro.outputs.codigo }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Testar o filtro
+        run: bash .github/scripts/test_roda_testes.sh
+      - name: Algum arquivo mudado não é .md?
+        id: filtro
+        env:
+          EVENTO: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$EVENTO" = "pull_request" ]; then
+            git diff --name-only "$BASE" HEAD | tee /dev/stderr > mudados.txt
+            codigo=$(bash .github/scripts/roda_testes.sh < mudados.txt)
+          else
+            codigo=true
+          fi
+          echo "codigo=$codigo" >> "$GITHUB_OUTPUT"
+          echo "Testes de código: $codigo" >> "$GITHUB_STEP_SUMMARY"
+
   codigo-morto:
     name: Código morto
+    needs: mudancas
+    if: ${{ !cancelled() && needs.mudancas.outputs.codigo != 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +65,8 @@ jobs:
 
   pipeline-unidade:
     name: Pipeline · unidade
+    needs: mudancas
+    if: ${{ !cancelled() && needs.mudancas.outputs.codigo != 'false' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -51,6 +84,8 @@ jobs:
 
   pipeline-integracao:
     name: Pipeline · integração com PostGIS
+    needs: mudancas
+    if: ${{ !cancelled() && needs.mudancas.outputs.codigo != 'false' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -103,6 +138,8 @@ jobs:
 
   backend:
     name: API · contrato e especificação TDD
+    needs: mudancas
+    if: ${{ !cancelled() && needs.mudancas.outputs.codigo != 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -122,6 +159,8 @@ jobs:
 
   jornadas:
     name: Front · jornadas de usuário (E2E)
+    needs: mudancas
+    if: ${{ !cancelled() && needs.mudancas.outputs.codigo != 'false' }}
     runs-on: ubuntu-latest
     defaults:
       run:
