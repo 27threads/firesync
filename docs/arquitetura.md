@@ -25,9 +25,9 @@ Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir"
 | 3 | Resolução H3 | | a decidir | |
 | 4 | Linguagem e framework da API | | a decidir | |
 | 5 | Framework do front | | a decidir | |
-| 6 | Biblioteca de mapa e desenho de área (RD01) | | a decidir | |
+| 6 | Biblioteca de mapa e desenho de área (RD01) | Leaflet; MapLibre GL | Leaflet com renderizador canvas + Leaflet-Geoman para desenhar | frente C |
 | 7 | Biblioteca de gráficos do calendário | | a decidir | |
-| 8 | Paleta acessível (RD04) | viridis ou cividis | a decidir | |
+| 8 | Paleta acessível (RD04) | viridis ou cividis; escala linear ou log | cividis com escala logarítmica | frente C |
 | 9 | Formato do download (RF13) | PNG, PDF, CSV | a decidir | |
 | 10 | Granularidade mostrada no calendário | mensal ou diária | a decidir | |
 | 11 | Onde roda o job NRT e a recarga SP | | a decidir | |
@@ -38,7 +38,8 @@ Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases,
 
 ## Justificativas
 
-_(vazio)_
+- **6. Leaflet (canvas):** num teste lado a lado com os mesmos pontos (14/11/2026), Leaflet e MapLibre ficaram a 61 fps ao arrastar com até 60.000 focos, e o Leaflet desenhou mais rápido (141 ms contra 309 ms com 60.000). Com o desempenho empatado no nosso volume, ganhou o mais simples de colocar no ar: mais exemplos prontos e desenho de polígono, retângulo e círculo pelo Geoman. Os focos usam o renderizador canvas (`preferCanvas`), não marcadores DOM. A camada de focos recentes vem da nossa API, porque as camadas de fogo do GIBS são vector tiles (o Leaflet não lê sem plugin) e deram erro nos testes. A camada de nomes do GIBS (`Reference_Labels_15m`) deixou blocos pretos no mapa e não deve ser usada.
+- **8. Cividis com escala logarítmica:** o cividis é o mais seguro para daltonismo e é citado no desafio (RD04). A escala é logarítmica porque setembro tem cerca de 30× mais focos que março: numa escala linear, todos os meses fora da temporada ficariam da mesma cor. Estados especiais (mês incompleto, estimado pelo MODIS, fora da cobertura) são marcados por hachura, borda ou rótulo, nunca só por cor.
 
 ## Componentes
 

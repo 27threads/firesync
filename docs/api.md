@@ -27,6 +27,7 @@ Base: `/api/v1`.
 | `GET` | `/regions` | Regiões prontas para o seletor (biomas) | RF06 |
 | `POST` | `/calendar` | Calendário, sazonalidade, ranking de anos, mês atual, anomalias e indicadores de uma área | RF06–RF12, RD06 |
 | `POST` | `/export` | Pacote de auditoria em ZIP da mesma busca | RF13, RD05 |
+| `GET` | `/detections/recent` | Focos recentes dentro da área visível do mapa, para a camada de focos | RD07 |
 
 `/calendar` e `/export` usam `POST` porque o GeoJSON da área pode ser grande demais para a URL.
 
@@ -224,6 +225,40 @@ Se a área tiver mais de 500.000 focos, `detections.csv` sai do ZIP e `metadata.
 Nome do arquivo: `firesync-YYYY-MM-DD.zip`.
 
 O PNG do calendário é gerado no front, a partir do que está na tela.
+
+## `GET /detections/recent`
+
+A camada de focos recentes do mapa. Vem da nossa API, e não do GIBS: as camadas de fogo do GIBS são vector tiles, que o Leaflet não lê sem plugin, e deram erro nos testes. Os dados são os focos NRT que o job de atualização grava em `focos`.
+
+Pedido:
+
+```
+GET /api/v1/detections/recent?bbox=-63.5,-6.0,-57.0,0.5&hours=24
+```
+
+| Parâmetro | Valores | Significado |
+| --- | --- | --- |
+| `bbox` | `oeste,sul,leste,norte` | Área visível do mapa |
+| `hours` | `24`, `72` ou `168` (padrão `24`) | Janela de tempo até agora |
+
+Resposta: GeoJSON, que o Leaflet desenha direto.
+
+```json
+{
+  "type": "FeatureCollection",
+  "updated_at": "2026-11-14T15:00:00Z",
+  "truncated": false,
+  "features": [
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-60.21, -3.12] },
+      "properties": { "satellite": "N20", "acquired_utc": "2026-11-14T05:42:00Z", "confidence": "nominal", "frp": 12.4, "daynight": "N" } }
+  ]
+}
+```
+
+- Só confiança nominal e alta, o mesmo filtro do calendário.
+- No máximo **50.000 focos** por resposta. Acima disso, `truncated: true`, e a tela pede para aproximar o mapa.
+- Cache de 5 minutos, renovado a cada atualização NRT.
+- Erros: `invalid_bbox` (400) e `invalid_hours` (400).
 
 ## `GET /regions`
 
