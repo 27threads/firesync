@@ -103,7 +103,6 @@ def test_falha_no_download_nao_grava_atualizado_em(banco, monkeypatch):
     assert banco["conn"].execute("SELECT count(*) FROM focos").fetchone()[0] == 0
 
 
-@pytest.mark.xfail(strict=True, reason="bug da issue #15: dados e atualizado_em não estão no mesmo commit")
 def test_falha_depois_de_agregar_nao_muda_o_que_a_api_le(banco, monkeypatch):
     """Se a rodada falha depois de agregar, a API não pode ler agregados novos com o atualizado_em velho."""
     conn, hoje = banco["conn"], banco["hoje"]
@@ -115,4 +114,4 @@ def test_falha_depois_de_agregar_nao_muda_o_que_a_api_le(banco, monkeypatch):
     with pytest.raises(RuntimeError):
         banco["job"].rodada()
     assert atualizado_em(conn) is None
-    assert soma_do_mes(conn, hoje) == 0  # hoje falha: os agregados novos já foram gravados
+    assert soma_do_mes(conn, hoje) == 0  # issue #15: dados e versão vão no mesmo commit, então nada mudou
