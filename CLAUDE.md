@@ -27,10 +27,20 @@ Leia o [README.md](README.md) antes de qualquer tarefa. Ele tem a ordem de leitu
 - Não commite CSVs descompactados nem arquivos grandes gerados pelo pipeline. Os ZIPs de teste em `data-pipeline/data/` já estão versionados.
 - Para testar, use os arquivos de 2024 (Brasil, SP). O histórico completo ainda não chegou.
 
+## Git
+
+- Nunca adicione `Co-Authored-By` (nem outra linha de coautoria ou atribuição) nas mensagens de commit. O uso de IA é registrado só na tabela "Uso de IA" do README.
+
 ## Uso de IA
 
 Toda parte gerada ou assistida por IA precisa entrar na tabela "Uso de IA" do README, no mesmo commit do código.
 
 ## Comandos
 
-A preencher quando a stack estiver definida: instalar dependências, rodar o importador, subir a API, subir o front, rodar os testes.
+Pipeline de dados (bash, a partir de `data-pipeline/`):
+
+- Instalar: `pip install -r requirements.txt`
+- Testes: `python test_pipeline.py`
+- Etapas: `python pipeline.py cadastrar|download|stage|sem_dados|clean`, `python agregar.py` e `python eda.py` (detalhes em [docs/pipeline-dados.md](docs/pipeline-dados.md))
+
+API e front: a preencher quando a stack estiver definida.

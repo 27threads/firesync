@@ -1,0 +1,8 @@
+[
+  {"nome": "Amazônia", "fonte_poligono": "IBGE, Biomas do Brasil 1:250.000", "url": "https://geoftp.ibge.gov.br/informacoes_ambientais/estudos_ambientais/biomas/vetores/Biomas_250mil.zip", "arquivo": "ibge/Biomas_250mil.zip", "campo": "CD_Bioma", "valor": 1},
+  {"nome": "Caatinga", "fonte_poligono": "IBGE, Biomas do Brasil 1:250.000", "url": "https://geoftp.ibge.gov.br/informacoes_ambientais/estudos_ambientais/biomas/vetores/Biomas_250mil.zip", "arquivo": "ibge/Biomas_250mil.zip", "campo": "CD_Bioma", "valor": 2},
+  {"nome": "Cerrado", "fonte_poligono": "IBGE, Biomas do Brasil 1:250.000", "url": "https://geoftp.ibge.gov.br/informacoes_ambientais/estudos_ambientais/biomas/vetores/Biomas_250mil.zip", "arquivo": "ibge/Biomas_250mil.zip", "campo": "CD_Bioma", "valor": 3},
+  {"nome": "Mata Atlântica", "fonte_poligono": "IBGE, Biomas do Brasil 1:250.000", "url": "https://geoftp.ibge.gov.br/informacoes_ambientais/estudos_ambientais/biomas/vetores/Biomas_250mil.zip", "arquivo": "ibge/Biomas_250mil.zip", "campo": "CD_Bioma", "valor": 4},
+  {"nome": "Pampa", "fonte_poligono": "IBGE, Biomas do Brasil 1:250.000", "url": "https://geoftp.ibge.gov.br/informacoes_ambientais/estudos_ambientais/biomas/vetores/Biomas_250mil.zip", "arquivo": "ibge/Biomas_250mil.zip", "campo": "CD_Bioma", "valor": 5},
+  {"nome": "Pantanal", "fonte_poligono": "IBGE, Biomas do Brasil 1:250.000", "url": "https://geoftp.ibge.gov.br/informacoes_ambientais/estudos_ambientais/biomas/vetores/Biomas_250mil.zip", "arquivo": "ibge/Biomas_250mil.zip", "campo": "CD_Bioma", "valor": 6}
+]

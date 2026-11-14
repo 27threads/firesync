@@ -57,7 +57,7 @@ Ideia futura, fora do prazo: agrupar detecções em **eventos** para a visão de
 - Calculado em contagens por célula H3, um cenário por ano. Base 2012 a 2024, com os anos escolhidos pela validação deixando um ano de fora: se o erro de 2022 a 2024 passar de 1,5× o de 2012 a 2021, ficam só 2012 a 2021 (10 cenários); senão, os 13 anos. 2025 em diante fica fora.
 - NOAA-20 tratado como igual ao S-NPP (fator 1).
 - Só confiança nominal e alta (arquivo principal). Os 6 biomas do IBGE são calibrados.
-- Faixa de incerteza: P10 e P90 entre os cenários.
+- Faixa de incerteza: P5 e P95 entre os cenários (cerca de 8 em 10; ver o resultado da calibração em decisoes-harmonizacao.md).
 - Fator = razão das somas por bioma, mês e período. Sem os dias em `dias_sem_dados` de qualquer um dos dois satélites e sem janeiro de 2012. Fusão quando faltar foco: meses vizinhos no mesmo período, depois o ano inteiro no mesmo período, e só em último caso o ano inteiro com dia e noite juntos. Detalhes em [decisoes-harmonizacao.md](decisoes-harmonizacao.md).
 - Nunca comparar a contagem bruta de pontos do VIIRS com a do MODIS. Sempre pelo fator ou por célula da grade.
 

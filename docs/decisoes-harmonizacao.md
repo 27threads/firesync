@@ -44,13 +44,13 @@ Condições do fator: **bioma × mês × dia/noite**. Essas são as condições 
 
 1. Contar, por célula H3 e mês, os focos do Aqua e os do S-NPP nos anos de calibração (definidos pela regra do item 4). Só confiança nominal e alta: o arquivo de baixa confiança (MODIS abaixo de 30, VIIRS `l` de dia) fica guardado à parte e **não entra no fator nem no calendário**, porque os dois precisam usar o mesmo filtro.
 2. Somar por bioma, mês e dia/noite e calcular o fator Aqua para S-NPP (quantos focos do VIIRS cada foco do Aqua representa). Calibrar os 6 biomas do IBGE.
-3. Cada ano de calibração gera um fator, e cada fator é um **cenário**. A faixa de incerteza é o percentil 10 e o percentil 90 entre os cenários (13 ou 10, conforme o item 4).
+3. Cada ano de calibração gera um fator, e cada fator é um **cenário**. A faixa de incerteza é o **percentil 5 e o percentil 95** entre os cenários, por interpolação linear (trocado de P10 a P90 pelo Weberson em 14/11/2026, ver "Resultado da calibração").
 4. **Escolha dos anos pela validação, com critério fixado antes de rodar** (equipe, PR 3; aceito pelo Weberson em 14/11/2026):
    - **Base:** sobreposição Aqua × S-NPP de 2012 a 2024 (13 anos).
    - **Validação deixando um ano de fora:** para cada ano, calcular o fator com os outros 12, aplicar ao Aqua do ano deixado de fora e comparar com o S-NPP real.
-   - **Erro do ano:** erro relativo médio mensal por bioma, isto é, a média de `|estimado − observado| / observado` nos 12 meses. Para a decisão vale a Amazônia, que tem mais focos. Há uma proposta de troca desta medida pelo erro ponderado, em "Regras de cálculo da calibração" abaixo.
+   - **Erro do ano:** erro ponderado por bioma, `soma dos |estimado − observado| / soma dos observados` nos 12 meses (aprovado pelo Mateus no PR #4, no lugar da média simples). Para a decisão vale a Amazônia, que tem mais focos.
    - **Critério:** se o erro médio de 2022 a 2024 passar de **1,5×** o erro médio de 2012 a 2021, a deriva de órbita do Aqua atrapalhou, e a calibração fica com **2012 a 2021 (10 cenários)**. Senão, ficam os **13 anos**. O limite de 1,5× é ESCOLHA DA EQUIPE, não um padrão estatístico.
-   - **Registro:** a tabela com o erro de cada ano e a decisão entram neste documento, e o resumo vai para a tela de Método. Também reportar quantas vezes o valor real cai dentro da faixa de 80%.
+   - **Registro:** a tabela com o erro de cada ano e a decisão entram neste documento, e o resumo vai para a tela de Método. Também reportar quantas vezes o valor real cai dentro da faixa (P5 a P95).
 5. 2025 em diante fica fora do cálculo. A razão S-NPP/Aqua caiu para 4,8 (contra cerca de 6), provavelmente pela deriva de órbita do Aqua. Com a escala VIIRS, isso não afeta o calendário recente: de 2012 em diante os números são do VIIRS, e o Aqua só é usado em 2003 a 2011, quando a órbita ainda era normal.
 
 **Regras de cálculo da calibração (DECIDIDO, Weberson, 14/11/2026, salvo onde indicado):**
@@ -59,8 +59,8 @@ Condições do fator: **bioma × mês × dia/noite**. Essas são as condições 
 - **Dias sem dado ficam fora.** Na calibração, sai todo dia em que o Aqua ou o S-NPP aparece em `dias_sem_dados`, dos dois satélites ao mesmo tempo. Sem isso, a falha de um só satélite distorce a razão do mês.
 - **Janeiro de 2012 fica fora.** O S-NPP só começa em 20/01/2012. O mês de janeiro fica com um cenário a menos.
 - **Ordem da fusão** quando `A_k` não atinge o mínimo de focos: 1º somar com os meses vizinhos (`m − 1` e `m + 1`) no mesmo período; 2º usar o ano inteiro do bioma **no mesmo período** (noite com noite); 3º só em último caso, o ano inteiro com dia e noite juntos. A fusão usada fica em `fusao_com`, e `n_focos_origem` guarda o `A_k` que sustentou o fator. Ordem trocada pelo Weberson em 14/11/2026 depois do protótipo B1: o fator noturno é cerca de 5× o diurno (Amazônia 2024: dia 2,4 a 4,5, noite 12 a 25), e juntar dia e noite cedo puxava a noite para o fator do dia (Caatinga, março, noite: 25,4 próprio, 9,4 com dia e noite, 23,8 com o ano inteiro da noite).
-- **Validação deixando um ano de fora:** para o ano `y`, o fator de cada condição é a **mediana** dos `F_k` dos outros anos (como na série). Estimado = soma de `A_y × mediana`. Observado = `S_y`. A cobertura da faixa usa o P10 e o P90 dos `F_k` dos outros anos.
-- **Medida de erro (PROPOSTA do Weberson, precisa de acordo da equipe antes de rodar):** trocar a média de `|estimado − observado| / observado` mês a mês pelo **erro ponderado do ano**, `soma dos |estimado − observado| / soma dos observados` nos 12 meses. Motivo: num mês com pouco fogo, um erro pequeno vira uma porcentagem enorme e pode disparar o critério de 1,5× sozinho, mesmo sem efeito no calendário. O critério de 1,5× não muda.
+- **Validação deixando um ano de fora:** para o ano `y`, o fator de cada condição é a **mediana** dos `F_k` dos outros anos (como na série). Estimado = soma de `A_y × mediana`. Observado = `S_y`. A cobertura da faixa usa o P5 e o P95 dos `E_k` dos outros anos.
+- **Medida de erro (DECIDIDO, aprovado no PR #4):** **erro ponderado do ano**, `soma dos |estimado − observado| / soma dos observados` nos 12 meses, no lugar da média de `|estimado − observado| / observado` mês a mês. Motivo: num mês com pouco fogo, um erro pequeno vira uma porcentagem enorme e poderia disparar o critério de 1,5× sozinho, mesmo sem efeito no calendário. O critério de 1,5× não muda.
 
 **Salvaguardas obrigatórias (aceitas junto com a decisão):**
 
@@ -69,7 +69,31 @@ Condições do fator: **bioma × mês × dia/noite**. Essas são as condições 
 
 Por que contagens por célula e não o classificador ponto a ponto: é mais barato, usa 10 ou 13 pontos para a faixa em vez de 4, e dispensa a regra "MODIS estava olhando", que gerava viés (descartava justamente as áreas onde o VIIRS viu fogo e o MODIS nada).
 
-**Contrato para a API (DECIDIDO, Weberson, 14/11/2026):** adotamos o formato da frente A (`docs/banco.md`, PR #2). `agregados` guarda a contagem **bruta** por célula × ano × mês × satélite × dia/noite, e `fatores_harmonizacao` guarda um fator por cenário (ano de calibração). A API soma as contagens da área, multiplica pelos fatores de cada cenário e só então calcula a mediana e o P10 e o P90, porque a soma dos P10 das células não é o P10 da soma. Mudar um fator não exige refazer `agregados`.
+**Contrato para a API (DECIDIDO, Weberson, 14/11/2026):** adotamos o formato da frente A (`docs/banco.md`, PR #2). `agregados` guarda a contagem **bruta** por célula × ano × mês × satélite × dia/noite, e `fatores_harmonizacao` guarda um fator por cenário (ano de calibração). A API soma as contagens da área, multiplica pelos fatores de cada cenário e só então calcula a mediana e a faixa (P5 e P95), porque a soma dos percentis das células não é o percentil da soma. Mudar um fator não exige refazer `agregados`.
+
+### Resultado da calibração (B3, primeira rodada, 14/11/2026)
+
+O Eduardo rodou `data-pipeline/harmonizacao/calibrar.py` (branch `trabalho/harmonizacao`) no banco de teste com o histórico completo (46,4 milhões de focos, `dias_sem_dados` com 169 dias), sem gravar. Mínimo de 30 focos, 1.860 condições, 451 com fusão.
+
+**Decisão dos anos: ficam os 13 (2012 a 2024).** A deriva do Aqua não atrapalhou.
+
+| Medida de erro (Amazônia) | 2012 a 2021 | 2022 a 2024 | Razão | Limite |
+| --- | --- | --- | --- | --- |
+| Ponderado (decidida) | 5,7% | 6,4% | 1,13 | 1,5 |
+| Simples (original) | 9,2% | 11,4% | 1,24 | 1,5 |
+
+Erro ponderado por ano na Amazônia: de 2,4% (2017) a 12,6% (2020).
+
+**Cobertura da faixa:** com P10 a P90, o valor real caiu dentro em 0,58 a 0,69 dos meses (Amazônia 0,69). Isso é o esperado pela aritmética: com poucos cenários, a faixa entre percentis cobre menos do que o nome sugere. Numa simulação com anos intercambiáveis (200 mil sorteios), um ano novo cai dentro de:
+
+| Faixa | 12 cenários (validação) | 13 cenários (série) |
+| --- | --- | --- |
+| P10 a P90 | 68% | 69% |
+| **P5 a P95 (decidida)** | **78%** | **79%** |
+
+Por isso a faixa passou a ser **P5 a P95**, que corresponde a "cerca de 8 em 10". A cobertura medida com P5 a P95 sai na próxima rodada do passo 1 e entra aqui e na tela de Método.
+
+**Classe de intensidade na tela (aprovada no PR #4, `api.md`):** `low` abaixo de 5 MW, `medium` de 5 a 25 MW, `high` de 25 MW ou mais **ou** pixel saturado do VIIRS (confiança alta). Limites fixos na tela. A regra do pixel saturado vale só para o VIIRS: no MODIS, confiança alta não indica saturação.
 
 Pedido à frente A (migration 002): acrescentar `n_focos_origem` e `fusao_com` em `fatores_harmonizacao`, para a salvaguarda do mínimo de focos.
 
@@ -98,7 +122,7 @@ O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, 
 
 ## 7. Pendências
 
-1. Acordo da equipe sobre a medida de erro da validação (erro ponderado), antes de rodar.
-2. Definir o mínimo de focos por condição com a base limpa. (As colunas `n_focos_origem` e `fusao_com` já estão na migration 002 do PR #2.)
+1. Rodar de novo o passo 1 da B3 com P5 a P95, registrar a cobertura medida e gravar os fatores (`--gravar`).
+2. Confirmar o mínimo de focos por condição (a primeira rodada usou 30). (As colunas `n_focos_origem` e `fusao_com` já estão na migration 002 do PR #2.)
 3. Investigar a queda de S-NPP/Aqua em 2025.
 4. Esta decisão muda o que o contexto do projeto dizia sobre o modelo A (o classificador deixa de gerar o fator da série). A equipe deve concordar com a mudança.
