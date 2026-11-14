@@ -2,11 +2,19 @@
 -- Idempotente: pode rodar de novo, e roda tanto num banco novo quanto num que já tem a 001.
 
 -- 1. Células de cada região numa tabela, não numa lista dentro de `regioes` (escala para o mundo).
+--    Chave só em h3: cada célula numa região só, senão `agregados` contaria o mesmo foco duas vezes.
 CREATE TABLE IF NOT EXISTS celula_regiao (
-    h3        BIGINT  NOT NULL CHECK (((h3 >> 52) & 15) = 6),
-    regiao_id INTEGER NOT NULL REFERENCES regioes (id) ON DELETE CASCADE,
-    PRIMARY KEY (h3, regiao_id)
+    h3        BIGINT  NOT NULL PRIMARY KEY CHECK (((h3 >> 52) & 15) = 6),
+    regiao_id INTEGER NOT NULL REFERENCES regioes (id) ON DELETE CASCADE
 );
+-- banco que já tinha a chave antiga (h3, regiao_id): troca pela chave só em h3
+DO $$
+BEGIN
+    IF (SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'celula_regiao_pkey') <> 'PRIMARY KEY (h3)' THEN
+        ALTER TABLE celula_regiao DROP CONSTRAINT celula_regiao_pkey;
+        ALTER TABLE celula_regiao ADD PRIMARY KEY (h3);
+    END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS celula_regiao_regiao ON celula_regiao (regiao_id);
 ALTER TABLE regioes DROP COLUMN IF EXISTS celulas_h3;
 

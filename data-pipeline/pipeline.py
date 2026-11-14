@@ -62,7 +62,8 @@ def env(name):
 
 
 def db():
-    return psycopg.connect(env("DATABASE_URL"), autocommit=True)
+    # datas sempre em UTC, qualquer que seja o fuso configurado no servidor (::date, extract, limites de mês)
+    return psycopg.connect(env("DATABASE_URL"), autocommit=True, options="-c timezone=UTC")
 
 
 def config(conn, chave):
@@ -75,12 +76,20 @@ def config(conn, chave):
 def curl(url, dest=None):
     # curl em vez de urllib: o Python deste Windows falha na cadeia SSL da NASA
     args = ["curl", "-sS", "-f", "--retry", "3", "-m", "600", url]
-    if dest:
-        tmp = Path(str(dest) + ".part")
-        subprocess.run(args + ["-o", str(tmp)], check=True)
-        tmp.replace(dest)
-        return None
-    return subprocess.run(args, check=True, capture_output=True, text=True).stdout
+    try:
+        if dest:
+            tmp = Path(str(dest) + ".part")
+            subprocess.run(args + ["-o", str(tmp)], check=True)
+            tmp.replace(dest)
+            return None
+        return subprocess.run(args, check=True, capture_output=True, text=True).stdout
+    except subprocess.CalledProcessError as e:
+        # a MAP_KEY vai na URL (/csv/<chave>/...): nunca deixar ela chegar ao log
+        raise RuntimeError(f"curl falhou ({e.returncode}): {mask_key(url)}") from None
+
+
+def mask_key(url):
+    return re.sub(r"/csv/[^/]+/", "/csv/***/", url)
 
 
 # ---------------------------------------------------------------- cadastrar
@@ -121,19 +130,22 @@ def cadastrar():
         geoms.append(g[g[r["campo"]] == r["valor"]].set_crs(4326, allow_override=True).union_all())
     cells_by_region = assign_cells([region_cells(g, res, "center") for g in geoms],
                                    [region_cells(g, res, "overlap") for g in geoms])
-    for r, geom, cells in zip(regs, geoms, cells_by_region):
-        with conn.transaction():
+    # Uma transação: a tabela vira exatamente o JSON. Região renomeada ou removida sai (o cascade limpa
+    # células, agregados e fatores dela); sem isso a célula ficaria em duas regiões.
+    with conn.transaction():
+        conn.execute("DELETE FROM regioes WHERE nome <> ALL(%s)", ([r["nome"] for r in regs],))
+        conn.execute("DELETE FROM celula_regiao")
+        for r, geom, cells in zip(regs, geoms, cells_by_region):
             rid = conn.execute(
                 """INSERT INTO regioes (nome, geom, fonte_poligono)
                    VALUES (%s, ST_Multi(ST_GeomFromWKB(%s, 4326)), %s)
                    ON CONFLICT (nome) DO UPDATE SET geom = EXCLUDED.geom, fonte_poligono = EXCLUDED.fonte_poligono
                    RETURNING id""",
                 (r["nome"], shapely.to_wkb(geom), r["fonte_poligono"])).fetchone()[0]
-            conn.execute("DELETE FROM celula_regiao WHERE regiao_id = %s", (rid,))
             with conn.cursor().copy("COPY celula_regiao (h3, regiao_id) FROM STDIN") as cp:
                 for c in cells:
                     cp.write_row((c, rid))
-        print(f"cadastrar: {r['nome']} ({len(cells):,} células res {res})", flush=True)
+            print(f"cadastrar: {r['nome']} ({len(cells):,} células res {res})", flush=True)
 
 
 def load_regions(conn):
@@ -242,6 +254,7 @@ def keep(df, mask, log, key):
 DUP_KEY = ["latitude", "longitude", "acq_date", "acq_time", "satellite"]
 
 
+# As mesmas regras estão em SQL em agregar.py (o que a API usa). Mudou uma, mude a outra.
 def common_filters(df, log):
     # type só existe na versão padrão; linhas NRT (provisional) ficam com type vazio
     df = keep(df, df.provisional | (df.type == 0), log, "type!=0")

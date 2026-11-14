@@ -28,13 +28,13 @@ Um só importador lê qualquer CSV do FIRMS: pedido de arquivo por país ou regi
 
 ## Tabelas
 
-Cinco tabelas separam o dado bruto, as regiões, a cobertura, a calibração e o resultado pronto para a API.
+Oito tabelas (mais a `config`) separam o dado bruto, as regiões e suas células, a cobertura, as falhas de satélite, a calibração e o resultado pronto para a API.
 
 | Tabela | Uma linha por | Colunas principais | Quem grava |
 | --- | --- | --- | --- |
 | `focos` | Foco detectado | Campos normalizados do importador + `h3` | Importador e jobs de atualização |
 | `regioes` | Região | `id`, `nome`, `geom` (polígono), `fonte_poligono` | `pipeline.py cadastrar` |
-| `celula_regiao` | Célula H3 × região | `h3`, `regiao_id` | `pipeline.py cadastrar` |
+| `celula_regiao` | Célula H3 (cada célula numa região só) | `h3` (chave), `regiao_id` | `pipeline.py cadastrar` |
 | `cobertura` | Região × satélite | `regiao_id`, `satelite`, `data_inicio`, `data_fim`, `atualizado_em` | Importador |
 | `fatores_harmonizacao` | Região (bioma) × par de satélites × mês × dia/noite × ano de calibração | `regiao_id`, `satelite_origem`, `satelite_destino`, `mes`, `periodo`, `ano_calibracao`, `fator`, `n_focos_origem`, `fusao_com` | Job de calibração |
 | `dias_sem_dados` | Dia × satélite com falha | `data`, `satelite` | `pipeline.py sem_dados` (FIRMS `missing_data`) |

@@ -20,7 +20,7 @@ Este documento junta o que o backend precisa para montar o `docker-compose.yml` 
 | 10 | `regioes.json` × tabela `regioes` | O JSON é a entrada. A tabela é a fonte de verdade | aprovado no PR #2 |
 | 11 | Formato de `fatores_harmonizacao` e `agregados` | Fator por mês × dia/noite × ano. Agregado bruto, com o fator aplicado na API | aprovado no PR #2 |
 | 12 | Escala da série | **VIIRS.** Aqua só para 2003–2011 e para a calibração. Terra fora (guardado, mas não entra na conta) | aprovado no PR #2 |
-| 13 | Células de cada região | Tabela `celula_regiao (h3, regiao_id)`, no lugar de uma lista dentro de `regioes` | aprovado no PR #2 |
+| 13 | Células de cada região | Tabela `celula_regiao (h3, regiao_id)`, chave só em `h3` (cada célula numa região só, garantido pelo banco), no lugar de uma lista dentro de `regioes` | aprovado no PR #2 |
 | 14 | Confiança | Só nominal e alta entram em `agregados` (calendário e fator). Baixa fica guardada à parte | aprovado no PR #2 |
 | 15 | Satélite em `agregados` | Só o satélite que vale em cada mês: Aqua até jan/2012, VIIRS de fev/2012 em diante. Os outros só servem para a calibração, que lê de `focos` | aprovado no PR #2 |
 | 16 | Falha de satélite | Tabela `dias_sem_dados (data, satelite)`, preenchida por `pipeline.py sem_dados`. Não é por célula | aprovado no PR #2 |
@@ -60,8 +60,8 @@ Um ID da resolução 6 vale cerca de 6 × 10¹⁷, e o JavaScript só representa
 | **Região de demonstração** | O que a demo destaca | Amazônia e Pantanal (escolha da apresentação, não do banco) |
 
 - `focos` guarda **tudo o que foi baixado**, sem coluna de região. O bioma só entra na calibração e na agregação.
-- **`regioes.json` é a entrada:** versionada e fácil de revisar no git. `python pipeline.py cadastrar` lê o JSON, baixa o polígono, grava em `regioes` (upsert por `nome`) e grava as células da região, na resolução da `config`, em `celula_regiao`. **Nenhuma outra etapa lê o JSON.**
-- **Células por região numa tabela, não numa lista:** `celula_regiao (h3, regiao_id)` tem chave `(h3, regiao_id)`, índice em `regiao_id` e o mesmo `CHECK` de resolução. Uma lista dentro da linha de `regioes` não escala (o mundo tem ~4 milhões de células de terra na res 6).
+- **`regioes.json` é a entrada:** versionada e fácil de revisar no git. `python pipeline.py cadastrar` lê o JSON, baixa o polígono, grava em `regioes` (upsert por `nome`) e grava as células da região, na resolução da `config`, em `celula_regiao`. **Nenhuma outra etapa lê o JSON.** O cadastro roda numa transação e deixa a tabela igual ao JSON: região renomeada ou removida do JSON sai do banco (com as células, agregados e fatores dela).
+- **Células por região numa tabela, não numa lista:** `celula_regiao (h3, regiao_id)` tem chave só em `h3` (o banco recusa a mesma célula em duas regiões), índice em `regiao_id` e o mesmo `CHECK` de resolução. Uma lista dentro da linha de `regioes` não escala (o mundo tem ~4 milhões de células de terra na res 6).
 - **Polígono simplificado só para achar as células:** tolerância de 0,001° (~110 m), muito menor que o lado da célula (~3,7 km). A simplificação mudou menos de 0,01% das células, e o polígono gravado em `regioes.geom` é o original.
 - **Cada célula numa região só, sem perder a borda:** a célula vai para a região que contém o centro dela. As células de borda (costa e fronteira) cujo centro cai fora de todos os biomas vão para a região que encosta nelas. Sem isso, 0,08–0,12% dos focos de 2024 ficavam sem região e sumiriam dos `agregados`; com isso, 0%. O cadastro dos 6 biomas leva ~3 min e roda uma vez só.
 - **Conferido:** a soma da área real das células de cada bioma fica entre +0,1% e +0,4% da área do polígono do IBGE. A área de um hexágono H3 varia com o lugar: no Brasil vai de ~30 a ~43 km².
@@ -156,6 +156,5 @@ volumes:
 
 ## Ainda em aberto
 
-- Anos de calibração (proposta: 2012–2021, antes da deriva do Aqua)
 - Regra de duplicatas do MODIS (em análise no PR #1; por enquanto só as exatas)
 - Linguagem e framework da API (arquitetura, ponto 4)
