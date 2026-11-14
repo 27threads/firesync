@@ -48,6 +48,51 @@ A etapa A sozinha já entrega a curva e a prova cruzada. A etapa B reforça com 
 
 **Saídas:** um relatório e CSVs pequenos (curva de detecção, medidas, comparação dos fatores) e um gráfico da curva com rótulos em inglês. **Nada é gravado no banco.**
 
+## Sequência de etapas
+
+A ordem de execução do caminho C. Cada passo só começa depois do anterior, e o **ponto de corte** está marcado.
+
+### Preparação
+
+| Passo | O quê | Quem |
+| --- | --- | --- |
+| 0.1 | Revisão deste PR: o Mateus e o Eduardo respondem às duas perguntas (tamanho dos blocos do teste e se a etapa B cabe no domingo) | Mateus e Eduardo |
+| 0.2 | Decisões finais: as faixas de potência da tabela simples (abaixo de 2, 2 a 5, 5 a 10, 10 a 25 e 25 MW ou mais) e o uso da biblioteca scikit-learn | Weberson |
+
+### Etapa A: modelo com os dados de 2024 (frente B, cerca de 3 a 4 horas)
+
+| Passo | O quê | Tempo |
+| --- | --- | --- |
+| 1 | Abrir uma branch só para o código do modelo, separada do PR #26 | minutos |
+| 2 | **Testes primeiro**, com dados inventados de resposta conhecida: o pareamento acha o fogo certo por distância e horário; a regra dos 50 km funciona; o sorteio dos blocos não põe vizinhos dos dois lados; o modelo recupera uma chance de detecção plantada; a prova cruzada recupera um fator conhecido. Rodar e ver falhar | 45 min |
+| 3 | Formar os pares de 2024, **reaproveitando as regras de limpeza do `pipeline.py` (frente A), sem copiá-las** | 1 h |
+| 4 | Separar treino e teste no espaço: sortear blocos H3, com semente fixa, metade para cada lado | 15 min |
+| 5 | Modelo 1, a tabela simples: chance de detecção por faixa de potência, dia ou noite e bioma | 20 min |
+| 6 | Modelo 2, o gradient boosting, com todas as pistas | 30 min |
+| 7 | Medir nos blocos de teste: separação, calibração e **prova cruzada** com o fator por contagens | 30 min |
+| 8 | Gerar a curva de detecção em gráfico, com rótulos em inglês | 15 min |
+| 9 | Abrir o PR do código: checagens de código morto e de cobertura, linha de uso de IA no README, sem `Co-Authored-By`, Mateus revisando | 20 min |
+
+**Ponto de corte:** se o gradient boosting (passo 6) não ficar pronto até a meia-noite, seguimos só com a tabela simples, que já entrega a curva e a prova cruzada.
+
+### Etapa B: modelo com o histórico (frente A, domingo de manhã, opcional)
+
+| Passo | O quê | Quem |
+| --- | --- | --- |
+| 10 | Acrescentar ao script um modo que lê o banco, como o `calibrar.py` já faz | Frente B |
+| 11 | Rodar no banco de teste, **sem gravar nada**: treino em 2019 a 2021, teste em 2022 a 2024, e mandar os CSVs | Eduardo |
+| 12 | Comparar com a etapa A e ver se a deriva do Aqua atrapalha nos anos recentes | Frente B |
+
+Só entra se a frente A tiver tempo **depois** de levar o banco para o servidor público. Se não couber, fica declarado como próximo passo.
+
+### Registro e entrega
+
+| Passo | O quê |
+| --- | --- |
+| 13 | Registrar os resultados no `decisoes-harmonizacao.md` (seção 5) e criar a tarefa B7 no `tarefas.md`, depois que o PR #26 entrar |
+| 14 | Entregar à frente D a curva de detecção e a frase da prova cruzada, em inglês, para a tela de Método |
+| 15 | Declarar os limites da seção "Limites a declarar no Método" |
+
 ## Prazos e ponto de corte
 
 - **Etapa A até a meia-noite de sábado.** Se o gradient boosting não ficar pronto, fica só a tabela simples, que já entrega a curva e a prova cruzada.
