@@ -24,6 +24,7 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 8 | [Banco de dados — decisões para o backend](docs/banco.md) | Imagem, H3, resolução, schema, consulta da API, compose sugerido, benchmark | Antes de mexer no banco ou na API |
 | 9 | [Contrato da API](docs/api.md) | Endpoints, pedido, resposta, erros, export de auditoria. JSON de exemplo em [api-exemplo.json](docs/api-exemplo.json) | Antes de mexer na API ou no front |
 | 10 | [Prompt do frontend](docs/prompt-frontend.md) | Prompt para o agente que constrói o front: direção de design, regras de dado na tela, animação, performance e etapas de construção | Antes de começar a frente D |
+| 11 | [Validação do nível de alerta](docs/validacao-alerta.md) | Solução A + B da issue #9: teste retroativo com "o que veio depois" e eventos conhecidos, no lugar da área queimada | Antes de mexer no alerta ou no `alert_rules.json` |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
