@@ -77,6 +77,20 @@ with tempfile.TemporaryDirectory() as d:
     tot = conn.execute("SELECT sum(focos_brutos), sum(frp_soma), count(DISTINCT satelite) FROM agregados").fetchone()
     assert tot == (3, 18.0, 1), tot  # 2 SP válidos + 1 NRT; frp 5 + 9 + 4
 
+    # issue #8: a contagem diária soma igual à mensal (VIIRS), um dia por linha
+    dia = conn.execute("SELECT sum(focos_brutos), count(DISTINCT data) FROM agregados_diarios").fetchone()
+    assert dia == (3, 3), dia  # 01/09, 02/09 (SP) e 03/09 (NRT)
+
+    # issue #15: a versão vai no mesmo commit; parcial muda atualizado_em, só a completa muda data_version
+    cfg = lambda k: conn.execute("SELECT valor FROM config WHERE chave = %s", (k,)).fetchone()
+    import time
+    v1 = agregar.agregar(date(2020, 9, 1), date(2020, 10, 1))
+    assert cfg("atualizado_em") == (v1,) and cfg("data_version") is None
+    time.sleep(1.1)
+    v2 = agregar.agregar()
+    assert v2 > v1 and cfg("atualizado_em") == (v2,) and cfg("data_version") == (v2,)
+    assert conn.execute("SELECT sum(focos_brutos) FROM agregados_diarios").fetchone()[0] == 3  # completa = mesma conta
+
     # as regras do clean (pandas) e do agregar (SQL) mantêm os mesmos focos
     main, _ = p.clean_viirs(p.normalize(sp.astype({"acq_time": str, "version": str, "confidence": str}), "viirs"), {})
     sp_agregado = conn.execute("""SELECT count(*) FROM focos WHERE qualidade = 'SP' AND confianca IN ('nominal','alta')

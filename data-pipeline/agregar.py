@@ -5,10 +5,12 @@ Uso:
     python agregar.py 2026-10 2026-11    # refaz só esses meses (job de atualização)
 
 Cada execução é uma transação: apaga os meses do intervalo e grava de novo, então rodar duas vezes dá o mesmo resultado.
+Na mesma transação refaz `agregados_diarios` (só VIIRS) e grava a versão em `config` (issue #15): quem lê vê
+os dados e a versão novos juntos, ou os antigos juntos, nunca metade.
 Datas em UTC: a conexão de pipeline.db() fixa o fuso.
 """
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 
 from pipeline import db
 
@@ -37,6 +39,22 @@ WHERE f.satelite = %(sat)s
 GROUP BY 1, 2, 3, 4, 5, 6
 """
 
+# Contagem diária (issue #8): mesmos filtros, por dia. Só VIIRS: o Aqua não entra no normal da janela recente.
+SQL_DIA = """
+INSERT INTO agregados_diarios (h3, data, regiao_id, satelite, periodo, focos_brutos)
+SELECT f.h3, f.datahora_utc::date, cr.regiao_id, f.satelite, f.periodo, count(*)
+FROM focos f
+JOIN celula_regiao cr ON cr.h3 = f.h3
+WHERE f.satelite = %(sat)s
+  AND f.datahora_utc >= %(ini)s AND f.datahora_utc < %(fim)s
+  AND f.confianca IN ('nominal', 'alta')
+  AND (f.tipo = 0 OR (f.tipo IS NULL AND f.qualidade = 'NRT'))
+  AND f.frp > 0
+GROUP BY 1, 2, 3, 4, 5
+"""
+VERSAO = """INSERT INTO config (chave, valor) VALUES (%s, %s)
+            ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor"""
+
 
 def janelas(de, ate):
     """Corta [de, ate) nos períodos de SATELITE_DO_MES -> [(satélite, início, fim)]."""
@@ -61,17 +79,23 @@ INICIO, FIM = date(2003, 1, 1), date(9999, 1, 1)
 
 
 def agregar(de=INICIO, ate=FIM):
+    """Refaz `agregados` e `agregados_diarios` do intervalo e grava a versão, tudo num commit. Devolve a versão."""
     conn = db()
+    versao = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     with conn.transaction():
         conn.execute("DELETE FROM agregados WHERE make_date(ano, mes, 1) >= %s AND make_date(ano, mes, 1) < %s",
                      (de, ate))
+        conn.execute("DELETE FROM agregados_diarios WHERE data >= %s AND data < %s", (de, ate))
         for sat, ini, fim in janelas(de, ate):
             n = conn.execute(SQL, {"sat": sat, "ini": ini, "fim": fim}).rowcount
-            print(f"agregar: {sat} {ini} a {fim}: {n:,} linhas", flush=True)
+            d = 0 if sat == "Aqua" else conn.execute(SQL_DIA, {"sat": sat, "ini": ini, "fim": fim}).rowcount
+            print(f"agregar: {sat} {ini} a {fim}: {n:,} linhas mensais, {d:,} diárias", flush=True)
+        # `atualizado_em` muda a cada escrita (é a chave do cache da API); `data_version` só na carga completa
+        # (a API recarrega os fatores). Data e hora: duas cargas no mesmo dia dão versões diferentes.
+        conn.execute(VERSAO, ("atualizado_em", versao))
         if (de, ate) == (INICIO, FIM):
-            # tabela inteira refeita: é o `data_version` da API (quando os dados foram carregados)
-            conn.execute("""INSERT INTO config (chave, valor) VALUES ('data_version', CURRENT_DATE::text)
-                            ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor""")
+            conn.execute(VERSAO, ("data_version", versao))
+    return versao
 
 
 if __name__ == "__main__":

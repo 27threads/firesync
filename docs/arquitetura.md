@@ -73,18 +73,44 @@ Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases,
 
 Valem para todo código novo, principalmente a API, que ainda não começou.
 
-### Camadas da API
+### Arquitetura hexagonal (portas e adaptadores)
 
-| Camada | Faz | Não faz |
+O núcleo (domínio e casos de uso) não conhece HTTP, SQL nem arquivo. Ele fala com o mundo só por **portas** (interfaces). Os **adaptadores** ligam as portas ao mundo real. Trocar o banco, o framework web ou a fonte de configuração não mexe no núcleo, e o núcleo é testado sem nada disso.
+
+```
+backend/src/firesync_api/
+├── domain/          regras puras: faixa P5–P95, origem do mês, classe de intensidade, alerta, janelas, IDs H3
+├── application/     casos de uso: calendário, janela recente, focos recentes, export
+├── ports/           interfaces (Protocol): AggregatesPort, DetectionsPort, RulesPort, ClockPort
+└── adapters/
+    ├── inbound/http/        rotas (FastAPI): validam a entrada e devolvem o formato do api.md
+    └── outbound/
+        ├── postgres/        consultas SQL e tradução dos nomes do banco (português) para o domínio (inglês)
+        └── config_file/     leitura do config/alert_rules.json
+```
+
+| Camada | Pode depender de | Não pode depender de |
 | --- | --- | --- |
-| **Rotas** (HTTP) | Recebem o pedido, validam a entrada e devolvem a resposta no formato do [api.md](api.md) | Conta nenhuma e SQL nenhum |
-| **Serviços** (regras) | Fórmula do calendário, cenários e percentis, janela recente, alerta, classe de intensidade | Não sabem que existe HTTP nem SQL |
-| **Repositórios** (SQL) | Só consultam o banco e traduzem os nomes do banco (em português) para os do domínio (em inglês) | Regra de negócio |
+| `domain` | nada (só a biblioteca padrão e bibliotecas de conta, como `numpy` e `h3`) | `application`, `ports`, `adapters`, framework web, banco |
+| `application` | `domain`, `ports` | `adapters` |
+| `ports` | `domain` (tipos) | `adapters` |
+| `adapters` | tudo acima | — |
 
-- **S (uma responsabilidade por parte):** cada camada muda por um motivo só. Mudar o banco não mexe na fórmula. Mudar a fórmula não mexe no HTTP.
-- **D (depender de abstrações):** os serviços recebem o repositório de fora. Nos testes, entra um repositório com dados falsos, sem banco.
-- **O (aberto para extensão):** a regra do alerta ([config/alert_rules.json](../config/alert_rules.json)) e as regiões (`regioes.json`) vêm de configuração. Uma regra ou uma região nova não exige mexer no código antigo.
+- **S (uma responsabilidade):** cada camada muda por um motivo só. Mudar o banco não mexe na fórmula, e mudar a fórmula não mexe no HTTP.
+- **D (depender de abstrações):** os casos de uso recebem as portas de fora. Nos testes, entra um adaptador falso em memória, sem banco.
+- **O (aberto para extensão):** a regra do alerta ([config/alert_rules.json](../config/alert_rules.json)) e as regiões (`regioes.json`) vêm de configuração. Uma regra ou região nova não exige mexer no código antigo.
 - **L e I pesam menos aqui.** Não vale criar classes e interfaces só para cumprir a sigla.
+- O `data-pipeline/` é um conjunto de scripts de carga e não precisa seguir o hexágono. Código novo de regra que ele compartilhar com a API vai para o `domain`.
+
+### Clean Code
+
+- **Nomes que dizem o que é**, em inglês no código (`uncertainty_band`, `month_source`), sem abreviação obscura.
+- **Funções pequenas, que fazem uma coisa só.** Se precisa de um comentário para explicar o que um bloco faz, ele vira uma função com esse nome.
+- **Sem número mágico:** limites, percentis e janelas vêm do `alert_rules.json` ou de uma constante com nome.
+- **Comentário explica o porquê**, não o quê. O "o quê" fica no nome.
+- **Sem código morto nem comentado.** O histórico está no git. A esteira checa (`ruff` e `vulture`, ver [testes.md](testes.md)).
+- **Erro explícito**, com mensagem clara. Nada de engolir exceção.
+- **Deixe o código melhor do que encontrou**, mas refatoração grande vai num PR separado.
 
 ### Orientação a objetos com moderação
 
@@ -101,6 +127,8 @@ O PostgreSQL é ACID, mas só protege o que estiver dentro de uma transação.
 - **Recarga SP**, quando voltar: apagar o NRT e inserir o SP numa transação só.
 
 ## Qualidade e testes
+
+A estratégia completa (TDD, regra dos bugs, cobertura, jornadas e esteira) está em [testes.md](testes.md).
 
 ### Testes automáticos (CI)
 

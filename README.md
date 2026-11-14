@@ -86,7 +86,7 @@ Detalhes de cada etapa: documento 4.
 - [ ] Stack e arquitetura definidas
 - [ ] Contrato da API
 - [x] Histórico do FIRMS baixado e análise por satélite ([pipeline-dados.md](docs/pipeline-dados.md))
-- [ ] Importador e pipeline
+- [x] Importador, pipeline, agregação, job NRT e série do INPE ([pipeline-dados.md](docs/pipeline-dados.md))
 - [ ] API
 - [ ] Frontend
 - [ ] Deploy público

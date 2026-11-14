@@ -1,0 +1,148 @@
+# Esteira de testes (RNF08). Roda em todo PR e em todo push na main.
+# Um PR só entra na main se todos os jobs passarem. Estratégia em docs/testes.md.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  codigo-morto:
+    name: Código morto
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff==0.8.4 vulture==2.14
+      - name: Imports, variáveis e redefinições sem uso (ruff, regras F)
+        run: ruff check --output-format github .
+      - name: Funções, classes e variáveis nunca usadas (vulture)
+        run: |
+          alvos="data-pipeline"
+          [ -d backend/src ] && alvos="$alvos backend/src"
+          vulture $alvos --exclude "tests,test_*.py" --min-confidence 60
+
+  pipeline-unidade:
+    name: Pipeline · unidade
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: data-pipeline
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: data-pipeline/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Filtros, importador, agregação e INPE
+        run: python test_pipeline.py
+
+  pipeline-integracao:
+    name: Pipeline · integração com PostGIS
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: data-pipeline
+    services:
+      db:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_PASSWORD: teste
+          POSTGRES_DB: firesync_teste
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d firesync_teste"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: teste
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: data-pipeline/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Migrations rodam duas vezes sem erro (idempotentes)
+        run: |
+          psql -d postgres -c "CREATE DATABASE firesync_migrations"
+          for rodada in 1 2; do
+            for f in migrations/*.sql; do psql -v ON_ERROR_STOP=1 -q -d firesync_migrations -f "$f"; done
+          done
+      - name: Unidade (de novo, para somar na cobertura)
+        run: coverage run -p test_pipeline.py
+      - name: Importar, SP substituindo NRT, cobertura e agregar
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:teste@localhost:5432/firesync_teste
+        run: coverage run -p test_banco.py
+      - name: Job NRT com o FIRMS simulado
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:teste@localhost:5432/firesync_teste_job
+        run: |
+          psql -d postgres -c "CREATE DATABASE firesync_teste_job"
+          coverage run -p -m pytest tests -v -rxX
+      - name: Cobertura de linhas (mínimo no .coveragerc)
+        run: |
+          coverage combine
+          coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+          coverage report
+
+  backend:
+    name: API · contrato e especificação TDD
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - run: pip install -r backend/requirements-dev.txt
+      - name: Contrato (api-exemplo.json, alert_rules.json) e núcleo do domínio
+        if: ${{ hashFiles('backend/src/**/*.py') == '' }}
+        run: pytest backend/tests -v -rxX
+      - name: Contrato, domínio e cobertura de linhas e ramos (mínimo 90%)
+        if: ${{ hashFiles('backend/src/**/*.py') != '' }}
+        run: |
+          pytest backend/tests -v -rxX --cov=backend/src --cov-branch --cov-report=term-missing --cov-fail-under=90
+
+  jornadas:
+    name: Front · jornadas de usuário (E2E)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/e2e/package-lock.json
+      - run: npm ci
+      - name: As jornadas compilam
+        run: npx playwright test --list
+      - name: Rodar as jornadas (quando o front existir)
+        if: ${{ hashFiles('frontend/package.json') != '' }}
+        run: |
+          npx playwright install --with-deps chromium
+          npm --prefix .. ci
+          npm --prefix .. run build
+          (npm --prefix .. run preview -- --port 5173 &) && npx wait-on http://localhost:5173
+          npx playwright test
+        env:
+          FRONTEND_URL: http://localhost:5173

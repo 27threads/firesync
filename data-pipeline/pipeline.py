@@ -483,11 +483,23 @@ INPE_CSV = ROOT / "referencia" / "inpe_mensal_biomas.csv"
 
 
 def inpe_mensal(d):
-    """JSON de estatísticas do INPE (histórico mensal por estado × bioma) -> bioma × ano × mês."""
+    """JSON de estatísticas do INPE (histórico mensal por estado × bioma) -> bioma × ano × mês.
+
+    O INPE troca de satélite de referência (NOAA-12 até 03/07/2002, AQUA_M-T depois): a coluna `satelite`
+    evita ler a troca como aumento de fogo. Mês com satélite é o da faixa que contém o dia 15.
+    `parcial` marca o mês de `data_limite`, que ainda não acabou.
+    """
     rows = [(h["bioma"]["nome_bioma"], h["ano"], int(m), n)
             for h in d["historico_mensal"] for m, n in h["meses"].items() if n is not None]
     df = pd.DataFrame(rows, columns=["bioma", "ano", "mes", "focos"])
-    return df.groupby(["bioma", "ano", "mes"], as_index=False).focos.sum()
+    df = df.groupby(["bioma", "ano", "mes"], as_index=False).focos.sum()
+    lim = pd.Timestamp(d["meta"]["data_limite"])
+    dia15 = pd.to_datetime(dict(year=df.ano, month=df.mes, day=15)).clip(upper=lim)  # mês atual: até o limite
+    df["satelite"] = None
+    for f in d["meta"]["faixas_de_satelite"]:
+        df.loc[dia15.between(pd.Timestamp(f["inicio"]), pd.Timestamp(f["fim"])), "satelite"] = f["satelite"]
+    df["parcial"] = (df.ano == lim.year) & (df.mes == lim.month) & (lim.day < lim.days_in_month)
+    return df
 
 
 def inpe():
