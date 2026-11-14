@@ -6,6 +6,8 @@ O usuário escolhe uma área e um período e vê um calendário meses × anos co
 
 **Prazo da submissão:** domingo, 15/11/2026, 23h59 (horário do evento local).
 
+**Objetivo: ganhar um prêmio global.** Primeiro, nota alta nos 5 critérios de julgamento, que decidem quem chega à final. Depois, as categorias-alvo (Best Use of Data, Best Use of Science e Local Impact), que guiam a história na página e no vídeo. Tudo em [docs/premiacao.md](docs/premiacao.md). Leia antes de qualquer tarefa.
+
 ## Para agentes: ordem de leitura
 
 Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdade. Se o código e um documento discordarem, pergunte antes de mudar qualquer um dos dois.
@@ -20,6 +22,7 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 6 | [Tarefas](docs/tarefas.md) | Frentes, responsáveis, branches, pastas de cada um, marcos e status | Antes de começar qualquer tarefa |
 | 7 | [Pipeline de dados — o que já foi feito](docs/pipeline-dados.md) | Download do histórico, filtros de qualidade, análise por satélite, achados | Antes de mexer em `data-pipeline/` |
 | 8 | [Banco de dados — decisões para o backend](docs/banco.md) | Imagem, H3, resolução, schema, consulta da API, compose sugerido, benchmark | Antes de mexer no banco ou na API |
+| 9 | [Contrato da API](docs/api.md) | Endpoints, pedido, resposta, erros, export de auditoria. JSON de exemplo em [api-exemplo.json](docs/api-exemplo.json) | Antes de mexer na API ou no front |
 | 10 | [Restrições para o mundo](docs/escala-mundial.md) | O que muda quando a cobertura passar do Brasil para o mundo, com a saída proposta para cada ponto | Antes de mexer em cobertura, seleção de área ou camada de focos |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
@@ -31,13 +34,16 @@ firesync/
 ├── README.md              este arquivo (mapa do projeto)
 ├── CLAUDE.md              regras para agentes
 ├── docs/                  todos os documentos do projeto (tabela acima)
-├── data-pipeline/         importador, harmonização, agregação e jobs de atualização
+├── data-pipeline/         download, importação, calibração, agregação e job NRT (frentes A e B)
+│   ├── migrations/        schema do banco, aplicado em ordem
 │   └── data/              ZIPs do FIRMS (Brasil, 2024, SP) para testes
-├── backend/               API que serve os agregados para o front
-└── frontend/              aplicação web (mapa, calendário, indicadores, downloads)
+├── backend/               API que serve o calendário, a janela recente e o export (frente C)
+├── frontend/              aplicação web: mapa, calendário, alerta, downloads (frente D)
+├── config/                regras que mudam sem mudar o código, como o alert_rules.json
+└── infra/                 deploy na VPS: docker-compose, servidor web, .env.example (frente C)
 ```
 
-`backend/` e `frontend/` ainda estão vazios. `data-pipeline/data/` tem os quatro ZIPs de teste:
+Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/`, `frontend/` e `infra/` ainda não têm código. `data-pipeline/data/` tem os quatro ZIPs de teste:
 
 | Arquivo | Conteúdo |
 | --- | --- |
@@ -92,7 +98,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 
 | Parte | Ferramenta | Como foi usada |
 | --- | --- | --- |
-| `data-pipeline/pipeline.py`, `agregar.py`, `eda.py`, `test_pipeline.py` | Claude Code (Claude Opus 5.5) | Código gerado a partir das especificações de filtro escritas pelo time de dados. Revisado pela equipe |
+| `data-pipeline/pipeline.py`, `agregar.py`, `eda.py`, `test_pipeline.py`, `test_banco.py`, `job_nrt.py`, `Dockerfile`, `migrations/` | Claude Code (Claude Opus 5.5) | Código gerado a partir das especificações de filtro escritas pelo time de dados. Revisado pela equipe |
 | `docs/banco.md`, `data-pipeline/migrations/001_inicial.sql` | Claude Code (Claude Opus 5.5) | Schema e documento de decisões gerados a partir dos docs do repo e de um benchmark local. Revisado pela equipe |
 | `docs/pipeline-dados.md` | Claude Code (Claude Opus 5.5) | Redação do relatório do que foi feito e dos achados da análise exploratória |
 

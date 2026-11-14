@@ -26,6 +26,8 @@ data/staged/{modis,viirs}/   parquet por arquivo: só pontos dentro da cobertura
             │
             ├──▶ python eda.py            → reports/eda.html + CSVs de contagem
             │
+            ├──▶ python pipeline.py importar → tabela `focos` (tudo, upsert) + `cobertura`
+            │
             ▼  python pipeline.py clean    (filtros do time de dados)
 data/processed/{modis,viirs}_{main,lowconf}/satellite=…/daynight=…/year=…/
             + data/processed/clean_report.json (quantas linhas cada filtro tirou)
@@ -70,6 +72,85 @@ Diferenças de formato que o `normalize` corrige:
 
 **Variáveis:** `FIRMS_MAP_KEY` e `DATABASE_URL`, como variáveis de ambiente ou no arquivo `data-pipeline/.env` (fora do git).
 
+## Importador (`importar`)
+
+Lê o `stage` (ou um CSV/ZIP do FIRMS passado como argumento) e grava em `focos` **tudo o que está na cobertura**, sem filtro de qualidade. Os filtros entram depois, na agregação.
+
+| Etapa | Regra |
+| --- | --- |
+| Satélite | `Terra`, `Aqua`, `N` → `SNPP`, `N20`, `N21`. Valor desconhecido faz o arquivo falhar |
+| Confiança | VIIRS `l`/`n`/`h` → baixa/nominal/alta. MODIS `< 30` baixa, `30–79` nominal, `≥ 80` alta |
+| Data e hora | `acq_date` + `acq_time` (HHMM, UTC) → `datahora_utc` |
+| Qualidade | `NRT` se a versão tem "NRT", senão `SP` |
+| H3 | célula na resolução da tabela `config` (o banco recusa outra) |
+| Chave única | (`satelite`, `lat`, `lon`, `datahora_utc`): `INSERT ... ON CONFLICT DO UPDATE`. Repetidos no mesmo arquivo viram uma linha |
+| Transação | um arquivo por transação: entra inteiro ou não entra |
+| `cobertura` | período do arquivo por satélite, gravado para todas as regiões (a cobertura é o país, não o bioma), sempre ampliando. Usar a data do último foco de cada bioma confundiria "zero focos" com "sem dados" |
+
+Reimportar o mesmo arquivo não duplica: tudo vira "atualizado".
+
+**SP substitui NRT.** O NRT só vale depois do último dia SP de cada satélite. Depois de cada arquivo, o importador apaga os focos NRT de dias que já têm SP (as coordenadas mudam um pouco no reprocessamento, então a chave única não junta os dois e o mesmo fogo contaria duas vezes). O `download` também apaga o arquivo NRT que ficou todo dentro do período SP. A migration `003_focos_nrt.sql` cria um índice só dos focos NRT, ordenado pelo tempo (12 MB), que deixa isso rápido e também atende a camada de focos recentes da API (issue #5).
+
+Teste com os ZIPs de 2024 do repo (Brasil, SP), em ~3 min:
+
+| Satélite | Plano de extração | Importado | Diferença |
+| --- | --- | --- | --- |
+| Aqua | 319.074 | 318.716 | −0,11% |
+| Terra | 208.820 | 208.585 | −0,11% |
+| S-NPP | 1.935.740 | 1.932.612 | −0,16% |
+| NOAA-20 | 1.988.404 | 1.985.271 | −0,16% |
+| NOAA-21 | 1.948.842 | 1.945.784 | −0,16% |
+
+A diferença são focos fora dos 6 biomas (mar e ilhas). A reimportação do MODIS deu 0 novos e 527.301 atualizados. Os 6,4 milhões de focos de 2024 ocupam **1,7 GB** com os índices, então o histórico inteiro do Brasil deve passar de 6 GB.
+
+### Carga completa no banco de teste (14/11/2026)
+
+`python pipeline.py importar` em todo o `data/staged/` (Brasil, 2000 a 14/11/2026): 511 arquivos, **46,4 milhões de focos**, **12 GB** com os índices, 56 min, sem erro. Nenhum dia tem SP e NRT do mesmo satélite.
+
+| Satélite | SP | NRT |
+| --- | --- | --- |
+| Aqua | 6.219.189 (2002-07-04 a 2026-08-31) | 73.685 (2026-09-01 a 11-14) |
+| Terra | 3.834.371 (2000-11-01 a 2026-08-31) | 48.203 |
+| S-NPP | 19.359.047 (2012-01-20 a 2026-07-31) | 531.308 (até 2026-11-02) |
+| NOAA-20 | 10.971.288 (2018-04-01 a 2026-07-31) | 581.203 |
+| NOAA-21 | 4.211.423 (2023-03-01 a 2026-07-31) | 566.272 |
+
+Na VPS, reservar ~30 GB livres para o banco.
+
+## Série do INPE (`pipeline.py inpe`, tarefa A2)
+
+Baixa o histórico mensal de focos do INPE (Programa Queimadas) e soma por **bioma × ano × mês** em [`data-pipeline/referencia/inpe_mensal_biomas.csv`](../data-pipeline/referencia/inpe_mensal_biomas.csv) (versionado, 45 KB, 6 biomas, 1998 até a véspera). É o JSON que a página `data.inpe.br/queimadas/estatisticas` carrega. O satélite de referência do INPE é o **AQUA_M-T desde 04/07/2002** (NOAA-12 antes), o mesmo que a gente usa.
+
+Conferência com o nosso Aqua na Amazônia (2003–2025, mesmos filtros dos `agregados`):
+
+| Medida | Resultado |
+| --- | --- |
+| Correlação mês a mês (276 meses) | 0,998 |
+| Correlação ano a ano | 0,997 |
+| Mês de pico igual | 23 de 23 anos |
+| Nossa contagem / INPE | 1,05 (0,94 a 1,10 por ano) |
+| 5 anos mais altos | INPE: 2004, 2005, 2007, 2003, 2006. Nosso: 2005, 2004, 2007, 2003, 2024 |
+
+A forma da curva é a mesma, que é o critério do plano de extração. Os ~5% a mais vêm de o FIRMS e o INPE processarem o Aqua de jeitos diferentes. A validação da série **harmonizada** (B6) é da frente B e usa este mesmo CSV.
+
+## Job NRT (`job_nrt.py`, issue #5)
+
+Mantém o banco atualizado sem a carga inteira. Cada rodada leva ~30 s:
+
+1. baixa as últimas 48 h de `VIIRS_NOAA20_NRT` e `VIIRS_NOAA21_NRT` no bbox da cobertura;
+2. `importar` (upsert: o que já está no banco vira "atualizado"; SP substitui NRT);
+3. `agregar` só dos meses da janela (dois meses quando a janela cruza a virada);
+4. `sem_dados`;
+5. grava `config.atualizado_em`.
+
+Trava no banco: se uma rodada ainda está rodando, a próxima sai sem fazer nada. Testado: rodada real (739 focos novos), segunda rodada sem duplicar (0 novos), trava ocupada e uma rodada dentro do container, ligada ao banco pela rede do Docker.
+
+Na VPS ele roda no container do `Dockerfile` desta pasta, com um laço de 3 h (compose em [banco.md](banco.md)). Em bash, local:
+
+```bash
+python job_nrt.py
+```
+
 ## Agregação (`agregar.py`, tarefa B4)
 
 Monta `agregados` a partir de `focos`, em SQL, dentro do banco. É a contagem **bruta**: os fatores são aplicados na API. Fica num módulo separado do importador, como pede o `tarefas.md`.
@@ -85,6 +166,16 @@ Monta `agregados` a partir de `focos`, em SQL, dentro do banco. É a contagem **
 | Antes de 2003 | não entra (Terra fora) |
 
 Cada execução apaga os meses do intervalo e grava de novo numa transação, então rodar duas vezes dá o mesmo resultado. As mesmas regras de limpeza existem em pandas no `clean`: mudou uma, mude a outra.
+
+Resultado no histórico completo: 4,68 milhões de linhas (553 MB) em 2,5 min. A soma de `focos_brutos` bate exatamente com os focos filtrados de cada satélite: Aqua 2.711.134, S-NPP 17.883.306, NOAA-20 60.062.
+
+| Consulta | Tempo |
+| --- | --- |
+| Calendário de uma área de ~100 × 100 km (241 células) | 2–9 ms |
+| Calendário da Amazônia inteira (110 mil células) | ~0,8 s (meta do `api.md`: < 1,5 s) |
+| Focos recentes, 7 dias, bbox da Amazônia, agrupados por célula | 19 ms com cache (466 ms frio) |
+| Focos recentes, 24 h, bbox da Amazônia | 1 ms |
+
 
 ## Filtros de qualidade (`clean`)
 
@@ -197,10 +288,13 @@ Comandos em bash, a partir de `data-pipeline/`:
 ```bash
 pip install -r requirements.txt
 python test_pipeline.py          # self-check dos filtros
+TEST_DATABASE_URL=... python test_banco.py   # importar, SP x NRT, cobertura e agregar num Postgres descartável
 python pipeline.py cadastrar     # precisa do banco com a migration aplicada
 python pipeline.py download      # ~3,5 GB; retoma de onde parou
 python pipeline.py stage
 python pipeline.py sem_dados     # dias sem dado de satélite (FIRMS) -> dias_sem_dados
+python pipeline.py inpe          # série mensal do INPE por bioma -> referencia/inpe_mensal_biomas.csv
+python pipeline.py importar      # data/staged/ -> focos + cobertura (ou: importar arquivo.csv|.zip ...)
 python agregar.py                # focos -> agregados (ou: agregar.py 2026-10 2026-11 para refazer só esses meses)
 python eda.py                    # reports/eda.html (antes: pip install matplotlib)
 python pipeline.py clean

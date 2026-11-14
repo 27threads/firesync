@@ -48,6 +48,21 @@ Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele
 - **RNF04:** **Desempenho.** São mais de 20 anos de focos no mundo inteiro, então as consultas por área e período precisam ser rápidas. Isso pede pré-agregação e indexação espacial.
 - **RNF05:** **Usabilidade e acessibilidade**, porque o usuário pode estar numa situação de emergência.
 
+### Definidos pela equipe
+
+Não vêm do texto do desafio. São necessários porque o sistema é público e precisa estar sempre atualizado para o público de emergência (RD07).
+
+- **RNF06:** **Limite de requisições na API.** A API é pública, e uma área grande (até 250 mil células) custa caro. Sem limite, uma pessoa ou um robô consegue derrubar o servidor.
+  - Limite por IP, com valores em configuração. Proposta inicial: 60 pedidos por minuto no geral, 10 por minuto em `POST /calendar` e 2 por minuto em `POST /export`.
+  - Acima do limite: HTTP `429` com o código `rate_limited` e o cabeçalho `Retry-After`.
+  - Um segundo limite no servidor web (ver `infra/`), antes de o pedido chegar à API.
+- **RNF07:** **Monitoramento.**
+  - **Dado velho:** se o `updated_at` passar de **6 horas** (duas rodadas do job NRT perdidas), a equipe recebe um aviso, e a tela mostra ao usuário que os dados podem estar desatualizados. Para o público de emergência, mostrar dado velho como se fosse atual é pior do que avisar.
+  - **Logs da API:** cada pedido registra o endpoint, o tempo de resposta, o número de células da área e o status HTTP.
+  - **Logs do job NRT:** cada rodada registra quantos focos entraram, quanto tempo levou e os erros.
+  - O canal do aviso (e-mail, Discord, Telegram) é decidido no deploy.
+- **RNF08:** **Testes automáticos (CI).** Todo PR com código roda os testes sozinho, pelo GitHub Actions, e só entra na `main` se passar. Detalhes em [arquitetura.md](arquitetura.md), seção "Qualidade e testes".
+
 ## 4. Decisões que o texto deixa em aberto
 
 O enunciado não diz como fazer estes pontos, e eles vão definir a arquitetura:
