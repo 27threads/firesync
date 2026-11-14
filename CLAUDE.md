@@ -6,7 +6,7 @@ Leia o [README.md](README.md) antes de qualquer tarefa. Ele tem a ordem de leitu
 
 A equipe quer ganhar um prêmio global do Space Apps. Leia o [docs/premiacao.md](docs/premiacao.md) antes de qualquer tarefa e siga as regras do fim dele:
 
-- Antes de começar, diga qual critério (Impact, Creativity, Validity, Relevance, Presentation) ou categoria-alvo (Best Use of Data, Best Use of Science, Local Impact) a tarefa melhora. Se não melhora nenhum, avise que ela pode ficar para depois da submissão.
+- Antes de começar, diga qual dos 5 critérios (Impact, Creativity, Validity, Relevance, Presentation) a tarefa melhora. Os critérios vêm primeiro: as categorias só contam na fase final, entre os finalistas. Se a tarefa não melhora nenhum critério, avise que ela pode ficar para depois da submissão.
 - Funcionando vale mais que completo. Prometa só o que foi medido.
 - Dados da NASA visíveis, tudo o que o jurado vê em inglês, toda fonte externa em References.
 
