@@ -183,7 +183,7 @@ Os dois objetos têm o mesmo formato:
 
 Os dias recentes são sempre VIIRS observado, então não há fator nem faixa de incerteza. O normal usa só anos com VIIRS (2012 em diante), porque não existe fator diário para o Aqua.
 
-Depende de duas coisas que ainda não existem: a tabela de **contagens diárias** (issue #8) e o **job NRT** (issue #5).
+Usa a tabela de **contagens diárias** `agregados_diarios` (issue #8, migration 004) e o **job NRT** a cada 3 h (issue #5, `data-pipeline/job_nrt.py`), os dois prontos na frente A.
 
 ### `indicators` (RD06)
 
@@ -431,9 +431,7 @@ A resposta também leva `ETag` com `updated_at`, para o navegador reaproveitar.
 
 | # | Ponto | Situação ou proposta | Quem decide |
 | --- | --- | --- | --- |
-| 1 | Job NRT mínimo e horário da última atualização | A cada 3 h, focos NRT das últimas 48 h, upsert e recálculo só dos dias e do mês atuais. Sem isso, `recent` não é verdade e o sistema não é "atualizado" (RNF03). Em andamento na issue #5 | Frente A |
-| 2 | Tabela de contagens diárias | `agregados_diarios`, para o normal de ±15 dias e para o alerta. Pedida na issue #8 | Frente A |
-| 3 | Nível de alerta (Normal / Atenção / Crítico) | Regra num `alert_rules.json` versionado, lido pela API. Validação com área queimada da NASA na issue #9 | Equipe, frentes B e C |
-| 4 | Anos de referência da anomalia (RF12) | Todos os anos completos menos o próprio ano, fixo, independente do intervalo pedido | Equipe |
-| 5 | Medida da anomalia | Diferença absoluta e percentual contra a mediana. O RD06 pede "média de vários anos", então `indicators` usa a média | Equipe |
-| 6 | Linguagem e framework da API | Python, pela biblioteca `h3` e pelo código de consulta do [banco.md](banco.md) | Equipe (arquitetura, ponto 4) |
+| 1 | Nível de alerta (Normal / Atenção / Crítico) | Regra num `alert_rules.json` versionado, lido pela API. Validação por teste retroativo (solução A + B) em [validacao-alerta.md](validacao-alerta.md); área queimada da NASA fica como próximo passo (issue #9) | Equipe, frentes B e C |
+| 2 | Anos de referência da anomalia (RF12) | Todos os anos completos menos o próprio ano, fixo, independente do intervalo pedido | Equipe |
+| 3 | Medida da anomalia | Diferença absoluta e percentual contra a mediana. O RD06 pede "média de vários anos", então `indicators` usa a média | Equipe |
+| 4 | Linguagem e framework da API | Python, pela biblioteca `h3` e pelo código de consulta do [banco.md](banco.md) | Equipe (arquitetura, ponto 4) |

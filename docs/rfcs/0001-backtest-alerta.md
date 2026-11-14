@@ -1,5 +1,5 @@
 # RFC 0001: Backtest do nível de alerta (solução A + B)
-- **Status:** Rascunho (depende do PR #42)
+- **Status:** Aprovado na revisão do PR #42 (Mateus). A implementação espera as perguntas em aberto da frente B
 - **Autor:** Eduardo
 - **Data:** 2026-11-14
 
@@ -78,15 +78,7 @@ Tudo em `numpy`, vetorizado por unidade. Para cada semana, `t` é o último dia 
 | `medidas(niveis, gabarito)` | → frequência, acerto, cobertura, alarme falso, estabilidade |
 | `ingenua_mesma_frequencia(s7, normal7, gabarito, freq_alvo)` | percentil da ingênua ajustado até dar a frequência da regra → acerto |
 
-**Janelas** (fixadas no [validacao-alerta.md](../validacao-alerta.md)):
-
-| Janela | Dias | Soma usada |
-| --- | --- | --- |
-| Nível | `t−6`..`t` | `s7[t]` |
-| Tendência | `t−2`..`t` contra `t−5`..`t−3` | `s3[t] > s3[t−3]` |
-| Gabarito | `t+1`..`t+14` | `s14[t+14]` |
-
-O gabarito é lido em `t+14`, e a soma de 14 dias que termina ali começa em `t+1`. Nenhum dia entra nas duas janelas.
+**Janelas:** as definidas em "Janelas" no [validacao-alerta.md](../validacao-alerta.md). Na matriz de somas móveis, o nível lê `s7[t]`, a tendência compara `s3[t] > s3[t−3]` e o gabarito lê `s14[t+14]`. A soma de 14 dias que termina em `t+14` começa em `t+1`.
 
 **Nível** (regra `0.2`, com os parâmetros vindos da grade):
 - **Crítico:** `s7 ≥ razao × mediana` **e** (se a tendência estiver ligada) `s3[t] > s3[t−3]`. Com mediana zero, vale `s7 ≥ 10` (mesmo piso do gabarito; ver "Perguntas em aberto").
@@ -98,18 +90,18 @@ O gabarito é lido em `t+14`, e a soma de 14 dias que termina ali começa em `t+
 **Medidas por regra** (sobre todas as semanas × unidades):
 - frequência de cada nível;
 - acerto do Crítico = P(gabarito | Crítico);
-- cobertura = P(Crítico ou Atenção | gabarito);
+- cobertura = P(Crítico ou Atenção | gabarito), e cobertura só do Crítico = P(Crítico | gabarito);
 - alarme falso = 1 − acerto;
 - estabilidade = trocas de nível por unidade por mês;
 - **ganho** = acerto − acerto da ingênua na mesma frequência, no total e por ano (`anos_com_ganho_positivo`, de 12).
 
 ### 3. Saída
 
-`relatorios/alerta/` (fora do git, como `relatorios/b6/`):
+`data-pipeline/relatorios/alerta/`. Hoje `relatorios/` só está fora do git pelo `.git/info/exclude` local; o PR do script põe `data-pipeline/relatorios/` no `.gitignore`.
 
 | Arquivo | Linhas | Colunas principais |
 | --- | --- | --- |
-| `backtest.csv` | 1 por regra da grade (+ sensibilidade) | `regra, razao, tendencia, atencao, p_gabarito, minimo, freq_normal, freq_atencao, freq_critico, acerto, cobertura, alarme_falso, trocas_mes, acerto_ingenua, ganho, anos_com_ganho_positivo` |
+| `backtest.csv` | 1 por regra da grade (+ sensibilidade) | `regra, razao, tendencia, atencao, p_gabarito, minimo, freq_normal, freq_atencao, freq_critico, acerto, cobertura, cobertura_critico, alarme_falso, trocas_mes, acerto_ingenua, ganho, anos_com_ganho_positivo` |
 | `por_bioma.csv` | 1 por regra × bioma | as mesmas, nos 6 biomas inteiros |
 | `eventos.csv` | 1 por evento × semana | `evento, semana, nivel, detections, typical_median` e a `antecedencia_semanas` |
 | `relatorio.txt` | resumo | a melhor regra por ganho e se alguma passou na regra de decisão |
@@ -159,7 +151,9 @@ Segue o padrão do `harmonizacao/test_validar_inpe.py`: dados inventados, `asser
 
 ## Plano de implementação
 
-Branch nova `a-backtest-alerta`, a partir da `main` depois do merge do PR #42. TDD: o teste vem antes de cada função.
+Branch nova `a-backtest-alerta`, a partir da `main` depois do merge do PR #42 e das respostas da frente B às perguntas em aberto (precisam vir antes da rodada, não antes do merge). TDD: o teste vem antes de cada função.
+
+0. `data-pipeline/relatorios/` no `.gitignore`.
 
 1. **Autoteste e funções puras** (`test_backtest_alerta.py` + contas do item 2), sem banco. ~1 h.
 2. **Leitura do banco e saída CSV.** Rodar no banco de teste, com o tempo e os números no PR. ~1 h.

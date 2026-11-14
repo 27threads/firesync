@@ -43,7 +43,7 @@ Em **todas as fases**, o projeto recebe nota de 1 a 5 em cada um dos 5 critério
 | --- | --- | --- |
 | **Impact** | Resolve um problema importante, com alcance grande | Equipes de alerta e resposta a incêndios sabem se o fogo de agora é normal para o lugar e a época. Amazônia e Pantanal, com desenho pronto para o mundo |
 | **Creativity** | Abordagem original, que melhora de forma relevante o que já existe | Série única MODIS + VIIRS com **faixa de incerteza** à mostra, "normal da época" com janela de ±15 dias, alerta com regra versionada e **pacote de auditoria** |
-| **Validity** | Base científica, tecnicamente viável, pronto para o mundo real, **fácil de usar** | Calibração validada ano a ano, comparação com o INPE, teste do alerta contra área queimada da NASA (issue #9), cobertura da faixa medida (não prometida), interface simples para quem está sob pressão |
+| **Validity** | Base científica, tecnicamente viável, pronto para o mundo real, **fácil de usar** | Calibração validada ano a ano, comparação com o INPE, teste retroativo do alerta com ganho sobre uma regra ingênua ([validacao-alerta.md](validacao-alerta.md)), cobertura da faixa medida (não prometida), interface simples para quem está sob pressão |
 | **Relevance** | Responde diretamente ao desafio, com os **dados da NASA no centro** da solução, não como enfeite | O produto inteiro é feito do NASA FIRMS (MODIS C6.1 e VIIRS C2). Possível reforço: área queimada MCD64A1 na validação |
 | **Presentation** | História clara e envolvente, apresentação organizada. **Vale tanto quanto os outros** | Vídeo de 30 s com o site funcionando ([pitch.md](pitch.md)) e página do projeto bem escrita. O guia pede atenção igual a este critério |
 

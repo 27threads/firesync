@@ -38,7 +38,7 @@ Esta solução cobre o que falta: **o alerta**.
 
 1. **Unidades de teste.** Para imitar as áreas que o usuário desenha, as células H3 res 6 são agrupadas na célula-mãe **res 4** (~1.770 km², cerca de 5 mil unidades no Brasil). Os 6 biomas inteiros também entram, para a linha da tela por bioma.
 2. **Uma avaliação por semana**, de 2013 a 2024, em cada unidade. As janelas **não se sobrepõem** (ver "Janelas", abaixo).
-3. **O nível de cada semana** sai da regra do `config/alert_rules.json` (hoje a `0.2`): os 7 dias contra o normal de ±15 dias, como no `recent` do [api.md](api.md). Para não usar o futuro, o normal de cada ano usa **só os outros anos** (deixa o próprio ano de fora).
+3. **O nível de cada semana** sai da regra do `config/alert_rules.json` (hoje a `0.2`): os 7 dias contra o normal de ±15 dias, como no `recent` do [api.md](api.md). O normal de cada ano **deixa o próprio ano de fora**, como a API (decisão 4 do [api.md](api.md)). Os anos seguintes entram no normal (ver "Limites").
 4. **Grade de limites** para a frente B escolher, por exemplo: razão para Crítico em {1,5; 2; 2,5; 3}, tendência de 3 dias ligada ou desligada, Atenção acima de P75 ou P90.
 5. **Comparação com uma regra ingênua** ("se esta semana está acima do P90, a próxima também está"). Uma regra só vale a pena se acertar mais do que ela. O fogo de uma semana costuma continuar na seguinte, então quase qualquer regra "acerta": o acerto do Crítico sozinho mede, em boa parte, só que o fogo continua. **O número que importa é o ganho sobre a ingênua.** Para a comparação ser justa, a ingênua também roda com a mesma frequência de alerta da regra testada (o percentil dela é ajustado até dar a mesma % de semanas em alerta).
 
@@ -59,6 +59,7 @@ O gabarito começa **no dia seguinte ao último dia usado pelo nível**. Nenhum 
 | Frequência de cada nível | % das semanas em Normal, Atenção e Crítico | Crítico em 2% a 5% |
 | Acerto do Crítico | % das semanas Crítico seguidas de muito fogo | quanto mais, melhor |
 | Cobertura | % das semanas de muito fogo que tiveram Crítico ou Atenção antes | quanto mais, melhor |
+| Cobertura só do Crítico | % das semanas de muito fogo que tiveram Crítico antes. Com Atenção acima do P75, a cobertura com Atenção tende a sair alta | quanto mais, melhor |
 | Alarme falso | % das semanas Crítico sem muito fogo depois | quanto menos, melhor |
 | Estabilidade | trocas de nível por unidade por mês | poucas |
 | Ganho sobre a regra ingênua | acerto da regra − acerto da ingênua | positivo |
@@ -98,6 +99,7 @@ Nenhuma data entra sem a fonte ao lado. O próprio banco ajuda a conferir o pico
 - **O gabarito vem do mesmo sensor.** A solução A mede se o alerta **antecipa semanas de muito fogo detectado pelo VIIRS**, e não se a área realmente queimou. Isso é o que o MCD64A1 mediria (próximo passo).
 - **O P90 e o mínimo de 10 detecções são escolha da equipe.** O teste mostra o resultado com outros valores, para não depender de uma escolha só.
 - **Unidades res 4 não são as áreas do usuário.** Elas imitam o tamanho de uma área desenhada, mas o resultado vale "em média", não para cada polígono.
+- **O normal usa anos posteriores.** Deixar o próprio ano de fora não impede que o normal de 2015 use 2016 a 2024. É o mesmo critério da API, então o teste mede a regra como ela roda na tela, mas não é uma previsão "às cegas" do passado.
 - **2025 e 2026 ficam de fora.** 2025 tem a deriva do Aqua, e 2026 ainda é NRT.
 
 ## Próximo passo (depois da submissão)

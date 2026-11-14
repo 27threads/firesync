@@ -6,7 +6,7 @@ Nov 14, 2026 · branch `a-importador`
 
 O histórico do FIRMS já está baixado e não depende do pedido do Archive Download. Usamos os **resumos anuais por país** (Brasil, versão SP) até 2025 e a **API** para 2026. Um pipeline em Python cadastra as regiões de calibração (os 6 biomas do IBGE) no banco, mantém todos os focos da cobertura (Brasil inteiro), aplica os filtros de qualidade do time de dados e gera uma análise exploratória por satélite.
 
-O banco já tem schema (A4) e as regiões cadastradas. Ainda **não** existe o importador de `focos` com upsert (A5). Esta etapa serviu para conhecer os dados e decidir o pré-processamento antes de escrever o importador.
+O banco de teste tem o schema (A4), as regiões cadastradas (A6) e o histórico completo em `focos`, carregado pelo importador com upsert (A5 e A7). Os `agregados`, a série do INPE e o job NRT também estão prontos (seções abaixo).
 
 ## Arquitetura atual
 
@@ -37,11 +37,14 @@ Tudo roda **um arquivo de cada vez**, porque o histórico (~30 milhões de focos
 
 | Arquivo | O que faz |
 | --- | --- |
-| `data-pipeline/pipeline.py` | `cadastrar`, `download`, `stage`, `clean` |
+| `data-pipeline/pipeline.py` | `cadastrar`, `download`, `stage`, `importar`, `sem_dados`, `inpe`, `clean` |
+| `data-pipeline/agregar.py` | `focos` → `agregados` e `agregados_diarios` |
+| `data-pipeline/job_nrt.py` | Rodada do job NRT (a cada 3 h no `Dockerfile` desta pasta) |
 | `data-pipeline/migrations/` | Schema do banco ([banco.md](banco.md)) |
 | `data-pipeline/regioes.json` | Entrada do `cadastrar`: os 6 biomas (nome, fonte do polígono, URL, campo e valor). Só o `cadastrar` lê este arquivo |
 | `data-pipeline/eda.py` | Análise exploratória por satélite, antes dos filtros |
 | `data-pipeline/test_pipeline.py` | Self-check dos filtros com casos sintéticos |
+| `data-pipeline/test_banco.py`, `data-pipeline/tests/` | Testes de integração num Postgres descartável ([testes.md](testes.md)) |
 | `data-pipeline/requirements.txt` | Dependências |
 
 ## De onde vêm os dados
@@ -176,7 +179,6 @@ Resultado no histórico completo: 4,68 milhões de linhas (553 MB) em 2,5 min. A
 | Focos recentes, 7 dias, bbox da Amazônia, agrupados por célula | 19 ms com cache (466 ms frio) |
 | Focos recentes, 24 h, bbox da Amazônia | 1 ms |
 
-
 ## Filtros de qualidade (`clean`)
 
 Implementados conforme as especificações de filtro do time de dados.
@@ -309,7 +311,7 @@ Para adicionar uma região de calibração: acrescente uma entrada em `regioes.j
 | Fonte do histórico | Archive Download (pedido) | Resumos anuais por país | Mesmo dado SP, sem fila de aprovação (A1) |
 | NOAA-21 | Só reserva no NRT | Baixa também o SP desde 03/2023 | Extra, não atrapalha. É só não usar |
 | Terra | Fora do cálculo | Baixado e mantido separado (`satellite=Terra`) | Confirmado. Escala da série: VIIRS, com Aqua só para 2003–2011 e calibração (PR #2) |
-| Banco e H3 | Tabelas `focos`, `regioes`, `cobertura` com H3 | Schema pronto (A4), `regioes` com os 6 biomas (A6). `focos` ainda em parquet | A5 e A7 pendentes |
+| Banco e H3 | Tabelas `focos`, `regioes`, `cobertura` com H3 | Schema (A4), `regioes` com os 6 biomas (A6) e histórico completo em `focos` (A5, A7) | Feito |
 | Regiões | Amazônia (e Pantanal) | Cobertura = Brasil inteiro; regiões de calibração = 6 biomas | Decidido no PR #2 |
 
 ## Pendências e decisões em aberto
@@ -318,8 +320,8 @@ Para adicionar uma região de calibração: acrescente uma entrada em `regioes.j
 - [x] Escala da série: VIIRS. Aqua só para 2003–2011 e para a calibração (PR #2)
 - [x] Só confiança nominal e alta entra em `agregados`. O arquivo `lowconf` do `clean` fica guardado, mas não entra no calendário nem no fator (PR #2)
 - [x] Banco de dados: PostgreSQL
-- [ ] Resolução H3 (ponto 3), combinada com a frente C. Sugestão: res 6
+- [x] Resolução H3: 6 (aprovada no PR #2, ver [banco.md](banco.md))
 - [ ] Investigar a queda de S-NPP/Aqua em 2025
-- [ ] Baixar a série mensal do INPE (A2)
+- [x] Baixar a série mensal do INPE (A2, `pipeline.py inpe`)
 - [x] Rodar `stage`, `eda` e `clean` no histórico completo
-- [ ] Importador para o banco (A4–A7), reaproveitando `normalize` e os filtros daqui
+- [x] Importador para o banco (A4–A7)
