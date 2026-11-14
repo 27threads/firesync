@@ -12,3 +12,9 @@ data-pipeline/data/*/
 data-pipeline/reports/eda.html
 *.part
 *.log
+
+# testes
+node_modules/
+playwright-report/
+test-results/
+.pytest_cache/

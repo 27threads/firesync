@@ -158,7 +158,7 @@ Doze itens, de janeiro a dezembro, usando **só os anos completos** do intervalo
 
 ### `recent`: o agora contra o normal da época (RF11)
 
-Sempre calculado até o último dia com dado (`data_through`), **independente do intervalo pedido**. Compara a janela atual com **todas as janelas de mesmo tamanho num raio de ±15 dias da mesma data**, em cada ano de referência (cerca de 25 janelas por ano, umas 350 no total). Assim o normal fica estável e tolera a estação que adianta ou atrasa umas semanas de um ano para o outro. Não usa proporção: o fogo não se distribui igual dentro do mês, e na temporada ele cresce ao longo do mês. Uma proporção mostraria queda justamente quando a situação piora.
+Sempre calculado até o último dia com dado (`data_through`), **independente do intervalo pedido**. Compara a janela atual com **todas as janelas de mesmo tamanho num raio de ±15 dias da mesma data**, em cada ano de referência (31 janelas por ano, uma para cada deslocamento de −15 a +15 dias: 434 em 14 anos). Assim o normal fica estável e tolera a estação que adianta ou atrasa umas semanas de um ano para o outro. Não usa proporção: o fogo não se distribui igual dentro do mês, e na temporada ele cresce ao longo do mês. Uma proporção mostraria queda justamente quando a situação piora.
 
 | Campo | Tipo | Significado |
 | --- | --- | --- |

@@ -16,7 +16,13 @@ A equipe quer ganhar um prêmio global do Space Apps. Leia o [docs/premiacao.md]
 - Confira em [docs/arquitetura.md](docs/arquitetura.md) se a stack da parte que você vai mexer já foi decidida. Se estiver "a decidir", pergunte. Não escolha linguagem, banco ou framework por conta própria.
 - Os documentos em `docs/` são a fonte de verdade. Se o código e um documento discordarem, pergunte antes de mudar qualquer um dos dois.
 - A abordagem de harmonização é da equipe (regra do Space Apps). Implemente o que está documentado e não invente outro método.
-- Siga os "Princípios de código" e "Qualidade e testes" de [docs/arquitetura.md](docs/arquitetura.md): camadas na API (rotas, serviços, repositórios), contas em funções puras, transações e testes que rodam no CI. Código novo entra com teste.
+- Siga os "Princípios de código" de [docs/arquitetura.md](docs/arquitetura.md): **arquitetura hexagonal** na API (domínio e casos de uso no centro, portas e adaptadores em volta), **Clean Code**, contas em funções puras e transações.
+- Siga o [docs/testes.md](docs/testes.md):
+  - **TDD:** o teste vem antes do código. Veja o teste falhar, depois faça passar, depois refatore.
+  - **Bug:** primeiro um teste que reproduz o bug e falha, depois a correção, e o teste passa. Correção sem esse teste não entra.
+  - **Esteira:** rode os testes antes do PR. A esteira do GitHub Actions precisa passar.
+  - **Cobertura só sobe:** se a cobertura medida passar do mínimo, suba o mínimo no mesmo PR.
+  - **Especificação TDD já escrita:** se você implementar algo de `backend/tests/domain` ou `application` e o teste passar, a esteira quebra com XPASS. Tire o `xfail` daquele teste.
 
 ## Documentos
 
@@ -50,7 +56,12 @@ Toda parte gerada ou assistida por IA precisa entrar na tabela "Uso de IA" do RE
 Pipeline de dados (bash, a partir de `data-pipeline/`):
 
 - Instalar: `pip install -r requirements.txt`
-- Testes: `python test_pipeline.py` (sem banco) e `TEST_DATABASE_URL=... python test_banco.py` (num Postgres descartável; o comando está no topo do arquivo)
+- Instalar para testar: `pip install -r requirements-dev.txt`
+- Testes: `python test_pipeline.py` (sem banco), `TEST_DATABASE_URL=... python test_banco.py` e `TEST_DATABASE_URL=... pytest tests` (num Postgres descartável; comandos em [docs/testes.md](docs/testes.md))
 - Etapas: `python pipeline.py cadastrar|download|stage|sem_dados|importar|clean|inpe`, `python agregar.py`, `python job_nrt.py` (rodada do job NRT) e `python eda.py` (detalhes em [docs/pipeline-dados.md](docs/pipeline-dados.md))
 
-API e front: a preencher quando a stack estiver definida.
+API (a partir da raiz): `pip install -r backend/requirements-dev.txt` e `pytest backend/tests -rxX`.
+
+Jornadas de usuário (a partir de `frontend/e2e/`): `npm ci` e `npx playwright test`.
+
+O resto da API e do front: a preencher quando a stack estiver definida.
