@@ -8,6 +8,7 @@ Leia o [README.md](README.md) antes de qualquer tarefa. Ele tem a ordem de leitu
 - Confira em [docs/arquitetura.md](docs/arquitetura.md) se a stack da parte que você vai mexer já foi decidida. Se estiver "a decidir", pergunte. Não escolha linguagem, banco ou framework por conta própria.
 - Os documentos em `docs/` são a fonte de verdade. Se o código e um documento discordarem, pergunte antes de mudar qualquer um dos dois.
 - A abordagem de harmonização é da equipe (regra do Space Apps). Implemente o que está documentado e não invente outro método.
+- Siga os "Princípios de código" e "Qualidade e testes" de [docs/arquitetura.md](docs/arquitetura.md): camadas na API (rotas, serviços, repositórios), contas em funções puras, transações e testes que rodam no CI. Código novo entra com teste.
 
 ## Documentos
 
