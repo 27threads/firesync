@@ -14,7 +14,7 @@ Mudar este contrato exige avisar a equipe antes e atualizar este documento no me
 - **IDs H3, quando aparecem, são texto.** Um ID da resolução 6 passa de 2⁵³, e o `JSON.parse` do navegador o arredonda sem erro. Ver "H3 IDs" abaixo.
 - **Zero, sem dados e fora da cobertura são coisas diferentes**, e a resposta sempre diz qual é o caso.
 - **A faixa de incerteza é calculada depois de somar.** Totais por ano, sazonalidade e anomalias são calculados por cenário, e só no fim saem a mediana e o P10–P90. A soma dos P10 não é o P10 da soma.
-- **O FRP (potência do fogo em MW) não aparece na tela.** Os fogos mais fortes saturam o VIIRS: 7% das detecções saturadas respondem por 22% da energia, e isso piora no pico da temporada. A soma em MW engana como indicador de gravidade. O FRP continua no pacote de auditoria (`counts.csv` e `detections.csv`).
+- **O FRP (potência do fogo em MW) não aparece na tela.** Os fogos mais fortes saturam o VIIRS: 7% das detecções saturadas respondem por 22% da energia, e isso piora no pico da temporada. A soma em MW engana como indicador de gravidade. No lugar, a tela mostra uma **classe de intensidade** (`low`, `medium`, `high`, ver "Classe de intensidade"). O FRP em MW continua no pacote de auditoria (`counts.csv` e `detections.csv`).
 - **O número mostrado se chama `detections`** (detecções de fogo), a convenção do FIRMS. Um fogo grande ocupa vários pixels, então não é "número de incêndios".
 - **O papel do sistema:** o FIRMS mostra onde o fogo está agora. O firesync diz se isso é normal para esse lugar e essa época do ano. O público inclui equipes de alerta precoce e de resposta a emergências (RD07), então o indicador principal é a **janela recente** (últimos 7 dias), e não o mês inteiro.
 
@@ -178,6 +178,8 @@ Os dois objetos têm o mesmo formato:
 | `difference_pct` | número ou `null` | `detections / typical_median − 1`. `null` quando a mediana é zero |
 | `n_years` | inteiro | Quantos anos entraram no normal |
 | `n_windows` | inteiro | Quantas janelas entraram no normal |
+| `n_high` | inteiro | Detecções de intensidade `high` na janela atual |
+| `high_share` | número | `n_high / detections`. `null` quando não há detecções |
 
 Os dias recentes são sempre VIIRS observado, então não há fator nem faixa de incerteza. O normal usa só anos com VIIRS (2012 em diante), porque não existe fator diário para o Aqua.
 
@@ -281,13 +283,14 @@ Sempre GeoJSON, que o Leaflet desenha direto, sem precisar da biblioteca H3 no f
   "features": [
     { "type": "Feature",
       "geometry": { "type": "Polygon", "coordinates": [[[-60.31, -3.05], [-60.22, -2.97], [-60.11, -3.01], [-60.10, -3.12], [-60.19, -3.20], [-60.30, -3.16], [-60.31, -3.05]]] },
-      "properties": { "h3": "85a8100ffffffff", "detections": 37 } }
+      "properties": { "h3": "85a8100ffffffff", "detections": 37, "n_low": 21, "n_medium": 12, "n_high": 4 } }
   ]
 }
 ```
 
 - `h3` vai como **texto**, nunca como número (ver "H3 IDs").
 - O front pinta os hexágonos com a mesma paleta do calendário (cividis em escala log).
+- `n_low`, `n_medium` e `n_high` são a contagem por classe de intensidade, e somam `detections`.
 
 **`points`:**
 
@@ -300,7 +303,7 @@ Sempre GeoJSON, que o Leaflet desenha direto, sem precisar da biblioteca H3 no f
   "total_detections": 3833,
   "features": [
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-60.21, -3.12] },
-      "properties": { "satellite": "N20", "acquired_utc": "2026-11-14T05:42:00Z", "confidence": "nominal", "daynight": "N" } }
+      "properties": { "satellite": "N20", "acquired_utc": "2026-11-14T05:42:00Z", "confidence": "nominal", "intensity": "medium", "daynight": "N" } }
   ]
 }
 ```
@@ -331,6 +334,21 @@ Medido pela frente A em 14/11, com o histórico completo (46,4 milhões de focos
 | --- | --- |
 | 7 dias, bbox da Amazônia, agrupado por célula (51.588 focos → 7.962 hexágonos) | 19 ms (466 ms na primeira execução, com o disco disputado) |
 | 24 h, bbox da Amazônia (3.833 focos) | 1 ms |
+
+## Classe de intensidade
+
+A tela não mostra o FRP em MW. Cada detecção recebe uma classe, para quem decide **onde atuar primeiro**: 3 detecções fortes podem pesar mais que 100 fracas. Proposta da frente B, aprovada no PR #4.
+
+| Classe | Regra |
+| --- | --- |
+| `low` | FRP abaixo de 5 MW |
+| `medium` | FRP de 5 a 25 MW |
+| `high` | FRP de 25 MW ou mais, **ou pixel saturado** |
+
+- **Por que o pixel saturado entra em `high`:** nos fogos mais fortes, o VIIRS satura, e o FRP sai **menor** do que o real. A mediana do FRP saturado é 18 MW (S-NPP, Amazônia, 2024). Só pelo FRP, mais da metade desses fogos cairia como `medium`. No VIIRS, a confiança alta (`confianca = 'alta'`) marca o pixel saturado.
+- **Limites fixos e configuráveis:** os valores (5 e 25 MW) vêm da distribuição do S-NPP em 2024 (mediana 5,4 MW, P90 26,6 MW) e ficam no mesmo arquivo de configuração versionado do alerta (`alert_rules.json`). A tela usa sempre os mesmos limites, então o mesmo fogo não muda de classe quando o usuário mexe no mapa. Mudar os limites não exige mudar o código. A versão vai no `metadata.json`.
+- **Só VIIRS:** a classe vale para detecções do VIIRS, que são todas as recentes. O FRP do MODIS não é comparável.
+- **Limites a declarar na tela de Método:** o FRP de pixels na borda da faixa do satélite tende a sair maior, e os fogos à noite tendem a ter FRP menor. A classe ajuda a priorizar, mas não substitui informação de campo, vento e avanço da frente.
 
 ## `GET /regions`
 
