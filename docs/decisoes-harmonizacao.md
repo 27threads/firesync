@@ -116,6 +116,24 @@ Cinco biomas ficaram no valor esperado pela teoria (cerca de 0,78). O Pampa fico
 
 **Anos excepcionais:** na Amazônia, a cobertura caiu em 2020 (0,67) e 2024 (0,58), anos de seca e fogo extremos. O erro ponderado também foi o maior nesses anos (12,6% e 9,5%). Limite a declarar no Método: em anos que fogem do padrão, a estimativa erra mais e a faixa cobre menos.
 
+**Cobertura dentro e fora da temporada de fogo (pedida pelo Mateus no PR #4):** calculada com o `validacao_meses.csv` da rodada gravada (930 linhas, enviado pelo Eduardo no PR #21). A cobertura geral de cada bioma confere com o relatório da rodada. A **temporada de fogo** de cada bioma são os meses com mais fogo que, juntos, somam 80% das detecções do ano, pela média do VIIRS observado de 2012 a 2024 (ESCOLHA DA EQUIPE, porque a estação seca muda de bioma para bioma).
+
+| Bioma | Temporada de fogo | Cobertura na temporada | Cobertura fora | Erro ponderado na temporada | Erro ponderado fora | Parte do fogo na temporada |
+| --- | --- | --- | --- | --- | --- | --- |
+| Amazônia | ago, set, out, nov | **0,87** | 0,75 | 5,2% | 10,2% | 82% |
+| Pantanal | jul, ago, set, out, nov | **0,86** | 0,68 | 10,0% | 13,2% | 86% |
+| Caatinga | ago, set, out, nov, dez | **0,83** | 0,71 | 10,2% | 16,1% | 86% |
+| Mata Atlântica | jan, jul, ago, set, out, nov, dez | 0,78 | 0,77 | 8,1% | 11,6% | 81% |
+| Cerrado | jul, ago, set, out | 0,77 | 0,82 | 4,8% | 8,7% | 84% |
+| Pampa | 9 meses, sem temporada clara | 0,66 | 0,72 | 16,2% | 21,4% | 83% |
+
+Leitura: nos meses que concentram mais de 80% do fogo, a faixa acerta cerca de 8,5 em 10 na Amazônia, no Pantanal e na Caatinga, e o erro cai pela metade na Amazônia. A conversão é mais confiável quando as equipes mais precisam dela. Os meses fora da temporada acertam menos, mas têm pouco fogo.
+
+Dois alertas:
+
+- **Pampa subestimado:** na temporada, quando o real fica fora da faixa, ele fica **acima** em 30 de 39 casos. A estimativa do Pampa sai baixa, coerente com o Aqua quase sem fogo noturno lá e com a fusão de dia e noite no último recurso.
+- **2024 na Amazônia:** 3 dos 4 meses da temporada ficaram fora da faixa (seca extrema), o que confirma o limite dos anos excepcionais.
+
 **Classe de intensidade na tela (aprovada no PR #4, `api.md`):** `low` abaixo de 5 MW, `medium` de 5 a 25 MW, `high` de 25 MW ou mais **ou** pixel saturado do VIIRS (confiança alta). Limites fixos na tela. A regra do pixel saturado vale só para o VIIRS: no MODIS, confiança alta não indica saturação.
 
 As colunas `n_focos_origem` e `fusao_com`, pedidas à frente A para a salvaguarda do mínimo de focos, entraram na migration 002 (PR #2) e já foram preenchidas pela calibração gravada.
@@ -135,7 +153,8 @@ O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, 
 ## 6. Limites a declarar no método
 
 - O fator é por bioma, mês e dia/noite. Não corrige por potência do fogo.
-- A faixa de incerteza reflete a variação entre anos de sobreposição e não cobre outras fontes de erro. Cobertura medida: cerca de 8 em 10 em cinco biomas, cerca de 7 em 10 no Pampa.
+- A faixa de incerteza reflete a variação entre anos de sobreposição e não cobre outras fontes de erro. Cobertura medida: cerca de 8 em 10 em cinco biomas, cerca de 7 em 10 no Pampa. Na temporada de fogo, cerca de 8,5 em 10 na Amazônia, no Pantanal e na Caatinga.
+- No Pampa, a estimativa tende a ficar abaixo do real (pouquíssimo fogo noturno visto pelo Aqua).
 - Em anos de fogo excepcional (como 2020 e 2024 na Amazônia), a estimativa erra mais e a faixa cobre menos.
 - A deriva de órbita do Aqua (depois de 2022) só pode afetar a calibração, e a validação deixando um ano de fora mede isso. O calendário de 2012 em diante usa o VIIRS e não é afetado.
 - **Contagem baixa do Aqua no período estimado:** se o Aqua viu zero ou poucos focos numa área pequena num mês fraco, a estimativa também fica zero ou baixa, mesmo que o VIIRS fosse ver fogos pequenos. A faixa não captura isso. PROPOSTA para a frente C: a API marca o mês estimado como "estimativa pouco confiável" quando a contagem bruta do Aqua na área for menor que 10 (limite ESCOLHA DA EQUIPE).
@@ -146,8 +165,8 @@ O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, 
 
 ## 7. Pendências
 
-1. **Cobertura da faixa por estação** (pedida pelo Mateus no PR #4). Não precisa rodar de novo: sai do `validacao_meses.csv` da rodada gravada, que está no computador do Eduardo. Pedido feito no PR #21 em 14/11/2026; aguardando o arquivo. A separação usa a **temporada de fogo** de cada bioma (os meses que somam 80% do fogo do ano) contra o resto do ano (ESCOLHA DA EQUIPE), porque a estação seca muda de bioma para bioma.
-2. **B6, comparação com o INPE.** O script está pronto (`data-pipeline/harmonizacao/validar_inpe.py`, branch `trabalho/harmonizacao`) e passou no autoteste com dados inventados (degrau de +1% com fatores certos, +102% com fatores pela metade). Aguarda o PR #21 entrar na `main` (série do INPE com o satélite de referência: NOAA-12 até 03/07/2002, Aqua depois) e o Eduardo rodar no banco de teste. Mede, por bioma: correlação mensal e anual, os 5 anos com mais fogo, o mês de pico, a sazonalidade e o **degrau em 2012** (razão firesync/INPE antes e depois da troca de satélite; perto de zero quer dizer que a troca não inventou fogo). Contexto da frente A (issue #19): a série do Aqua no FIRMS já tem correlação mensal de 0,998 com a do INPE e o mesmo mês de pico em 23 de 23 anos, então o degrau em 2012 mede principalmente a nossa conversão.
+1. ~~Cobertura da faixa por estação~~: feita (seção "Cobertura dentro e fora da temporada de fogo").
+2. **B6, comparação com o INPE.** O script está pronto (`data-pipeline/harmonizacao/validar_inpe.py`, branch `trabalho/harmonizacao`) e passou no autoteste com dados inventados (degrau de +1% com fatores certos, +102% com fatores pela metade). O PR #21 (série do INPE com o satélite de referência: NOAA-12 até 03/07/2002, Aqua depois) já entrou na `main`; o comando foi passado ao Eduardo no PR #26 e aguarda a rodada no banco de teste. Mede, por bioma: correlação mensal e anual, os 5 anos com mais fogo, o mês de pico, a sazonalidade e o **degrau em 2012** (razão firesync/INPE antes e depois da troca de satélite; perto de zero quer dizer que a troca não inventou fogo). Contexto da frente A (issue #19): a série do Aqua no FIRMS já tem correlação mensal de 0,998 com a do INPE e o mesmo mês de pico em 23 de 23 anos, então o degrau em 2012 mede principalmente a nossa conversão.
 3. **Levar o código da B3 e da B6 para o `main`.** Os scripts (`prototipo_fator.py`, `calibrar.py`, `validar_inpe.py` e os autotestes) estão só na branch `trabalho/harmonizacao`. O envio direto ao `main` foi bloqueado pelo controle de permissões em 14/11/2026. Depende de decisão do Weberson: abrir um PR ou liberar o envio.
 4. Confirmar o mínimo de focos por condição (a calibração gravada usou 30).
 5. Investigar a queda de S-NPP/Aqua em 2025.
