@@ -8,7 +8,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, dev-backend-rafael, dev-backend-rafael-integracao]
+    branches: [main, dev-backend-rafael]
 
 concurrency:
   group: ci-${{ github.ref }}
