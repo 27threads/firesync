@@ -50,6 +50,22 @@ def test_periodo_com_focos_e_sem_fator_nao_vira_zero_em_silencio():
     assert pd.isna(janeiro["firesync"])
 
 
+def serie_com_razao(razao_por_ano):
+    """Série mensal INVENTADA já juntada com o INPE: firesync = INPE x razão do ano, 12 meses por ano."""
+    return pd.DataFrame([("X", ano, mes, 100.0 * r, 100.0) for ano, r in razao_por_ano.items() for mes in range(1, 13)],
+                        columns=["bioma", "ano", "mes", "firesync", "inpe"])
+
+
+def test_degrau_em_2012_usa_so_os_anos_da_calibracao_e_ignora_2025():
+    """Revisão do PR #26 (issue #40, ponto 1): o "depois" do degrau incluía 2025, ano fora da calibração por causa
+    da deriva do Aqua, e isso puxava a média para baixo. O depois tem que ser 2013 a 2024."""
+    razoes = {ano: 6.0 for ano in range(2003, 2025) if ano != 2012}
+    razoes[2025] = 4.0  # razão anômala de 2025, INVENTADA
+    medidas = validar_inpe.comparar(serie_com_razao(razoes)).iloc[0]
+    assert medidas["degrau_2012"] == pytest.approx(0)
+    assert medidas["razao_media_2013_2024"] == pytest.approx(6.0)
+
+
 def test_mes_observado_nao_tem_faixa_e_usa_a_contagem_do_viirs():
     cont = contagens([("X", 2013, 1, "SNPP", "D", 70), ("X", 2013, 1, "SNPP", "N", 30)])
     fat = fatores([("X", 1, "D", 2012, 5.0)])
@@ -88,3 +104,7 @@ def test_comparacao_com_o_inpe_pela_linha_de_comando(tmp_path, monkeypatch):
     anual = pd.read_csv(tmp_path / "b6" / "serie_anual_firesync.csv")
     estimados = anual[anual["origem"] == "estimado_modis"]
     assert ((estimados["band_low"] <= estimados["firesync"]) & (estimados["firesync"] <= estimados["band_high"])).all()
+    # razão ano a ano, pedida na issue #40 para olhar a Mata Atlântica e o Pampa
+    razao = pd.read_csv(tmp_path / "b6" / "razao_anual.csv")
+    assert list(razao.columns) == ["bioma", "ano", "firesync", "inpe", "razao"]
+    assert len(razao) == 22 and (razao["razao"] > 0).all()
