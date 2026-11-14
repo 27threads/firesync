@@ -22,7 +22,7 @@ Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir"
 | --- | --- | --- | --- | --- |
 | 1 | Linguagem do pipeline | Python | Python (pandas, geopandas, pyarrow) | frente A |
 | 2 | Banco de dados | PostgreSQL + PostGIS + h3-pg; DuckDB | PostgreSQL + PostGIS (H3 calculado no Python, ver [banco.md](banco.md)) | frente A |
-| 3 | Resolução H3 | 5, 6, 7 | 6 (proposta em [banco.md](banco.md)) | frentes A e C |
+| 3 | Resolução H3 | 5, 6, 7 | 6 (aprovado no PR #2, ver [banco.md](banco.md)) | frentes A e C |
 | 4 | Linguagem e framework da API | | a decidir | |
 | 5 | Framework do front | | a decidir | |
 | 6 | Biblioteca de mapa e desenho de área (RD01) | Leaflet; MapLibre GL | Leaflet com renderizador canvas + Leaflet-Geoman para desenhar | proposta da frente C, frente D revisa |
@@ -32,7 +32,7 @@ Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir"
 | 10 | Granularidade mostrada no calendário | mensal ou diária | Mensal no calendário; diária só na janela recente e no alerta ([requisitos.md](requisitos.md), seção 4) | equipe |
 | 11 | Onde roda o job NRT e a recarga SP | | Job NRT no serviço `job-nrt` do `docker compose` da VPS ([banco.md](banco.md)). A recarga SP ficou fora da submissão | frente A |
 | 12 | Hospedagem pública (front, API e banco) | VPS; Postgres gerenciado | VPS com `docker compose`, incluindo `focos` (decidido no PR #2, ver [banco.md](banco.md)) | frentes A e C |
-| 13 | Cálculo da anomalia (RF11, RF12) | mediana histórica, média de vários anos | Diferença contra a mediana do mesmo mês; `indicators` usa a média (RD06). Os anos de referência ainda estão em aberto ([api.md](api.md), "Em aberto") | equipe |
+| 13 | Cálculo da anomalia (RF11, RF12) | mediana histórica, média de vários anos | a decidir (proposta e anos de referência em [api.md](api.md), "Em aberto", itens 2 e 3) | equipe |
 
 Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases, por que ela foi escolhida.
 
