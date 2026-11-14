@@ -6,6 +6,8 @@ O usuário escolhe uma área e um período e vê um calendário meses × anos co
 
 **Prazo da submissão:** domingo, 15/11/2026, 23h59 (horário do evento local).
 
+**Objetivo: ganhar um prêmio global.** Primeiro, nota alta nos 5 critérios de julgamento, que decidem quem chega à final. Depois, as categorias-alvo (Best Use of Data, Best Use of Science e Local Impact), que guiam a história na página e no vídeo. Tudo em [docs/premiacao.md](docs/premiacao.md). Leia antes de qualquer tarefa.
+
 ## Para agentes: ordem de leitura
 
 Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdade. Se o código e um documento discordarem, pergunte antes de mudar qualquer um dos dois.
@@ -20,6 +22,7 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 6 | [Tarefas](docs/tarefas.md) | Frentes, responsáveis, branches, pastas de cada um, marcos e status | Antes de começar qualquer tarefa |
 | 7 | [Pipeline de dados — o que já foi feito](docs/pipeline-dados.md) | Download do histórico, filtros de qualidade, análise por satélite, achados | Antes de mexer em `data-pipeline/` |
 | 8 | [Banco de dados — decisões para o backend](docs/banco.md) | Imagem, H3, resolução, schema, consulta da API, compose sugerido, benchmark | Antes de mexer no banco ou na API |
+| 9 | [Contrato da API](docs/api.md) | Endpoints, pedido, resposta, erros, export de auditoria. JSON de exemplo em [api-exemplo.json](docs/api-exemplo.json) | Antes de mexer na API ou no front |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 

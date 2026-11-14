@@ -2,6 +2,14 @@
 
 Leia o [README.md](README.md) antes de qualquer tarefa. Ele tem a ordem de leitura dos documentos, a estrutura do repositório e as regras de harmonização que não mudam.
 
+## Objetivo: prêmio global
+
+A equipe quer ganhar um prêmio global do Space Apps. Leia o [docs/premiacao.md](docs/premiacao.md) antes de qualquer tarefa e siga as regras do fim dele:
+
+- Antes de começar, diga qual dos 5 critérios (Impact, Creativity, Validity, Relevance, Presentation) a tarefa melhora. Os critérios vêm primeiro: as categorias só contam na fase final, entre os finalistas. Se a tarefa não melhora nenhum critério, avise que ela pode ficar para depois da submissão.
+- Funcionando vale mais que completo. Prometa só o que foi medido.
+- Dados da NASA visíveis, tudo o que o jurado vê em inglês, toda fonte externa em References.
+
 ## Antes de escrever código
 
 - Ache sua tarefa em [docs/tarefas.md](docs/tarefas.md). Mexa só nas pastas da sua frente e trabalhe na branch dela. Atualize o status da tarefa ao começar e ao terminar.
@@ -17,8 +25,8 @@ Leia o [README.md](README.md) antes de qualquer tarefa. Ele tem a ordem de leitu
 
 ## Regras de código
 
-- Interface, textos do app e mensagens para o usuário em **inglês**. Documentos internos em português.
-- Nomes de tabelas e colunas do banco iguais aos do documento de importação (`focos`, `regioes`, `cobertura`, `fatores_harmonizacao`, `agregados`).
+- Tudo o que é público fica em **inglês**: interface, mensagens para o usuário, endpoints, campos do JSON, códigos de erro, arquivos de export e nomes de funções, classes e variáveis no código. Quem avalia o projeto lê inglês. Documentos internos (`docs/`) em português.
+- O banco é a exceção: tabelas e colunas em português, iguais às do documento de importação (`focos`, `regioes`, `cobertura`, `fatores_harmonizacao`, `agregados`). A tradução para os nomes em inglês do contrato ([docs/api.md](docs/api.md)) acontece num lugar só, na camada da API que lê o banco.
 - Nada de região fixa no código. Amazônia, Pantanal e qualquer outra região são dados em `regioes`.
 - Datas e horas em UTC.
 - Segredos (MAP_KEY do FIRMS, credenciais do banco) só em variáveis de ambiente. Nunca no código nem em commit.
@@ -31,6 +39,7 @@ Leia o [README.md](README.md) antes de qualquer tarefa. Ele tem a ordem de leitu
 ## Git
 
 - Nunca adicione `Co-Authored-By` (nem outra linha de coautoria ou atribuição) nas mensagens de commit. O uso de IA é registrado só na tabela "Uso de IA" do README.
+- Nunca adicione "🤖 Generated with [Claude Code](https://claude.com/claude-code)" (nem outra atribuição de ferramenta) na descrição ou nos comentários de pull requests.
 
 ## Uso de IA
 
