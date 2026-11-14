@@ -30,13 +30,16 @@ firesync/
 ├── README.md              este arquivo (mapa do projeto)
 ├── CLAUDE.md              regras para agentes
 ├── docs/                  todos os documentos do projeto (tabela acima)
-├── data-pipeline/         importador, harmonização, agregação e jobs de atualização
+├── data-pipeline/         download, importação, calibração, agregação e job NRT (frentes A e B)
+│   ├── migrations/        schema do banco, aplicado em ordem
 │   └── data/              ZIPs do FIRMS (Brasil, 2024, SP) para testes
-├── backend/               API que serve os agregados para o front
-└── frontend/              aplicação web (mapa, calendário, indicadores, downloads)
+├── backend/               API que serve o calendário, a janela recente e o export (frente C)
+├── frontend/              aplicação web: mapa, calendário, alerta, downloads (frente D)
+├── config/                regras que mudam sem mudar o código, como o alert_rules.json
+└── infra/                 deploy na VPS: docker-compose, servidor web, .env.example (frente C)
 ```
 
-`backend/` e `frontend/` ainda estão vazios. `data-pipeline/data/` tem os quatro ZIPs de teste:
+Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/`, `frontend/` e `infra/` ainda não têm código. `data-pipeline/data/` tem os quatro ZIPs de teste:
 
 | Arquivo | Conteúdo |
 | --- | --- |

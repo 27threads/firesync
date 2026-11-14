@@ -1,0 +1,25 @@
+{
+  "version": "0.1",
+  "status": "initial proposal, to be calibrated by the backtest in issue #9",
+  "baseline": {
+    "window_days": 7,
+    "neighbor_days": 15,
+    "reference_years_from": 2012,
+    "satellite": "VIIRS"
+  },
+  "levels": {
+    "critical": {
+      "min_ratio_to_median": 2.0,
+      "trend_days": 3,
+      "requires_rising_trend": true
+    },
+    "attention": {
+      "above_percentile": 75
+    }
+  },
+  "intensity": {
+    "medium_min_mw": 5,
+    "high_min_mw": 25,
+    "saturated_is_high": true
+  }
+}
