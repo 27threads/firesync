@@ -158,5 +158,4 @@ volumes:
 
 ## Ainda em aberto
 
-- Regra de duplicatas do MODIS (em análise no PR #1; por enquanto só as exatas)
 - Linguagem e framework da API (arquitetura, ponto 4)
