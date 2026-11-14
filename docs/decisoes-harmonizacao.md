@@ -14,7 +14,8 @@ Este documento incorpora a revisão feita no PR 1 (comentário de nogran). Onde 
 | Grade | H3 resolução 6 | `banco.md` (PR #2) |
 | FRP | Fica no projeto, mas **fora das condições do fator** (seção 3) | Revisão do PR 1 |
 | Áreas críticas | Diferencial do app: contagem de focos mais energia (`frp_soma`) por célula, no período do VIIRS | Weberson, 14/11/2026 |
-| Anos de calibração | **2012 a 2021 (10 cenários)**, teste em 2022 a 2024, 2025 em diante fora | Equipe (PR 1), aceito pelo Weberson |
+| Anos de calibração | **Decididos pela validação, com critério fixado antes** (seção 4): base 2012 a 2024, e os 10 cenários de 2012 a 2021 se a deriva do Aqua atrapalhar. 2025 em diante fora | Equipe (PR 3), aceito pelo Weberson |
+| NOAA-20 → S-NPP | **Fator 1 (tratados como iguais).** O mês atual mostra a mesma contagem do FIRMS. A diferença medida (razões entre 0,97 e 1,04) é declarada no Método | Weberson, 14/11/2026 |
 | Baixa confiança | Guardada à parte, **fora do fator e do calendário** (seção 4) | Equipe (PR 1), aceito pelo Weberson |
 | Biomas calibrados | Os **6 biomas do IBGE**. A demo destaca Amazônia e Pantanal, e os outros biomas aparecem na seleção da interface | Equipe (PR 1), aceito pelo Weberson |
 | Dados provisórios (NRT) | Marcados com `qualidade = NRT`, fora do cálculo do fator | `banco.md` (PR #2) |
@@ -41,24 +42,31 @@ Cuidado: o FRP do MODIS e o do VIIRS não são comparáveis, porque o pixel do M
 
 Condições do fator: **bioma × mês × dia/noite**. Essas são as condições que existem nos dois períodos.
 
-1. Contar, por célula H3 e mês, os focos do Aqua e os do S-NPP nos anos de calibração (**2012 a 2021, 10 anos**). Só confiança nominal e alta: o arquivo de baixa confiança (MODIS abaixo de 30, VIIRS `l` de dia) fica guardado à parte e **não entra no fator nem no calendário**, porque os dois precisam usar o mesmo filtro.
+1. Contar, por célula H3 e mês, os focos do Aqua e os do S-NPP nos anos de calibração (definidos pela regra do item 4). Só confiança nominal e alta: o arquivo de baixa confiança (MODIS abaixo de 30, VIIRS `l` de dia) fica guardado à parte e **não entra no fator nem no calendário**, porque os dois precisam usar o mesmo filtro.
 2. Somar por bioma, mês e dia/noite e calcular o fator Aqua para S-NPP (quantos focos do VIIRS cada foco do Aqua representa). Calibrar os 6 biomas do IBGE.
-3. Cada ano de calibração gera um fator, e cada fator é um **cenário**. A faixa de incerteza é o percentil 10 e o percentil 90 entre os 10 cenários.
-4. **Teste em 2022 a 2024**, anos que o fator não viu: aplicar o fator ao Aqua desses anos e comparar com o S-NPP real. Reportar o erro e quantas vezes o real cai dentro da faixa de 80%. Isso também mostra se a deriva de órbita do Aqua (depois de 2022) atrapalha.
+3. Cada ano de calibração gera um fator, e cada fator é um **cenário**. A faixa de incerteza é o percentil 10 e o percentil 90 entre os cenários (13 ou 10, conforme o item 4).
+4. **Escolha dos anos pela validação, com critério fixado antes de rodar** (equipe, PR 3; aceito pelo Weberson em 14/11/2026):
+   - **Base:** sobreposição Aqua × S-NPP de 2012 a 2024 (13 anos).
+   - **Validação deixando um ano de fora:** para cada ano, calcular o fator com os outros 12, aplicar ao Aqua do ano deixado de fora e comparar com o S-NPP real.
+   - **Erro do ano:** erro relativo médio mensal por bioma, isto é, a média de `|estimado − observado| / observado` nos 12 meses. Para a decisão vale a Amazônia, que tem mais focos.
+   - **Critério:** se o erro médio de 2022 a 2024 passar de **1,5×** o erro médio de 2012 a 2021, a deriva de órbita do Aqua atrapalhou, e a calibração fica com **2012 a 2021 (10 cenários)**. Senão, ficam os **13 anos**. O limite de 1,5× é ESCOLHA DA EQUIPE, não um padrão estatístico.
+   - **Registro:** a tabela com o erro de cada ano e a decisão entram neste documento, e o resumo vai para a tela de Método. Também reportar quantas vezes o valor real cai dentro da faixa de 80%.
 5. 2025 em diante fica fora do cálculo. A razão S-NPP/Aqua caiu para 4,8 (contra cerca de 6), provavelmente pela deriva de órbita do Aqua. Com a escala VIIRS, isso não afeta o calendário recente: de 2012 em diante os números são do VIIRS, e o Aqua só é usado em 2003 a 2011, quando a órbita ainda era normal.
 
 **Salvaguardas obrigatórias (aceitas junto com a decisão):**
 
-- **Suposição declarada no Método:** o fator supõe que a razão entre os sensores em 2003 a 2011 é parecida com a de 2012 a 2021. Isso não pode ser testado, porque não há VIIRS antes de 2012. A queda de 2025 mostra que a razão pode mudar. A faixa mede só a variação entre anos, e não esse risco.
+- **Suposição declarada no Método:** o fator supõe que a razão entre os sensores em 2003 a 2011 é parecida com a dos anos de calibração. Isso não pode ser testado, porque não há VIIRS antes de 2012. A queda de 2025 mostra que a razão pode mudar. A faixa mede só a variação entre anos, e não esse risco.
 - **Mínimo de focos por condição:** cada combinação de bioma, mês e dia/noite precisa de um mínimo de focos do Aqua para ter fator próprio. Abaixo disso, junta com a condição vizinha e registra a fusão em `fatores_harmonizacao`. O valor do mínimo é definido com a base limpa. ESCOLHA DA EQUIPE.
 
-Por que contagens por célula e não o classificador ponto a ponto: é mais barato, usa 10 pontos para a faixa em vez de 4, e dispensa a regra "MODIS estava olhando", que gerava viés (descartava justamente as áreas onde o VIIRS viu fogo e o MODIS nada).
+Por que contagens por célula e não o classificador ponto a ponto: é mais barato, usa 10 ou 13 pontos para a faixa em vez de 4, e dispensa a regra "MODIS estava olhando", que gerava viés (descartava justamente as áreas onde o VIIRS viu fogo e o MODIS nada).
 
 **Contrato para a API (DECIDIDO, Weberson, 14/11/2026):** adotamos o formato da frente A (`docs/banco.md`, PR #2). `agregados` guarda a contagem **bruta** por célula × ano × mês × satélite × dia/noite, e `fatores_harmonizacao` guarda um fator por cenário (ano de calibração). A API soma as contagens da área, multiplica pelos fatores de cada cenário e só então calcula a mediana e o P10 e o P90, porque a soma dos P10 das células não é o P10 da soma. Mudar um fator não exige refazer `agregados`.
 
 Pedido à frente A (migration 002): acrescentar `n_focos_origem` e `fusao_com` em `fatores_harmonizacao`, para a salvaguarda do mínimo de focos.
 
-**Anos de calibração (DECIDIDO pela equipe no PR 1, aceito pelo Weberson):** 2012 a 2021, 10 cenários. A diferença de processamento para 13 cenários seria desprezível, mas 2022 a 2024 ficam livres para o teste e a calibração não usa anos depois da deriva do Aqua.
+**Anos de calibração:** ver o item 4. A diferença de processamento entre 10 e 13 cenários é desprezível. O que pesa é o risco da deriva do Aqua, e o critério fixado antes de rodar evita escolher os anos depois de ver o resultado.
+
+**NOAA-20 → S-NPP (DECIDIDO, Weberson, 14/11/2026): fator 1.** O NOAA-20 só é usado de novembro de 2026 em diante, ou seja, no mês atual, que o RF11 compara com a mediana. Tratar os dois como iguais faz o mês atual mostrar a mesma contagem que o usuário vê no FIRMS. As razões anuais NOAA-20/S-NPP ficaram entre 0,97 e 1,04, e um fator por mês e dia/noite teria mais ruído que a própria diferença. A razão de 1,12 em 2026 não conta, porque o S-NPP parou no meio do ano. Limite declarado no Método: diferença de até 4% entre os dois VIIRS.
 
 ## 5. DECIDIDO (Weberson, 14/11/2026): o classificador (modelo A) como análise complementar
 
@@ -75,6 +83,7 @@ O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, 
 - A deriva de órbita do Aqua pode afetar os anos recentes.
 - Calibrado por bioma do IBGE. Não vale automaticamente para regiões fora do Brasil.
 - O número do calendário conta **detecções de fogo** (fire detections, convenção do FIRMS), e não incêndios: uma frente de fogo gera várias detecções.
+- O NOAA-20 (mês atual) é tratado como igual ao S-NPP. A diferença medida entre os dois é de até 4%.
 - O uso de IA neste trabalho é declarado no campo "Use of Super Intelligence" e no README.
 
 ## 7. Pendências

@@ -54,7 +54,8 @@ Ideia futura, fora do prazo: agrupar detecções em **eventos** para a visão de
 **Fator da série (decidido):**
 
 - Condições: bioma × mês × dia/noite. O FRP não entra.
-- Calculado em contagens por célula H3, com calibração em 2012 a 2021 (um cenário por ano, 10 cenários) e teste em 2022 a 2024. 2025 em diante fica fora.
+- Calculado em contagens por célula H3, um cenário por ano. Base 2012 a 2024, com os anos escolhidos pela validação deixando um ano de fora: se o erro de 2022 a 2024 passar de 1,5× o de 2012 a 2021, ficam só 2012 a 2021 (10 cenários); senão, os 13 anos. 2025 em diante fica fora.
+- NOAA-20 tratado como igual ao S-NPP (fator 1).
 - Só confiança nominal e alta (arquivo principal). Os 6 biomas do IBGE são calibrados.
 - Faixa de incerteza: P10 e P90 entre os cenários.
 - Nunca comparar a contagem bruta de pontos do VIIRS com a do MODIS. Sempre por célula da grade ou por evento.
