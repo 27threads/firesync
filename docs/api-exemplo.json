@@ -1,7 +1,7 @@
 {
  "_example": "Made-up values, only to show the format. Contract in docs/api.md.",
  "meta": {
-  "data_version": "2026-11-14",
+  "data_version": "2026-11-14T19:48:30Z",
   "scale": "VIIRS",
   "last_month": "2026-11",
   "updated_at": "2026-11-14T15:00:00Z",

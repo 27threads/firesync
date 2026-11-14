@@ -59,7 +59,7 @@ Cada jornada roda no desktop e no celular. Os seletores usam papéis e textos ac
 
 | Parte | Medida | Mínimo | Onde fica o mínimo |
 | --- | --- | --- | --- |
-| `data-pipeline/` | Linhas e ramos, juntando unidade e integração | 35% hoje (unidade sozinha: 36%). Sobe para o valor medido na esteira | `data-pipeline/.coveragerc` |
+| `data-pipeline/` | Linhas e ramos, juntando unidade e integração | **56%**, o medido na primeira esteira (PR #24): `agregar.py` 80%, `job_nrt.py` 85%, `pipeline.py` 51% | `data-pipeline/.coveragerc` |
 | `backend/src/` | Linhas e ramos | **90%**, a partir do primeiro código | `.github/workflows/ci.yml` |
 
 O `eda.py` (análise exploratória) fica fora da cobertura. Download, `stage`, `clean` e `cadastrar` dependem do FIRMS e do IBGE, e são as próximas partes a ganhar teste.
@@ -68,8 +68,11 @@ O `eda.py` (análise exploratória) fica fora da cobertura. Download, `stage`, `
 
 Arquivo: `.github/workflows/ci.yml`. Roda em todo PR e em todo push na `main`.
 
+**PR só de documentação.** Se todos os arquivos mudados no PR terminam em `.md`, os jobs de teste são pulados (aparecem como "skipped", que a proteção da `main` aceita). Nenhum teste lê `.md`. Basta um arquivo de outro tipo para tudo rodar, inclusive o `docs/api-exemplo.json`, que o contrato testa. Push na `main` sempre roda tudo. Quem decide é o `.github/scripts/roda_testes.sh`, testado pelo `test_roda_testes.sh`. Não troque isso por `paths-ignore` no gatilho: sem o workflow rodar, os checks obrigatórios ficam esperando e o PR trava.
+
 | Job | O que roda |
 | --- | --- |
+| **Só documentação?** | Testa o filtro e decide se os outros jobs rodam |
 | **Código morto** | `ruff check .` (imports, variáveis e redefinições sem uso) e `vulture` (funções, classes e variáveis nunca usadas), fora dos testes |
 | **Pipeline · unidade** | `test_pipeline.py` |
 | **Pipeline · integração com PostGIS** | Migrations aplicadas duas vezes (precisam rodar de novo sem erro), `test_banco.py`, job NRT com o FIRMS simulado e o relatório de cobertura, que aparece no resumo do job |
