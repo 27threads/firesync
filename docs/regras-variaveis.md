@@ -76,5 +76,5 @@ Ideia futura, fora do prazo: agrupar detecções em **eventos** para a visão de
 
 ## 7. Perguntas em aberto
 
-1. Mínimo de focos por condição (definir com a base limpa).
+1. Mínimo de focos por condição: a calibração gravada usou 30, e falta a equipe confirmar ([decisoes-harmonizacao.md](decisoes-harmonizacao.md), seção 7).
 2. Faixas de FRP para o classificador e para os indicadores de áreas críticas (sugestão inicial a partir dos dados brutos de 2024: 2, 5, 10 e 25 MW, a reconferir depois da limpeza).
