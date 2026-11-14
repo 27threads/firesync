@@ -4,74 +4,76 @@ Nov 13, 2026 · @Mateus Nogueira
 
 Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele só **sugere** (aparece como "pode considerar"). Assim fica claro o mínimo para entregar e o que dá pontos extras.
 
+**Situação em 14/11/2026:** ✅ feito e verificado · ⏳ falta ou é parcial (a nota diz onde está). A frente A (dados e banco) está pronta; o que falta nos RF06–RF13 é o código da API e do front, que hoje existem só como contrato ([api.md](api.md)) e testes.
+
 ## 1. Requisitos obrigatórios
 
 ### Parte A: Harmonização dos dados (backend / pipeline)
 
-- **RF01:** Buscar os focos de calor do **MODIS** (Terra e Aqua). É a série histórica, do início dos anos 2000 em diante.
-- **RF02:** Buscar os focos de calor do **VIIRS**. É o sensor que continua a série, com mais detalhe.
-- **RF03:** Harmonizar as duas fontes numa **série temporal única e consistente**. Depois dessa etapa, "o sensor de origem não importa mais". O processo precisa compensar as diferenças entre os dois sensores:
+- [x] **RF01:** Buscar os focos de calor do **MODIS** (Terra e Aqua). É a série histórica, do início dos anos 2000 em diante. ✅ MODIS Terra (desde 01/11/2000) e Aqua (desde 04/07/2002) até hoje, Brasil inteiro, na tabela `focos` ([pipeline-dados.md](pipeline-dados.md)).
+- [x] **RF02:** Buscar os focos de calor do **VIIRS**. É o sensor que continua a série, com mais detalhe. ✅ VIIRS S-NPP (2012 até 02/11/2026), NOAA-20 e NOAA-21, na tabela `focos`.
+- [ ] **RF03:** Harmonizar as duas fontes numa **série temporal única e consistente**. Depois dessa etapa, "o sensor de origem não importa mais". O processo precisa compensar as diferenças entre os dois sensores: ⏳ **parcial:** método decidido ([decisoes-harmonizacao.md](decisoes-harmonizacao.md)), contagem bruta por satélite em `agregados` e 1.860 fatores Aqua → S-NPP gravados (13 cenários, cobertura P5–P95 medida). Falta a API aplicar os fatores.
   - resolução espacial (VIIRS \~375 m, MODIS \~1 km)
   - sensibilidade de detecção (o VIIRS detecta mais focos pequenos)
   - horário em que cada satélite passa
-- **RF04:** Cobrir o período **do início dos anos 2000 até hoje**, com dados atualizados.
-- **RF05:** Entregar os dados harmonizados como **entrada da aplicação web**.
+- [ ] **RF04:** Cobrir o período **do início dos anos 2000 até hoje**, com dados atualizados. ⏳ **parcial:** histórico de 2003 até hoje no banco de teste e job NRT a cada 3 h pronto (`job_nrt.py`). Falta rodar na VPS.
+- [x] **RF05:** Entregar os dados harmonizados como **entrada da aplicação web**. ✅ `agregados`, `agregados_diarios`, `fatores_harmonizacao`, `dias_sem_dados`, `cobertura` e `config` no formato do [api.md](api.md) ([banco.md](banco.md)).
 
 ### Parte B: Aplicação web (frontend + API)
 
-- **RF06:** Deixar o usuário **escolher uma região / área de interesse**.
-- **RF07:** Deixar o usuário **escolher um intervalo de datas**.
-- **RF08:** Mostrar um **calendário de atividade de queimadas** com o **número de focos de calor** da área escolhida, no formato meses × anos.
-- **RF09:** Mostrar **quais meses do ano têm mais fogo** (o padrão sazonal).
-- **RF10:** Mostrar **quais anos tiveram mais fogo**.
-- **RF11:** Comparar o **mês atual com a mediana histórica** da área.
-- **RF12:** Mostrar **como a atividade atual se compara a períodos anteriores**, ou seja, as anomalias.
-- **RF13:** Permitir **baixar as análises e visualizações** da busca.
+- [ ] **RF06:** Deixar o usuário **escolher uma região / área de interesse**. ⏳ contrato no [api.md](api.md) (região, GeoJSON, lat/lon); falta a API e o front.
+- [ ] **RF07:** Deixar o usuário **escolher um intervalo de datas**. ⏳ contrato no [api.md](api.md); falta a API e o front.
+- [ ] **RF08:** Mostrar um **calendário de atividade de queimadas** com o **número de focos de calor** da área escolhida, no formato meses × anos. ⏳ contrato no [api.md](api.md) e dados prontos (`agregados`); falta a API e o front.
+- [ ] **RF09:** Mostrar **quais meses do ano têm mais fogo** (o padrão sazonal). ⏳ contrato no [api.md](api.md); falta a API e o front.
+- [ ] **RF10:** Mostrar **quais anos tiveram mais fogo**. ⏳ contrato no [api.md](api.md); falta a API e o front.
+- [ ] **RF11:** Comparar o **mês atual com a mediana histórica** da área. ⏳ contrato no [api.md](api.md) (janela recente); dados prontos (`agregados_diarios`, normal de ±15 dias em 7–40 ms); falta a API e o front.
+- [ ] **RF12:** Mostrar **como a atividade atual se compara a períodos anteriores**, ou seja, as anomalias. ⏳ contrato no [api.md](api.md); falta a API e o front.
+- [ ] **RF13:** Permitir **baixar as análises e visualizações** da busca. ⏳ contrato do pacote de auditoria no [api.md](api.md) (`POST /export`); falta a API e o front.
 
 ## 2. Requisitos desejáveis (diferenciais)
 
-- **RD01:** **Mapa interativo** em que o usuário desenha a área de interesse (polígono ou retângulo).
-- **RD02:** Opção de **digitar latitude e longitude**, como alternativa ao desenho no mapa.
-- **RD03:** **Rampa de cores** no calendário, para mostrar as diferenças entre meses como um heatmap.
-- **RD04:** Cores **acessíveis**, legíveis para quem tem daltonismo (por exemplo, viridis ou cividis).
-- **RD05:** **Exportar um CSV** com os focos de calor encontrados na busca.
-- **RD06:** **Indicadores principais** em destaque:
+- [ ] **RD01:** **Mapa interativo** em que o usuário desenha a área de interesse (polígono ou retângulo). ⏳ decidido: Leaflet + Geoman ([arquitetura.md](arquitetura.md)); falta o front.
+- [ ] **RD02:** Opção de **digitar latitude e longitude**, como alternativa ao desenho no mapa. ⏳ contrato no [api.md](api.md) (`point` com raio); falta a API e o front.
+- [ ] **RD03:** **Rampa de cores** no calendário, para mostrar as diferenças entre meses como um heatmap. ⏳ decidido: escala logarítmica ([arquitetura.md](arquitetura.md)); falta o front.
+- [ ] **RD04:** Cores **acessíveis**, legíveis para quem tem daltonismo (por exemplo, viridis ou cividis). ⏳ decidido: cividis ([arquitetura.md](arquitetura.md)); falta o front.
+- [ ] **RD05:** **Exportar um CSV** com os focos de calor encontrados na busca. ⏳ `detections.csv` no pacote de auditoria; `focos` vai para produção; falta a API.
+- [ ] **RD06:** **Indicadores principais** em destaque: ⏳ contrato no [api.md](api.md) (`indicators`); falta a API e o front.
   - número total de focos detectados e registrados
   - anomalia em relação à média de vários anos
-- **RD07:** Interface pensada para o **público-alvo**: equipes de alerta precoce, resposta a emergências, cientistas, gestores de terras e bombeiros. Precisa ser rápida de ler e de usar.
+- [ ] **RD07:** Interface pensada para o **público-alvo**: equipes de alerta precoce, resposta a emergências, cientistas, gestores de terras e bombeiros. Precisa ser rápida de ler e de usar. ⏳ janela recente e camada de focos recentes no contrato; dados e índice prontos (19 ms); falta a API e o front.
 
 ## 3. Requisitos não funcionais (implícitos no texto)
 
-- **RNF01:** Ser uma **aplicação web**, acessada pelo navegador.
-- **RNF02:** **Fonte de dados:** o texto sugere o **NASA FIRMS** (Earthdata), que fornece os dados do MODIS e do VIIRS.
-- **RNF03:** **Atualização contínua.** O calendário precisa estar "atualizado", então os dados novos devem entrar periodicamente.
-- **RNF04:** **Desempenho.** São mais de 20 anos de focos no mundo inteiro, então as consultas por área e período precisam ser rápidas. Isso pede pré-agregação e indexação espacial.
-- **RNF05:** **Usabilidade e acessibilidade**, porque o usuário pode estar numa situação de emergência.
+- [ ] **RNF01:** Ser uma **aplicação web**, acessada pelo navegador. ⏳ falta a API, o front e o deploy.
+- [x] **RNF02:** **Fonte de dados:** o texto sugere o **NASA FIRMS** (Earthdata), que fornece os dados do MODIS e do VIIRS. ✅ NASA FIRMS: resumos anuais por país (SP) e API (SP e NRT).
+- [ ] **RNF03:** **Atualização contínua.** O calendário precisa estar "atualizado", então os dados novos devem entrar periodicamente. ⏳ **parcial:** job NRT a cada 3 h pronto e testado (`job_nrt.py` + `Dockerfile`); falta rodar na VPS.
+- [x] **RNF04:** **Desempenho.** São mais de 20 anos de focos no mundo inteiro, então as consultas por área e período precisam ser rápidas. Isso pede pré-agregação e indexação espacial. ✅ pré-agregação (`agregados`, `agregados_diarios`) e índice espacial H3: calendário de 100 × 100 km em 2–9 ms, Amazônia inteira em ~0,8 s, focos recentes em 19 ms (medido no banco de teste).
+- [ ] **RNF05:** **Usabilidade e acessibilidade**, porque o usuário pode estar numa situação de emergência. ⏳ falta o front.
 
 ### Definidos pela equipe
 
 Não vêm do texto do desafio. São necessários porque o sistema é público e precisa estar sempre atualizado para o público de emergência (RD07).
 
-- **RNF06:** **Limite de requisições na API.** A API é pública, e uma área grande (até 250 mil células) custa caro. Sem limite, uma pessoa ou um robô consegue derrubar o servidor.
+- [ ] **RNF06:** **Limite de requisições na API.** A API é pública, e uma área grande (até 250 mil células) custa caro. Sem limite, uma pessoa ou um robô consegue derrubar o servidor. ⏳ contrato no [api.md](api.md) (`429 rate_limited`); falta a API.
   - Limite por IP, com valores em configuração. Proposta inicial: 60 pedidos por minuto no geral, 10 por minuto em `POST /calendar` e 2 por minuto em `POST /export`.
   - Acima do limite: HTTP `429` com o código `rate_limited` e o cabeçalho `Retry-After`.
   - Um segundo limite no servidor web (ver `infra/`), antes de o pedido chegar à API.
-- **RNF07:** **Monitoramento.**
+- [ ] **RNF07:** **Monitoramento.** ⏳ **parcial:** `config.atualizado_em` gravado pelo job e logs de cada rodada; falta o aviso de dado velho e os logs da API.
   - **Dado velho:** se o `updated_at` passar de **6 horas** (duas rodadas do job NRT perdidas), a equipe recebe um aviso, e a tela mostra ao usuário que os dados podem estar desatualizados. Para o público de emergência, mostrar dado velho como se fosse atual é pior do que avisar.
   - **Logs da API:** cada pedido registra o endpoint, o tempo de resposta, o número de células da área e o status HTTP.
   - **Logs do job NRT:** cada rodada registra quantos focos entraram, quanto tempo levou e os erros.
   - O canal do aviso (e-mail, Discord, Telegram) é decidido no deploy.
-- **RNF08:** **Testes automáticos (CI).** Todo PR com código roda os testes sozinho, pelo GitHub Actions, e só entra na `main` se passar. Detalhes em [arquitetura.md](arquitetura.md), seção "Qualidade e testes".
+- [x] **RNF08:** **Testes automáticos (CI).** Todo PR com código roda os testes sozinho, pelo GitHub Actions, e só entra na `main` se passar. Detalhes em [arquitetura.md](arquitetura.md), seção "Qualidade e testes". ✅ esteira no GitHub Actions (pipeline, integração com PostGIS, contrato da API, jornadas E2E); `main` protegida.
 
 ## 4. Decisões que o texto deixa em aberto
 
 O enunciado não diz como fazer estes pontos, e eles vão definir a arquitetura:
 
-1. **Método de harmonização.** Por exemplo: agregar os focos numa grade comum (como 0,25° ou 1 km) e calcular um fator de calibração no período em que os dois sensores funcionaram juntos (2012 em diante). Outra opção é filtrar por confiança ou potência radiativa (FRP).
-2. **Granularidade do calendário:** contagem mensal ou diária.
-3. **Escopo geográfico:** o mundo todo ou só o Brasil num primeiro momento (muda muito o volume de dados).
-4. **Dados pré-processados ou consulta à API do FIRMS na hora.** A API do FIRMS tem limites, então pré-processar é mais seguro.
-5. **Formato do download** pedido no RF13: PNG, PDF ou CSV.
+1. **Método de harmonização.** Por exemplo: agregar os focos numa grade comum (como 0,25° ou 1 km) e calcular um fator de calibração no período em que os dois sensores funcionaram juntos (2012 em diante). Outra opção é filtrar por confiança ou potência radiativa (FRP). ✅ **Decidido: escala VIIRS, fator Aqua → S-NPP por bioma × mês × dia/noite em células H3, um cenário por ano de 2012 a 2024, faixa P5–P95 ([decisoes-harmonizacao.md](decisoes-harmonizacao.md)).**
+2. **Granularidade do calendário:** contagem mensal ou diária. ✅ **Decidido: mensal no calendário; diária só para a janela recente e o alerta (`agregados_diarios`).**
+3. **Escopo geográfico:** o mundo todo ou só o Brasil num primeiro momento (muda muito o volume de dados). ✅ **Decidido: Brasil inteiro, calibrado nos 6 biomas do IBGE.**
+4. **Dados pré-processados ou consulta à API do FIRMS na hora.** A API do FIRMS tem limites, então pré-processar é mais seguro. ✅ **Decidido: pré-processados no banco, atualizados pelo job NRT a cada 3 h.**
+5. **Formato do download** pedido no RF13: PNG, PDF ou CSV. ✅ **Decidido: ZIP de auditoria com CSVs (`POST /export`); o PNG do calendário é gerado no front ([api.md](api.md)).**
 
 ## 5. Entregáveis da submissão (Space Apps 2026)
 
