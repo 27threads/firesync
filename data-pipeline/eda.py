@@ -119,7 +119,7 @@ def ratio(m, num, den):
     r = (t[num] / t[den]).unstack().reindex(columns=range(1, 13))
     r = r[r.index < 2026] if num != "VIIRS NOAA-21" else r
     fig, ax = plt.subplots(figsize=(6.5, 0.25 * len(r) + 1))
-    im = ax.imshow(r.values, cmap="Oranges", aspect="auto")
+    ax.imshow(r.values, cmap="Oranges", aspect="auto")
     for (i, j), v in np.ndenumerate(r.values):
         if np.isfinite(v):
             ax.text(j, i, f"{v:.1f}", ha="center", va="center", fontsize=7, color="white" if v > np.nanpercentile(r.values, 70) else INK)
@@ -159,7 +159,7 @@ def main():
             img, r = ratio(m, num, den)
             ratios.append(img)
             r.to_csv(out / f"razao_{num.split()[-1]}_{den.split()[-1]}.csv".lower())
-    parts = [f"<h1>Análise exploratória das bases FIRMS: cobertura (Brasil)</h1>",
+    parts = ["<h1>Análise exploratória das bases FIRMS: cobertura (Brasil)</h1>",
              "<p>Dados <b>antes</b> dos filtros de limpeza (só recorte pela cobertura, tabela regioes). Distribuições usam amostra de "
              f"{SAMPLE:.0%}. Tabela mensal completa em <code>reports/focos_mensais_por_base.csv</code>.</p>",
              "<h2>Resumo por base</h2>", summary(counts, conf, s),

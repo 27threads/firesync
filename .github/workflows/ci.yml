@@ -15,6 +15,23 @@ permissions:
   contents: read
 
 jobs:
+  codigo-morto:
+    name: Código morto
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff==0.8.4 vulture==2.14
+      - name: Imports, variáveis e redefinições sem uso (ruff, regras F)
+        run: ruff check --output-format github .
+      - name: Funções, classes e variáveis nunca usadas (vulture)
+        run: |
+          alvos="data-pipeline"
+          [ -d backend/src ] && alvos="$alvos backend/src"
+          vulture $alvos --exclude "tests,test_*.py" --min-confidence 60
+
   pipeline-unidade:
     name: Pipeline · unidade
     runs-on: ubuntu-latest
