@@ -31,6 +31,8 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 15 | [Pitch e vídeo](docs/pitch.md) | Roteiro de 30 s, legenda em inglês e como gravar | Antes de montar a demo |
 | 16 | [Testes e esteira](docs/testes.md) | TDD, regra dos bugs, cobertura, jornadas e jobs do GitHub Actions | Antes de escrever código |
 | 17 | [Versionamento (SemVer)](docs/versionamento.md) | Tipo no commit e no título do PR, como lançar uma versão | Antes do primeiro commit |
+| 18 | [Validação do nível de alerta](docs/validacao-alerta.md) | Solução A + B da issue #9: teste retroativo com "o que veio depois" e eventos conhecidos, no lugar da área queimada | Antes de mexer no alerta ou no `alert_rules.json` |
+| 19 | [RFC 0001: backtest do alerta](docs/rfcs/0001-backtest-alerta.md) | Como implementar a solução A + B: consultas, janelas, contas, saídas, autoteste e plano | Antes de implementar o backtest do alerta |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
@@ -110,6 +112,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `docs/pipeline-dados.md` | Claude Code (Claude Opus 5.5) | Redação do relatório do que foi feito e dos achados da análise exploratória |
 | `docs/prompt-frontend.md` | Claude Code (Claude Opus 5.5) | Prompt do front escrito a partir dos docs do repo. A equipe aprova antes de usar |
 | `docs/api.md`, `docs/api-exemplo.json` (issues #22 e #29) | Claude Code (Claude Opus 5.5) | Correções do contrato escritas a partir das issues da auditoria. Revisado pela equipe |
+| `docs/validacao-alerta.md`, `docs/rfcs/0001-backtest-alerta.md` | Claude Code (Claude Opus 5.5) | Proposta de validação do alerta e RFC de implementação, escritos a partir da issue #9 e da revisão do PR #42. Revisado pela equipe |
 | Limpeza dos `.md` (README, CLAUDE.md, `docs/`, READMEs das pastas) | Claude Code (Claude Opus 5.5) | Levantamento do que estava desatualizado, comparando os docs com o código da `main`, e correção dos trechos. Revisado pela equipe no PR |
 | `.github/workflows/ci.yml` (job "Só documentação?"), `.github/scripts/roda_testes.sh`, `test_roda_testes.sh` | Claude Code (Claude Opus 5.5) | Filtro que pula os testes de código em PR só de `.md`. Revisado pela equipe |
 | Decisões do front em `docs/arquitetura.md` (pontos 5 a 8) e `frontend/README.md` | Claude Code (Claude Opus 5.5) | Levantamento das opções e redação das justificativas. As escolhas foram feitas pela equipe |
