@@ -257,7 +257,7 @@ Resposta: GeoJSON, que o Leaflet desenha direto.
 
 - Só confiança nominal e alta, o mesmo filtro do calendário.
 - No máximo **50.000 focos** por resposta. Acima disso, `truncated: true`, e a tela pede para aproximar o mapa.
-- Cache de 5 minutos, renovado a cada atualização NRT.
+- Cache com a mesma regra da seção "Desempenho": a chave inclui o `updated_at`, então o cache se renova sozinho a cada atualização NRT.
 - Erros: `invalid_bbox` (400) e `invalid_hours` (400).
 
 ## `GET /regions`
@@ -313,7 +313,9 @@ Teste obrigatório: a API devolve uma célula conhecida, e o teste confere que e
 | Área desenhada do tamanho da Amazônia | < 1,5 s | Consulta direta |
 | Mesmo pedido repetido | < 50 ms | Cache por (células da área + intervalo + `updated_at`) |
 
-A resposta leva `ETag` com `updated_at`, para o navegador reaproveitar. O cache expira a cada atualização NRT.
+**Como funciona o cache:** fica na memória da própria API (um LRU), sem serviço extra como Redis. A chave de cada resposta inclui o `updated_at` da última atualização NRT. Quando chega dado novo, a chave muda e o cache antigo simplesmente deixa de ser usado. Não existe um passo de "invalidar", e não há risco de mostrar dado velho.
+
+A resposta também leva `ETag` com `updated_at`, para o navegador reaproveitar.
 
 ## Regras de operação
 
