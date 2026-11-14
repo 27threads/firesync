@@ -45,7 +45,7 @@ Ideia futura, fora do prazo: agrupar detecções em **eventos** para a visão de
 
 ## 4. Regras de ligação entre MODIS e VIIRS (só para o classificador complementar)
 
-- Mesma `acq_date` e mesmo `daynight`, com diferença de horário de até 10 minutos. **ESCOLHA DA EQUIPE**
+- Mesma `acq_date` e mesmo `daynight`, com diferença de horário de até 10 minutos. **ESCOLHA DA EQUIPE.** Essa janela vale quando o Aqua estava na órbita original (até 2021). **Em 2024 ela precisa ser de 90 minutos**: o Aqua passa 44 minutos (dia) e 63 minutos (noite) depois do S-NPP no mesmo lugar, e só 6% a 9% dos pares ficam dentro de 10 minutos. A janela é o parâmetro `--janela` do `modelo_a.py`.
 - "MODIS viu": a distância entre os dois pontos é menor ou igual a metade do maior entre `scan` e `track` do MODIS, mais metade do pixel do VIIRS (375 m).
 - "MODIS estava olhando": existe foco do Aqua a até 50 km, na mesma passagem. **ESCOLHA DA EQUIPE.** Esta regra gera viés: descarta justamente as áreas onde o VIIRS viu fogo pequeno e o MODIS nada, e por isso o fator da série **não** usa essa regra. Vale só para o classificador complementar, com o viés declarado.
 

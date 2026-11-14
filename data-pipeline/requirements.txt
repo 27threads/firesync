@@ -5,3 +5,4 @@ pyogrio>=0.9
 h3>=4.0
 psycopg[binary]>=3.2
 shapely>=2.0
+scikit-learn>=1.5

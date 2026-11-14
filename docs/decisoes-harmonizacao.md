@@ -176,13 +176,47 @@ As colunas `n_focos_origem` e `fusao_com`, pedidas à frente A para a salvaguard
 
 **NOAA-20 → S-NPP (DECIDIDO, Weberson, 14/11/2026): fator 1.** O NOAA-20 só é usado de novembro de 2026 em diante, ou seja, no mês atual, que o RF11 compara com a mediana. Tratar os dois como iguais faz o mês atual mostrar a mesma contagem que o usuário vê no FIRMS. As razões anuais NOAA-20/S-NPP ficaram entre 0,97 e 1,04, e um fator por mês e dia/noite teria mais ruído que a própria diferença. A razão de 1,12 em 2026 não conta, porque o S-NPP parou no meio do ano. Limite declarado no Método: diferença de até 4% entre os dois VIIRS.
 
-## 5. DECIDIDO (Weberson, 14/11/2026): o classificador (modelo A) como análise complementar
+## 5. DECIDIDO (Weberson, 14/11/2026): o modelo A como entrega, pelo caminho C
 
-O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, temperatura, confiança, mês, dia/noite, bioma e `modis_scan_mediano`. Ele **não gera o fator da série**. Serve para a tela de Método mostrar quais fogos o MODIS perde por potência (fraco ou forte).
+O modelo aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, temperatura, confiança, mês, dia/noite, bioma e `modis_scan_mediano`. Ele **não gera o fator da série** (o calendário usa o fator por contagens). Ele entrega a **curva de detecção** para a tela de Método (quais fogos o MODIS perde, por potência) e uma **prova cruzada** do fator. Como é feito: [rfcs/0002-modelo-a.md](rfcs/0002-modelo-a.md) (PR #48). Código: `data-pipeline/harmonizacao/modelo_a.py`.
 
-- Roda em volume pequeno (treino 2019 a 2021, teste 2022 a 2024).
+- **Etapa A (feita em 14/11/2026):** dados de 2024 do repositório, corte no espaço (blocos H3 de resolução 4, metade para treino e metade para teste, semente 42). A etapa B, com o histórico no banco da frente A, é opcional.
 - A regra "MODIS estava olhando" (foco do Aqua a até 50 km) vale só aqui, e o viés que ela causa é declarado.
-- Se só houver os arquivos de 2024, o corte é **no espaço**: metade das células H3 para treino e metade para teste, com todos os meses dos dois lados.
+
+### Resultado da etapa A (dados de 2024, janela de 90 minutos)
+
+**A janela de horário precisou mudar.** A regra original pedia até 10 minutos entre o Aqua e o S-NPP. Em 2024, o Aqua passa **44 minutos (dia) e 63 minutos (noite) depois** do S-NPP no mesmo lugar (deriva de órbita do Aqua, que saiu da órbita original em 2022), e só 6% a 9% dos pares ficam dentro de 10 minutos. Com 10 minutos, só 6,4% dos fogos do S-NPP entram na análise, e eles são uma amostra especial (bordas de faixa onde as duas passagens se sobrepõem). Com 90 minutos, entram 55,7% (983 mil fogos), e 92% dos pares ficam dentro da janela. O resultado abaixo usa 90 minutos, e **ele mistura a sensibilidade do sensor com a mudança do fogo ao longo da hora que separa as duas passagens**.
+
+**Curva de detecção** (chance de o MODIS também ver um fogo que o VIIRS viu, em áreas que o MODIS estava olhando):
+
+| Potência do fogo (FRP) | De dia | De noite |
+| --- | --- | --- |
+| Abaixo de 2 MW | 15% | 18% |
+| 2 a 5 MW | 26% | 40% |
+| 5 a 10 MW | 41% | 69% |
+| 10 a 25 MW | 57% | 81% |
+| 25 MW ou mais | 71% | 87% |
+
+- O MODIS perde a maior parte dos fogos fracos e vê a maior parte dos fortes. Isso explica, sem jargão, por que juntar as séries sem tratamento infla ou esconde fogo.
+- **De noite, a maior parte dos fogos do VIIRS é fraca:** 162 mil dos 333 mil fogos noturnos têm menos de 2 MW, e o MODIS vê 18% deles. Isso é o que torna o fator noturno (cerca de 5 vezes o diurno) muito maior que o diurno.
+
+**Medidas nos blocos de teste** (AUC: 1 é perfeito e 0,5 é sorteio; Brier: menor é melhor):
+
+| Modelo | AUC | Brier |
+| --- | --- | --- |
+| Referência (taxa única, 43,7%) | 0,500 | 0,246 |
+| Tabela por faixa de potência, período e bioma | 0,708 | 0,214 |
+| Gradient boosting | 0,753 | 0,199 |
+
+O gradient boosting separa melhor que a tabela, e as chances previstas batem com as observadas na média (prevista 43,9% contra observada 43,7%).
+
+**Prova cruzada: NÃO confirma o fator por contagens, e isso precisa ser declarado.** A razão entre o fator do modelo e o fator por contagens, nos blocos de teste:
+
+- **De dia, concorda em três biomas:** Amazônia 0,91, Mata Atlântica 1,05 e Cerrado 0,76.
+- **De noite, não concorda em nenhum:** de 0,29 a 0,44. O fator do modelo fica em 2 a 3, e o por contagens em 7 a 10.
+- Pantanal (0,46 de dia) e Caatinga (1,96 de dia) também ficam fora.
+
+A causa conhecida é o **viés da regra dos 50 km**: ela só inclui fogos em áreas onde o Aqua viu algum fogo, e descarta as áreas onde o VIIRS viu fogo fraco e o MODIS nada. De noite, a maior parte dos fogos fracos está nessas áreas descartadas, então a chance de detecção sai alta demais e o fator implícito sai baixo demais. Há também uma diferença de conceito: um pixel do MODIS (1 km²) pode cobrir vários pixels do VIIRS, então "fogos do VIIRS vistos" não é o mesmo que "fogos do MODIS". **O que pode ser dito:** a curva é válida para áreas que o MODIS estava olhando; a prova cruzada, como definida, **não** valida o fator por contagens. O que valida o fator é a validação deixando um ano de fora (seção 4).
 
 ## 6. Limites a declarar no método
 
