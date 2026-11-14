@@ -216,6 +216,17 @@ Limites do gráfico, a declarar junto dele: (1) ele provavelmente **subestima** 
 
 O gradient boosting separa melhor que a tabela, e as chances previstas batem com as observadas na média (prevista 43,9% contra observada 43,7%).
 
+**Calibração** (as chances que o modelo dá batem com o que aconteceu? Conferida em dez faixas de chance prevista, com cerca de 49 mil fogos em cada, nos blocos de teste):
+
+| Modelo | Erro médio entre previsto e observado | Pior faixa |
+| --- | --- | --- |
+| Gradient boosting | 0,7 ponto percentual | 1,4 ponto |
+| Tabela por faixa de potência, período e bioma | 0,8 ponto percentual | 2,8 pontos |
+
+Quando o gradient boosting diz 11%, o MODIS viu 11,5% desses fogos; quando diz 46%, viu 46%; quando diz 82%, viu 80,5%. A calibração é muito boa **dentro de 2024 e dos blocos sorteados**; ela não diz que o modelo valeria para outro ano (isso só a etapa B mostra). Com a janela de 10 minutos ela é pior (erro médio de 2,9 pontos e até 8 pontos nas pontas), numa amostra pequena e especial, o que reforça a escolha dos 90 minutos.
+
+**O que a calibração afeta:** a calibração é um teste do modelo já treinado, e não muda o treino. Ela não afeta a curva de detecção (que sai das taxas observadas nos dados) nem o AUC (que só olha a ordem das chances). Ela só importa para a prova cruzada, que soma as chances previstas. Como a calibração está boa, a falha da prova cruzada (abaixo) **não vem de chances mal calibradas**.
+
 **Prova cruzada: NÃO confirma o fator por contagens, e isso precisa ser declarado.** A razão entre o fator do modelo e o fator por contagens, nos blocos de teste:
 
 - **De dia, concorda em três biomas:** Amazônia 0,91, Mata Atlântica 1,05 e Cerrado 0,76.
