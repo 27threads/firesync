@@ -121,7 +121,7 @@ nome,regiao,inicio,fim,fonte_url,fonte_descricao
 
 ### 5. Autoteste (`test_backtest_alerta.py`, sem banco)
 
-Segue o padrão do `harmonizacao/test_validar_inpe.py`: dados inventados, `assert` e "OK" no fim.
+Segue o padrão do `tests/test_harmonizacao.py`: pytest com dados inventados.
 
 1. **Sobreposição (pedido do Mateus):** fogo alto só em `t−6..t` e zero depois → gabarito `False`. Se a janela do gabarito incluir `t`, o teste quebra.
 2. **Sem futuro no normal:** um ano com fogo enorme não entra no normal do próprio ano.
