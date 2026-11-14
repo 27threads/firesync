@@ -1,7 +1,7 @@
 """Pipeline de dados FIRMS (MODIS + VIIRS).
 
 Uso (nesta ordem; precisa de DATABASE_URL e, para o download, FIRMS_MAP_KEY):
-    python pipeline.py cadastrar  # regioes.json -> tabela regioes (polígono + celulas_h3)
+    python pipeline.py cadastrar  # regioes.json -> tabelas regioes (polígono) e celula_regiao
     python pipeline.py download   # arquivos anuais do país da cobertura + API (2026 / NOAA-21 / NRT)
     python pipeline.py stage      # mantém só os focos dentro da cobertura (sem filtros) em data/staged/
     python pipeline.py clean      # aplica os filtros do time de dados e grava parquet em data/processed/
@@ -82,8 +82,11 @@ def curl(url, dest=None):
 
 
 # ---------------------------------------------------------------- cadastrar
+SIMPLIFY_DEG = 0.001  # ~110 m, bem menor que o lado da célula res 6 (~3,7 km): não muda quais células entram
+
+
 def cadastrar():
-    """Única etapa que lê regioes.json. Grava polígono e células H3 em `regioes` (upsert por nome)."""
+    """Única etapa que lê regioes.json. Grava o polígono em `regioes` (upsert por nome) e as células em `celula_regiao`."""
     conn = db()
     res = int(config(conn, "h3_resolucao"))
     for r in json.loads((ROOT / "regioes.json").read_text(encoding="utf-8")):
@@ -94,13 +97,20 @@ def cadastrar():
         g = gpd.read_file(f"zip://{src}")
         # SIRGAS2000 ≈ WGS84 (<1 m)
         geom = g[g[r["campo"]] == r["valor"]].set_crs(4326, allow_override=True).union_all()
-        cells = [h3.str_to_int(c) for c in h3.h3shape_to_cells(h3.geo_to_h3shape(geom.__geo_interface__), res)]
-        conn.execute(
-            """INSERT INTO regioes (nome, geom, celulas_h3, fonte_poligono)
-               VALUES (%s, ST_Multi(ST_GeomFromWKB(%s, 4326)), %s, %s)
-               ON CONFLICT (nome) DO UPDATE
-               SET geom = EXCLUDED.geom, celulas_h3 = EXCLUDED.celulas_h3, fonte_poligono = EXCLUDED.fonte_poligono""",
-            (r["nome"], shapely.to_wkb(geom), cells, r["fonte_poligono"]))
+        # o polígono do IBGE tem centenas de milhares de vértices; simplificar só para achar as células
+        simple = geom.simplify(SIMPLIFY_DEG, preserve_topology=True)
+        cells = [h3.str_to_int(c) for c in h3.h3shape_to_cells(h3.geo_to_h3shape(simple.__geo_interface__), res)]
+        with conn.transaction():
+            rid = conn.execute(
+                """INSERT INTO regioes (nome, geom, fonte_poligono)
+                   VALUES (%s, ST_Multi(ST_GeomFromWKB(%s, 4326)), %s)
+                   ON CONFLICT (nome) DO UPDATE SET geom = EXCLUDED.geom, fonte_poligono = EXCLUDED.fonte_poligono
+                   RETURNING id""",
+                (r["nome"], shapely.to_wkb(geom), r["fonte_poligono"])).fetchone()[0]
+            conn.execute("DELETE FROM celula_regiao WHERE regiao_id = %s", (rid,))
+            with conn.cursor().copy("COPY celula_regiao (h3, regiao_id) FROM STDIN") as cp:
+                for c in cells:
+                    cp.write_row((c, rid))
         print(f"cadastrar: {r['nome']} ({len(cells):,} células res {res})", flush=True)
 
 

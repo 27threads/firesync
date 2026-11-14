@@ -11,7 +11,7 @@ O banco já tem schema (A4) e as regiões cadastradas. Ainda **não** existe o i
 ## Arquitetura atual
 
 ```
-regioes.json ──▶ python pipeline.py cadastrar ──▶ tabela `regioes` (6 biomas, polígono + celulas_h3)
+regioes.json ──▶ python pipeline.py cadastrar ──▶ `regioes` + `celula_regiao` (6 biomas)
                                                         │ (bbox e cobertura vêm daqui)
 FIRMS (arquivos anuais por país + API)                  ▼
             │  python pipeline.py download
@@ -196,13 +196,15 @@ Para adicionar uma região de calibração: acrescente uma entrada em `regioes.j
 | --- | --- | --- | --- |
 | Fonte do histórico | Archive Download (pedido) | Resumos anuais por país | Mesmo dado SP, sem fila de aprovação (A1) |
 | NOAA-21 | Só reserva no NRT | Baixa também o SP desde 03/2023 | Extra, não atrapalha. É só não usar |
-| Terra | Fora do cálculo | Baixado e mantido separado (`satellite=Terra`) | Confirmado: só Aqua |
+| Terra | Fora do cálculo | Baixado e mantido separado (`satellite=Terra`) | Confirmado. Escala da série: VIIRS, com Aqua só para 2003–2011 e calibração (PR #2) |
 | Banco e H3 | Tabelas `focos`, `regioes`, `cobertura` com H3 | Schema pronto (A4), `regioes` com os 6 biomas (A6). `focos` ainda em parquet | A5 e A7 pendentes |
 | Regiões | Amazônia (e Pantanal) | Cobertura = Brasil inteiro; regiões de calibração = 6 biomas | Decidido no PR #2 |
 
 ## Pendências e decisões em aberto
 
-- [x] Terra fora do cálculo: só Aqua, a partir de 2003 (decisão do time de dados, com base na tabela "Aqua × Terra"). O Terra continua baixado e separado
+- [x] Terra fora do cálculo (decisão do time de dados, com base na tabela "Aqua × Terra"). O Terra continua baixado e separado
+- [x] Escala da série: VIIRS. Aqua só para 2003–2011 e para a calibração (PR #2)
+- [x] Só confiança nominal e alta entra em `agregados`. O arquivo `lowconf` do `clean` fica guardado, mas não entra no calendário nem no fator (PR #2)
 - [x] Banco de dados: PostgreSQL
 - [ ] Resolução H3 (ponto 3), combinada com a frente C. Sugestão: res 6
 - [ ] Investigar a queda de S-NPP/Aqua em 2025

@@ -19,7 +19,9 @@ Este documento junta o que o backend precisa para montar o `docker-compose.yml` 
 | 9 | Cobertura × região de calibração | Cobertura = Brasil inteiro. Regiões de calibração = 6 biomas do IBGE | aprovado no PR #2 |
 | 10 | `regioes.json` × tabela `regioes` | O JSON é a entrada. A tabela é a fonte de verdade | aprovado no PR #2 |
 | 11 | Formato de `fatores_harmonizacao` e `agregados` | Fator por mês × dia/noite × ano. Agregado bruto, com o fator aplicado na API | aprovado no PR #2 |
-| 12 | Referência MODIS | Só Aqua, a partir de 2003. Terra guardado, mas fora do cálculo | frente A |
+| 12 | Escala da série | **VIIRS.** Aqua só para 2003–2011 e para a calibração. Terra fora (guardado, mas não entra na conta) | aprovado no PR #2 |
+| 13 | Células de cada região | Tabela `celula_regiao (h3, regiao_id)`, no lugar de uma lista dentro de `regioes` | aprovado no PR #2 |
+| 14 | Confiança | Só nominal e alta entram em `agregados` (calendário e fator). Baixa fica guardada à parte | aprovado no PR #2 |
 
 ## Resolução H3: fixa e numa fonte só
 
@@ -34,7 +36,7 @@ Este documento junta o que o backend precisa para montar o `docker-compose.yml` 
 - A resolução **não** é parâmetro do request. Os `agregados` existem numa resolução só.
 - **Fonte única:** `config.h3_resolucao = '6'`, criada pela migration. O pipeline lê dali (`pipeline.py cadastrar`). A API também deve ler dali e **não subir** se o valor for diferente do que ela espera (frente C).
 - **O banco recusa célula errada.** A resolução fica nos bits 52–55 do ID, então `CHECK (((h3 >> 52) & 15) = 6)` em `focos.h3` e `agregados.h3` faz qualquer carga errada falhar na hora. Testado: uma célula de resolução 5 foi recusada.
-- **Mudar a resolução é uma migração**, não um ajuste: exige refazer `agregados` e `regioes.celulas_h3` e trocar o `CHECK`.
+- **Mudar a resolução é uma migração**, não um ajuste: exige refazer `agregados` e `celula_regiao` e trocar o `CHECK`.
 - **O front nunca precisa saber a resolução.** Ele manda a área em GeoJSON.
 
 ## IDs do H3 no JSON: sempre como texto
@@ -55,7 +57,9 @@ Um ID da resolução 6 vale cerca de 6 × 10¹⁷, e o JavaScript só representa
 | **Região de demonstração** | O que a demo destaca | Amazônia e Pantanal (escolha da apresentação, não do banco) |
 
 - `focos` guarda **tudo o que foi baixado**, sem coluna de região. O bioma só entra na calibração e na agregação.
-- **`regioes.json` é a entrada:** versionada e fácil de revisar no git. `python pipeline.py cadastrar` lê o JSON, baixa o polígono, calcula `celulas_h3` na resolução da `config` e grava em `regioes`, com upsert por `nome`. **Nenhuma outra etapa lê o JSON.**
+- **`regioes.json` é a entrada:** versionada e fácil de revisar no git. `python pipeline.py cadastrar` lê o JSON, baixa o polígono, grava em `regioes` (upsert por `nome`) e grava as células da região, na resolução da `config`, em `celula_regiao`. **Nenhuma outra etapa lê o JSON.**
+- **Células por região numa tabela, não numa lista:** `celula_regiao (h3, regiao_id)` tem chave `(h3, regiao_id)`, índice em `regiao_id` e o mesmo `CHECK` de resolução. Uma lista dentro da linha de `regioes` não escala (o mundo tem ~4 milhões de células de terra na res 6).
+- **Polígono simplificado só para achar as células:** tolerância de 0,001° (~110 m), muito menor que o lado da célula (~3,7 km). O cadastro dos 6 biomas leva ~48 s (sem simplificar, só a Amazônia levava 102 s). A simplificação mudou menos de 0,01% das células (por exemplo, Amazônia 109.433 → 109.429), e nenhuma célula ficou em dois biomas. O polígono gravado em `regioes.geom` é o original.
 - **A tabela `regioes` é a fonte de verdade:** a API, a calibração, a agregação e o próprio pipeline (bbox da API do FIRMS e recorte da cobertura) leem só ela.
 - Fora da cobertura, a API responde "sem dados para esta área (cobertura atual: Brasil)". Nunca zero.
 - **Para levar a outro país:** acrescentar os polígonos em `regioes.json`, rodar `cadastrar`, trocar `cobertura_pais` e baixar. O código não muda.
@@ -96,7 +100,7 @@ Medido com o formato anterior de `agregados` (uma linha por célula × mês, só
 
 | Área consultada | Células | Polígono → células | Consulta no banco |
 | --- | --- | --- | --- |
-| Amazônia inteira | 109.433 | 102 s (IBGE detalhado) → usar `regioes.celulas_h3` | 346 ms |
+| Amazônia inteira | 109.433 | 102 s (IBGE detalhado) → ler de `celula_regiao` | 346 ms |
 | Pantanal inteiro | 4.177 | 0,7 s | 34 ms |
 | Área de ~100 × 100 km | 241 | < 1 ms | 3 ms |
 
