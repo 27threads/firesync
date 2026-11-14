@@ -50,7 +50,7 @@ firesync/
 └── infra/                 deploy na VPS: docker-compose, servidor web, .env.example (frente C)
 ```
 
-Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/` e `frontend/` têm, por enquanto, os testes escritos antes do código (especificação TDD e jornadas). `infra/` ainda não tem arquivos de deploy. `data-pipeline/data/` tem os quatro ZIPs de teste:
+Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/` tem, por enquanto, os testes escritos antes do código (especificação TDD); `frontend/` já traz o esqueleto (D1), a seleção de área e período (D2–D3), o calendário (D4), os indicadores/gráficos (D5) e os testes E2E em `frontend/e2e/`. `infra/` ainda não tem arquivos de deploy. `data-pipeline/data/` tem os quatro ZIPs de teste:
 
 | Arquivo | Conteúdo |
 | --- | --- |
@@ -90,12 +90,12 @@ Detalhes de cada etapa: [importacao-regioes.md](docs/importacao-regioes.md).
 - [x] Levantamento do FIRMS e plano de extração
 - [x] Modelo de dados e processo de importação
 - [x] Dados de teste (Brasil, 2024)
-- [ ] Stack e arquitetura definidas (pipeline e banco decididos; faltam API, front e gráficos em [arquitetura.md](docs/arquitetura.md))
+- [x] Stack e arquitetura definidas (pipeline, banco, API, front, mapa e gráficos decididos em [arquitetura.md](docs/arquitetura.md); falta só o ponto 13)
 - [ ] Contrato da API ([api.md](docs/api.md) na `main`; falta A e D confirmarem, tarefa T02)
 - [x] Histórico do FIRMS baixado e análise por satélite ([pipeline-dados.md](docs/pipeline-dados.md))
 - [x] Importador, pipeline, agregação, job NRT e série do INPE ([pipeline-dados.md](docs/pipeline-dados.md))
 - [ ] API
-- [ ] Frontend
+- [ ] Frontend (D1–D5 feitos; faltam downloads D6, integração com a API real D7 e demo D8)
 - [ ] Deploy público
 - [ ] Demo e página do projeto
 
@@ -114,7 +114,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `.github/workflows/ci.yml` (job "Só documentação?"), `.github/scripts/roda_testes.sh`, `test_roda_testes.sh` | Claude Code (Claude Opus 5.5) | Filtro que pula os testes de código em PR só de `.md`. Revisado pela equipe |
 | Decisões do front em `docs/arquitetura.md` (pontos 5 a 8) e `frontend/README.md` | Claude Code (Claude Opus 5.5) | Levantamento das opções e redação das justificativas. As escolhas foram feitas pela equipe |
 | Ponto 4 de `docs/arquitetura.md` e responsáveis em `docs/tarefas.md` | Claude Code (Claude Opus 5.5) | Redação da justificativa e levantamento dos responsáveis pelos autores dos commits. As escolhas foram feitas pela equipe |
-| `frontend/` (esqueleto D1, calendário D4 e indicadores D5: `index.html`, `src/`, configuração do Vite e testes) | Claude Code (Claude Opus 5.5) | Esqueleto gerado a partir do `prompt-frontend.md` e dos docs do repo; textos de Method tirados de `decisoes-harmonizacao.md` e `tarefas.md`. Indicadores, janela recente, sazonalidade e ranking (D5) gerados a partir do `api.md` e do `ux-telas.md`, com testes escritos antes. A equipe revisa no PR |
+| `frontend/` (D1–D5: `index.html`, `src/`, configuração do Vite, testes unitários e E2E) | Claude Code (Claude Opus 5.5) em D1, D4 e D5; Antigravity em D2 e D3 | Esqueleto (D1), calendário (D4) e indicadores/gráficos (D5) gerados a partir do `prompt-frontend.md`, `api.md` e `ux-telas.md`. Seleção de área e período (D2–D3: mapa Leaflet + Geoman em `src/controls/`, cliente API `src/api/client.ts`, validação UTC, fallback demo e destravamento de `e2e/jornadas.spec.ts`) escrita em TDD a partir dos docs. A equipe revisa no PR |
 
 ## Dados e créditos
 

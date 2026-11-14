@@ -146,6 +146,5 @@ Afirmações que precisam ser verdade antes da entrega: comparação com o INPE 
 
 1. Nível Normal, Atenção ou Crítico (tela 2): aguarda decisão da equipe.
 2. "Estimativa pouco confiável" (tela 3): aguarda decisão da equipe.
-3. Framework do front: ainda "a decidir" em [arquitetura.md](arquitetura.md).
 
 A faixa de incerteza já está no contrato como `band_low` e `band_high` (percentis 5 e 95), no [api.md](api.md).
