@@ -4,7 +4,8 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  server: { port: 5173 },
+  // O JSON de exemplo fica em docs/ (fonte de verdade do contrato), fora da pasta do front.
+  server: { port: 5173, fs: { allow: ['..'] } },
   preview: { port: 5173 },
   test: {
     environment: 'jsdom',
