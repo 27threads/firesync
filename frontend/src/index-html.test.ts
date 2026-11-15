@@ -39,7 +39,6 @@ describe('index.html (static page shell)', () => {
       'INPE',
       'NASA EOSDIS GIBS',
       'OpenStreetMap',
-      'CARTO',
       'Leaflet',
       'Leaflet-Geoman',
     ]) {

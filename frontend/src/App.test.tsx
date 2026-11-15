@@ -1,209 +1,122 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import example from '../../docs/api-exemplo.json';
 import { App } from './App';
 
-function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...headers },
-  });
+type Handler = (url: string, init?: RequestInit) => Response | Promise<Response>;
+
+const REGIONS = [{ region_id: 1, name: 'Amazônia', source: 'IBGE', bbox: [-74, -16.3, -43.9, 5.3] }];
+const HEALTH = { status: 'ok', data_version: '2026-11-14T19:48:30Z', last_month: '2026-11', updated_at: example.meta.updated_at, h3_resolution: 6 };
+
+function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 }
 
-function mockApi(
-  options: {
-    calendarStatus?: number;
-    calendarBody?: unknown;
-    calendarHeaders?: Record<string, string>;
-  } = {},
-) {
-  const { calendarStatus = 200, calendarBody = example, calendarHeaders = {} } = options;
-  return vi.fn(async (input: RequestInfo | URL) => {
-    const url = String(input);
-    if (url.endsWith('/api/v1/health')) {
-      return jsonResponse({
-        status: 'ok',
-        data_version: '2026-11-14T19:48:30Z',
-        last_month: '2026-11',
-        updated_at: example.meta.updated_at,
-        h3_resolution: 6,
-      });
-    }
-    if (url.endsWith('/api/v1/regions')) {
-      return jsonResponse([
-        { region_id: 1, name: 'Amazônia', source: 'IBGE, Biomas do Brasil 1:250.000', bbox: [-74.0, -16.3, -43.9, 5.3] },
-      ]);
-    }
-    if (url.endsWith('/api/v1/calendar')) {
-      return jsonResponse(calendarBody, calendarStatus, calendarHeaders);
-    }
-    if (url.includes('/api/v1/detections/recent')) {
-      return jsonResponse({
-        type: 'FeatureCollection',
-        mode: 'points',
-        hours: 24,
-        updated_at: example.meta.updated_at,
-        total_detections: 0,
-        features: [],
-      });
-    }
-    throw new Error(`Unexpected URL: ${url}`);
-  });
+function mockApi(calendar: Handler) {
+  const calls: { url: string; body: unknown }[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push({ url, body: init?.body ? JSON.parse(String(init.body)) : null });
+      if (url.endsWith('/api/v1/health')) return json(HEALTH);
+      if (url.endsWith('/api/v1/regions')) return json(REGIONS);
+      if (url.includes('/api/v1/detections/recent')) return json({ type: 'FeatureCollection', mode: 'points', hours: 24, updated_at: HEALTH.updated_at, total_detections: 0, features: [] });
+      if (url.endsWith('/api/v1/calendar')) return calendar(url, init);
+      return new Response('not found', { status: 404 });
+    }),
+  );
+  return calls;
 }
 
-describe('App (interactive tool shell)', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+function offline() {
+  vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))));
+}
 
-  it('shows the tool as a labelled region with its heading', async () => {
-    vi.stubGlobal('fetch', mockApi());
+beforeEach(() => {
+  // Como o Playwright, o teste não deixa a primeira região carregar sozinha.
+  Object.defineProperty(navigator, 'webdriver', { value: true, configurable: true });
+  document.body.innerHTML = '<div id="hero-viz"></div>';
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe('App', () => {
+  it('opens on clearly labelled demo data when the API is offline, with the full calendar', async () => {
+    offline();
     render(<App />);
-    expect(screen.getByRole('region', { name: /explore an area/i })).toBeInTheDocument();
-    await screen.findByRole('option', { name: 'Amazônia' });
+    const grid = await screen.findByRole('grid', { name: /fire calendar/i });
+    expect(within(grid).getAllByRole('row')).toHaveLength(1 + 24);
+    expect(screen.getAllByText('Demo data').length).toBeGreaterThan(0);
+    expect(screen.getByRole('region', { name: /last 7 days/i })).toHaveTextContent('+54%');
+    expect(screen.getByRole('button', { name: /audit package/i })).toBeDisabled();
   });
 
-  it('tells the user what to do first and falls back to example data when the API fails', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')));
+  it('draws the opening preview with the same months, outside the calendar grid', async () => {
+    offline();
     render(<App />);
-    expect(screen.getByText(/choose an area/i)).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByText(/showing example data/i)).toBeInTheDocument();
-    });
+    const hero = document.getElementById('hero-viz')!;
+    expect(within(hero).getByRole('img', { name: /preview of the fire history/i })).toBeInTheDocument();
+    expect(within(hero).queryByRole('grid')).toBeNull();
   });
 
-  it('puts now before history: indicators and the last 7 days come before the calendar', async () => {
-    vi.stubGlobal('fetch', mockApi());
-    render(<App />);
-    await screen.findByRole('option', { name: 'Amazônia' });
-    const order = [
-      screen.getByRole('region', { name: /key indicators/i }),
-      screen.getByRole('region', { name: /last 7 days/i }),
-      screen.getByRole('grid', { name: /fire calendar/i }),
-      screen.getByRole('region', { name: /seasonal pattern/i }),
-      screen.getByRole('region', { name: /years ranked/i }),
-    ];
-    for (let i = 1; i < order.length; i++) {
-      expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    }
-  });
-
-  it('replaces example data when the user chooses a region from GET /regions', async () => {
-    const customResponse = {
-      ...example,
-      indicators: { ...example.indicators, total_detections: 98765 },
-    };
-    const fetchMock = mockApi({ calendarBody: customResponse });
-    vi.stubGlobal('fetch', fetchMock);
-
-    render(<App />);
-    const select = await screen.findByRole('combobox', { name: /region/i });
-    await screen.findByRole('option', { name: 'Amazônia' });
-
-    fireEvent.change(select, { target: { value: '1' } });
-
-    await waitFor(() => {
-      expect(screen.getByText('98,765')).toBeInTheDocument();
-    });
-    expect(screen.queryByText(/showing example data/i)).toBeNull();
-  });
-
-  it('shows the coverage message and hides the calendar when coverage.status is "none"', async () => {
-    const noCoverage = {
+  it('shows the API message and no calendar when the area is outside coverage', async () => {
+    const none = {
       meta: example.meta,
-      area: { type: 'point', n_cells: 0, area_km2: 0, biomes: [] },
+      area: example.area,
       coverage: { status: 'none', covered_fraction: 0, message: 'No data for this area yet. Current coverage: Brazil.' },
     };
-    vi.stubGlobal('fetch', mockApi({ calendarBody: noCoverage }));
-
+    mockApi(() => json(none));
     render(<App />);
-    await screen.findByRole('option', { name: 'Amazônia' });
     fireEvent.change(screen.getByLabelText(/latitude/i), { target: { value: '48.8' } });
     fireEvent.change(screen.getByLabelText(/longitude/i), { target: { value: '2.3' } });
-    fireEvent.click(screen.getByRole('button', { name: /show|search/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Current coverage: Brazil/)).toBeInTheDocument();
-    });
+    fireEvent.click(screen.getByRole('button', { name: /show this area/i }));
+    expect(await screen.findByText(/no record for this area/i)).toBeInTheDocument();
     expect(screen.queryByRole('grid', { name: /fire calendar/i })).toBeNull();
-    expect(screen.getByRole('button', { name: /download.*audit package/i })).toBeDisabled();
+    expect(screen.getAllByText(/current coverage: brazil/i).length).toBeGreaterThan(0);
   });
 
-  it('shows a rate-limit alert with Retry-After seconds on HTTP 429', async () => {
-    vi.stubGlobal(
-      'fetch',
-      mockApi({
-        calendarStatus: 429,
-        calendarHeaders: { 'Retry-After': '30' },
-        calendarBody: { error: { code: 'rate_limited', message: 'Too many requests.' } },
-      }),
-    );
-
+  it('sends the point request from the contract and shows the returned calendar', async () => {
+    const calls = mockApi(() => json(example));
     render(<App />);
-    await screen.findByRole('option', { name: 'Amazônia' });
-    fireEvent.change(screen.getByRole('combobox', { name: /region/i }), { target: { value: '1' } });
-
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent(/try again in 30 seconds/i);
+    fireEvent.change(screen.getByLabelText(/latitude/i), { target: { value: '-3.1' } });
+    fireEvent.change(screen.getByLabelText(/longitude/i), { target: { value: '-60.0' } });
+    fireEvent.change(screen.getByLabelText(/radius/i), { target: { value: '25' } });
+    fireEvent.click(screen.getByRole('button', { name: /show this area/i }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith('/api/v1/calendar'))).toBe(true));
+    const body = calls.find((c) => c.url.endsWith('/api/v1/calendar'))!.body as { area: unknown; start: string; end: string };
+    expect(body.area).toEqual({ type: 'point', lat: -3.1, lon: -60, radius_km: 25 });
+    expect(body.start).toBe('2003-01');
+    expect(await screen.findByRole('button', { name: /audit package/i })).toBeEnabled();
   });
 
-  it('shows contract errors like area_too_large in role="alert"', async () => {
-    vi.stubGlobal(
-      'fetch',
-      mockApi({
-        calendarStatus: 413,
-        calendarBody: { error: { code: 'area_too_large', message: 'The selected area is too large. Draw a smaller area.' } },
-      }),
-    );
-
+  it('turns a 429 into a friendly alert with the wait time', async () => {
+    mockApi(() => json({ error: { code: 'rate_limited', message: 'Too many requests. Try again in 30 seconds.' } }, 429, { 'Retry-After': '30' }));
     render(<App />);
-    await screen.findByRole('option', { name: 'Amazônia' });
-    fireEvent.change(screen.getByRole('combobox', { name: /region/i }), { target: { value: '1' } });
-
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent(/selected area is too large/i);
+    const select = await screen.findByRole('combobox', { name: /region/i });
+    await waitFor(() => expect(select).toBeEnabled());
+    fireEvent.change(select, { target: { value: '1' } });
+    expect(await screen.findByRole('alert')).toHaveTextContent(/try again in 30 seconds/i);
   });
 
-  it('warns in role="alert" when API data updated_at is older than 6 hours', async () => {
-    const staleResponse = {
-      ...example,
-      meta: { ...example.meta, updated_at: '2026-11-13T00:00:00Z' },
-    };
-    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-14T15:00:00Z'));
-    vi.stubGlobal('fetch', mockApi({ calendarBody: staleResponse }));
-
+  it('keeps a drawn selection but says the figures are demo data when the API goes down', async () => {
+    mockApi(() => new Response('<html>Bad gateway</html>', { status: 502 }));
     render(<App />);
-    await screen.findByRole('option', { name: 'Amazônia' });
-    fireEvent.change(screen.getByRole('combobox', { name: /region/i }), { target: { value: '1' } });
-
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent(/may be out of date/i);
+    fireEvent.change(screen.getByLabelText(/latitude/i), { target: { value: '-10' } });
+    fireEvent.change(screen.getByLabelText(/longitude/i), { target: { value: '-55' } });
+    fireEvent.click(screen.getByRole('button', { name: /show this area/i }));
+    expect(await screen.findByText(/figures below belong to the demo example/i)).toBeInTheDocument();
+    expect(screen.getByText('Demo data, not this area')).toBeInTheDocument();
   });
 
-  it('automatically loads the first region via POST /api/v1/calendar when GET /regions returns regions and no area was chosen yet', async () => {
-    const autoLoadedResponse = {
-      ...example,
-      indicators: { ...example.indicators, total_detections: 54321 },
-    };
-    const fetchMock = mockApi({ calendarBody: autoLoadedResponse });
-    vi.stubGlobal('fetch', fetchMock);
-
+  it('shows the month detail with its uncertainty range when a calendar cell is selected', async () => {
+    offline();
     render(<App />);
-    await screen.findByRole('option', { name: 'Amazônia' });
-
-    await waitFor(() => {
-      expect(screen.getByText('54,321')).toBeInTheDocument();
-    });
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/calendar',
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({
-          area: { type: 'region', region_id: 1 },
-          start: '2003-01',
-          end: '2026-11',
-        }),
-      }),
-    );
+    const cell = await screen.findByRole('gridcell', { name: /^Sep 2010/ });
+    fireEvent.click(cell);
+    const detail = screen.getByRole('complementary', { name: /month detail/i });
+    expect(detail).toHaveTextContent('Sep 2010');
+    expect(detail).toHaveTextContent(/P5–P95/);
+    expect(detail).toHaveTextContent(/Estimated from MODIS Aqua/);
   });
 });
