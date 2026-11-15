@@ -2,9 +2,8 @@ import { scaleLinear } from 'd3-scale';
 import type { SeasonalityMonth } from '../api/types';
 import { formatCount } from '../format';
 import { buildSeasonality } from '../summary/summaryModel';
+import { NARROW_QUERY, useMediaQuery } from '../ui/useMediaQuery';
 
-const W = 600;
-const H = 250;
 const M = { top: 16, right: 8, bottom: 26, left: 44 };
 
 interface SeasonalChartProps {
@@ -14,6 +13,10 @@ interface SeasonalChartProps {
 }
 
 export function SeasonalChart({ seasonality, includesEstimatedYears, highlightMonthIndex }: SeasonalChartProps) {
+  // No celular o SVG tem quase a largura da tela, e o texto fica no tamanho do CSS.
+  const narrow = useMediaQuery(NARROW_QUERY);
+  const W = narrow ? 340 : 600;
+  const H = narrow ? 220 : 250;
   const model = buildSeasonality(seasonality);
   const y = scaleLinear().domain([0, model.maxValue || 1]).nice().range([H - M.bottom, M.top]);
   const band = (W - M.left - M.right) / 12;
