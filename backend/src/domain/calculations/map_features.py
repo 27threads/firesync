@@ -10,9 +10,13 @@ PRIORITY_ORDER = {'critical': 0, 'attention': 1}
 
 def alerts_block(rows, rules):
     """Level of each resolution 4 cell with recent fire, and the cells to look at first (Critical, then Attention)."""
-    if rules is None or rows.get('cell_daily') is None:
+    if rules is None:
         return None, {}
-    levels = cell_alerts(rows['data_through'], rows['cell_daily'], rules, rows['coverage_start'])
+    levels = rows.get('cell_levels')      # already computed (and cached per data version) by the repository
+    if levels is None and rows.get('cell_daily') is not None:
+        levels = cell_alerts(rows['data_through'], rows['cell_daily'], rules, rows['coverage_start'])
+    if levels is None:
+        return None, {}
     priority = []
     for cell, info in levels.items():
         if info['alert_level'] in PRIORITY_ORDER:

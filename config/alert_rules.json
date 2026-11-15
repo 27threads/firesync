@@ -23,7 +23,7 @@
     "outcome": "next 14 days above the seasonal 90th percentile with at least 10 VIIRS detections",
     "unit": "H3 resolution 4 cell (about 1,770 km2)",
     "period": "2013-2024",
-    "source": "backtest of rule v1 on the public FIRMS VIIRS S-NPP series (RFC 0003); it reproduces the database run (gain +6.1 vs +6.0, PR #85)",
+    "source": "backtest of rule v1 (RFC 0003), run on the public FIRMS VIIRS S-NPP series and confirmed on the database (H3 res 4, 2013-2024): Normal 2.58%, Attention 10.69%, Critical 26.58%, overall 4.21%",
     "share_followed_by_high": {
       "normal": 0.026,
       "attention": 0.107,

@@ -199,10 +199,29 @@ def test_map_skips_alert_levels_when_too_many_cells_are_in_view(api_database, al
     pool, _, cell = api_database
     with postgres_api.PostgresApiRepository(pool, alert_rules).read() as reader:
         rows = reader.map_rows(MapQuery.parse('-61,-4,-59,-2', '24', '4'), NOW)
-        assert set(rows['cell_daily']) == {h3.cell_to_parent(h3.int_to_str(cell), 4)}
+        assert set(rows['cell_levels']) == {h3.cell_to_parent(h3.int_to_str(cell), 4)}
         monkeypatch.setattr(postgres_api, 'MAX_ALERT_CELLS', 0)
         rows = reader.map_rows(MapQuery.parse('-61,-4,-59,-2', '24', '4'), NOW)
-    assert rows['cell_daily'] is None and rows['data_through'] == date(2026, 11, 14)
+    assert rows['cell_levels'] is None and rows['data_through'] == date(2026, 11, 14)
+
+
+def test_map_levels_of_a_cell_are_computed_once_per_data_version_for_any_viewport(api_database, alert_rules, monkeypatch):
+    """Revisão do PR #86: arrastar ou dar zoom no mapa não pode voltar a buscar o histórico de 12 anos."""
+    from backend.adapters.outbound.postgres import api as postgres_api
+    from backend.domain.models.map_query import MapQuery
+    pool, _, cell = api_database
+    repository = postgres_api.PostgresApiRepository(pool, alert_rules)
+    computed = []
+    original = postgres_api.PostgresApiReader._compute_levels
+    monkeypatch.setattr(postgres_api.PostgresApiReader, '_compute_levels',
+                        lambda self, parents, through: computed.append(sorted(parents)) or original(self, parents, through))
+    with repository.read() as reader:
+        first = reader.map_rows(MapQuery.parse('-61,-4,-59,-2', '24', '4'), NOW)
+    with repository.read() as reader:        # another viewport and another zoom over the same cell
+        second = reader.map_rows(MapQuery.parse('-62,-5,-58,-1', '72', '5'), NOW)
+    assert len(computed) == 1
+    parent = h3.cell_to_parent(h3.int_to_str(cell), 4)
+    assert first['cell_levels'][parent] == second['cell_levels'][parent]
 
 
 def test_map_cache_expires_detections_when_time_moves_without_a_pipeline_update(api_database, alert_rules):

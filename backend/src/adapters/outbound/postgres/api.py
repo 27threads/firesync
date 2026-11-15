@@ -7,12 +7,13 @@ from threading import Lock
 import h3
 from psycopg.rows import dict_row
 
+from backend.adapters.outbound.postgres.cell_level_cache import CellLevelCache
 from backend.adapters.outbound.postgres.history import PostgresHistoryRepository
 from backend.application.audit import DETECTION_LIMIT
 from backend.domain.models.error import CalendarError
 from backend.domain.models.month import SATELLITE_SWITCHES, Month
 from backend.domain.intensity import intensity_class
-from backend.domain.calculations.cell_alerts import history_ranges
+from backend.domain.calculations.cell_alerts import cell_alerts, history_ranges
 from backend.domain.calculations.map_features import ALERT_RESOLUTION
 
 POINT_LIMIT = 50_000
@@ -75,6 +76,7 @@ class PostgresApiRepository:
         self.pool, self.rules = pool, rules
         self.factor_versions = OrderedDict()
         self.factor_lock = Lock()
+        self.cell_levels = CellLevelCache()
 
     @contextmanager
     def read(self):
@@ -200,7 +202,15 @@ class PostgresApiReader(PostgresHistoryRepository):
                                 (now.date(),))
             through = self.cursor.fetchone()['through']
         if not parents or through is None or len(parents) > MAX_ALERT_CELLS:
-            return {'cell_daily': None, 'data_through': through, 'coverage_start': VIIRS_START}
+            return {'cell_levels': None, 'cell_daily': None, 'data_through': through, 'coverage_start': VIIRS_START}
+        # The level of a cell depends on the data, not on the viewport: keep it per data version (PR #86 review),
+        # so dragging or zooming the map only computes the cells not seen yet.
+        meta = self.meta()
+        levels = self.repository.cell_levels.levels((meta['updated_at'], meta['data_version'], through), sorted(parents),
+                                                    lambda missing: self._compute_levels(missing, through))
+        return {'cell_levels': levels, 'cell_daily': None, 'data_through': through, 'coverage_start': VIIRS_START}
+
+    def _compute_levels(self, parents, through):
         child_to_parent = {h3.str_to_int(child): parent for parent in parents
                            for child in h3.cell_to_children(parent, DATABASE_RESOLUTION)}
         ranges = history_ranges(through, self.repository.rules)
@@ -212,4 +222,4 @@ class PostgresApiReader(PostgresHistoryRepository):
         for row in self.cursor.fetchall():
             daily = cell_daily[child_to_parent[row['h3']]]
             daily[row['day']] = daily.get(row['day'], 0) + row['detections']
-        return {'cell_daily': cell_daily, 'data_through': through, 'coverage_start': VIIRS_START}
+        return cell_alerts(through, cell_daily, self.repository.rules, VIIRS_START)
