@@ -93,6 +93,19 @@ O front estático fica no Cloudflare; PostgreSQL/PostGIS, API, job NRT, job de r
 
 **Ambientes:** desenvolvimento local com Vite/API; integração com PostGIS descartável e dados sintéticos; produção nos endereços acima. Não há homologação permanente separada documentada. Use versões compatíveis com os manifests, lockfiles e imagens do projeto; valide atualizações no CI antes de publicar.
 
+## 5. QA
+
+| Validação | Evidência prevista no repositório |
+| --- | --- |
+| Requisitos e regressão | Testes de domínio, contratos HTTP, Vitest e casos de regressão antes das correções. |
+| Integração | PostGIS descartável, migrations, pipeline e repositórios da API. |
+| Jornadas e aceitação | Playwright em desktop/celular e conferência da carga real pelo roteiro M2. |
+| Desempenho e smoke | Medição das consultas no banco real; health, calendário, mapa e exportação após deploy. |
+
+Processo: identificar requisito e critério → preparar dados e teste → executar → corrigir e repetir a regressão → registrar resultado no PR. Entrada: contrato e ambiente definidos. Saída: verificações aplicáveis aprovadas, falhas e limitações explicitadas e revisão concluída.
+
+A CI exige cobertura mínima de **97,1% no backend**; o pipeline usa o limite de sua `.coveragerc`. PRs apenas de Markdown dispensam as suítes de código pela regra da esteira. Cobertura, falhas, latência e atualização dos dados são evidências distintas. Detalhes: [testes](docs/testes.md) e [validação com dados reais](docs/validacao-api-eduardo.md).
+
 ## Uso de IA
 
 | Parte | Ferramenta | Como foi usada |
