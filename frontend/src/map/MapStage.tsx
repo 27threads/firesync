@@ -7,6 +7,7 @@ import type {
   RecentHours,
 } from '../api/types';
 import { bboxToPolygon, closePolygonRing, DEFAULT_MAP_BBOX } from '../controls/areaPeriodModel';
+import { BLUE_MARBLE_TILES, SURFACE_VIEW } from '../hero/globeTransition';
 import { loadLeafletWithGeoman, type LeafletModule } from '../controls/leafletLoader';
 import {
   computeHexagonDomain,
@@ -32,6 +33,14 @@ interface DragBox {
 interface MapStageProps {
   shape: MapShape;
   onSelectPolygon: (geometry: GeoJsonPolygon) => void;
+  /** Com o exemplo na tela, o mapa abre onde a descida do globo termina, em vez de enquadrar a área. */
+  startOnArrival?: boolean;
+}
+
+// O mapa continua a descida da abertura: mesmo centro e mesmo zoom do fim do globo (SURFACE_VIEW).
+export function arrivalView(startOnArrival: boolean): { center: [number, number]; zoom: number } | null {
+  if (!startOnArrival) return null;
+  return { center: [SURFACE_VIEW.latitude, SURFACE_VIEW.longitude], zoom: SURFACE_VIEW.zoom };
 }
 
 type DetectionsState = 'idle' | 'ready' | 'unavailable';
@@ -53,13 +62,14 @@ const GIBS = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best';
 const GIBS_ATTRIBUTION =
   'Imagery: <a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs">NASA EOSDIS GIBS</a> · Coastlines: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
-// Mapas base do NASA GIBS, sem chave de API. Black Marble é o próprio VIIRS de noite: escuro e da NASA.
+// Mapas base do NASA GIBS, sem chave de API. O Blue Marble é a mesma camada da descida do globo;
+// o Black Marble é o próprio VIIRS de noite.
 function applyBasemapLayers(L: LeafletModule, group: LTypes.LayerGroup, basemap: BasemapId): void {
   group.clearLayers();
   const base =
     basemap === 'black-marble'
       ? `${GIBS}/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png`
-      : `${GIBS}/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg`;
+      : BLUE_MARBLE_TILES;
   L.tileLayer(base, { maxZoom: 12, maxNativeZoom: 8, attribution: GIBS_ATTRIBUTION }).addTo(group);
   L.tileLayer(`${GIBS}/Coastlines_15m/default/GoogleMapsCompatible_Level13/{z}/{y}/{x}.png`, {
     maxZoom: 12,
@@ -137,8 +147,10 @@ function renderRecentDetections(
   }
 }
 
-export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
+export function MapStage({ shape, onSelectPolygon, startOnArrival = false }: MapStageProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const startOnArrivalRef = useRef(startOnArrival);
+  startOnArrivalRef.current = startOnArrival;
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const leafletRef = useRef<LeafletModule | null>(null);
   const mapRef = useRef<LTypes.Map | null>(null);
@@ -148,7 +160,7 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
   const currentBboxRef = useRef<[number, number, number, number]>(DEFAULT_MAP_BBOX);
   const currentZoomRef = useRef<number>(4);
   const drawModeRef = useRef<DrawMode>(null);
-  const basemapRef = useRef<BasemapId>('black-marble');
+  const basemapRef = useRef<BasemapId>('blue-marble');
   const showHotSpotsRef = useRef<boolean>(true);
   const hotSpotsHoursRef = useRef<RecentHours>(24);
   // Os pedidos de focos recentes nunca são cancelados: um contador descarta respostas antigas.
@@ -163,7 +175,7 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
   const shapeRef = useRef<MapShape>(shape);
   const pendingFocusRef = useRef<[number, number] | null>(null);
 
-  const [basemap, setBasemap] = useState<BasemapId>('black-marble');
+  const [basemap, setBasemap] = useState<BasemapId>('blue-marble');
   const [drawMode, setDrawMode] = useState<DrawMode>(null);
   const [polygonPoints, setPolygonPoints] = useState<[number, number][]>([]);
   const [dragBox, setDragBox] = useState<DragBox | null>(null);
@@ -248,7 +260,9 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
         const selectionGroup = L.layerGroup().addTo(map);
         applyBasemapLayers(L, baseGroup, basemapRef.current);
         const initialBounds = renderShape(L, selectionGroup, shapeRef.current);
-        if (initialBounds) map.fitBounds(initialBounds, { padding: [48, 48], maxZoom: 7, animate: false });
+        const arrival = arrivalView(startOnArrivalRef.current);
+        if (arrival) map.setView(arrival.center, arrival.zoom, { animate: false });
+        else if (initialBounds) map.fitBounds(initialBounds, { padding: [48, 48], maxZoom: 7, animate: false });
         currentZoomRef.current = Math.round(map.getZoom() || 4);
 
         const updateBoundsAndFetch = () => {
@@ -406,7 +420,8 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
       return;
     }
     const bounds = renderShape(L, selectionGroup, shape);
-    if (bounds) map.fitBounds(bounds, { padding: [48, 48], maxZoom: 7, animate: false });
+    // Quando o mapa acaba de carregar no enquadramento da chegada, a área do exemplo só é desenhada.
+    if (bounds && (changed || !startOnArrivalRef.current)) map.fitBounds(bounds, { padding: [48, 48], maxZoom: 7, animate: false });
   }, [shape, mapReady, requestRecentDetections]);
 
   // Depois do efeito acima: se o clique na lista carregou o mapa, o enquadramento da área não desfaz o foco.

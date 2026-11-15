@@ -53,7 +53,7 @@ firesync/
 │   └── data/              ZIPs do FIRMS (Brasil, 2024, SP) para testes
 ├── backend/               API que serve o calendário, a janela recente e o export (frente C)
 ├── frontend/              aplicação web: mapa, calendário, alerta, downloads (frente D)
-├── lovable/               front feito no Lovable (TanStack Start), com a abertura do globo e dos satélites
+├── lovable/               protótipo feito no Lovable (TanStack Start); a abertura do globo foi portada para `frontend/src/hero/`
 ├── config/                regras que mudam sem mudar o código, como o alert_rules.json
 └── infra/                 deploy na VPS: docker-compose com Cloudflare Tunnel, .env.example (frente C)
 ```
@@ -159,12 +159,13 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `docs/pagina-projeto.md` (C9) | Claude Code (Claude Opus 5.5) | Texto em inglês da página do projeto, escrito a partir dos docs do repo, da tela de Método e desta tabela, com os números copiados dos documentos. A equipe revisa no PR |
 | Assets de `lovable/` no git (`src/assets/`: texturas da Terra, `aqua.glb`, `suomi-npp.glb`, `country-boundaries.geojson`; imports em `OrbitalScene.tsx`, `AreaMap.tsx`, `routes/index.tsx`) | Claude Code (Claude Opus 5.5) | Troca dos ponteiros `*.asset.json` (só funcionavam na hospedagem do Lovable) por arquivos das fontes públicas: modelos da NASA com o Draco decodificado, textura gerada da camada GIBS do mapa e GeoJSON sem alteração. O Terra rotulado como Aqua virou o modelo do Aqua. Conferido no navegador local. A equipe revisa no PR |
 | `RISK_MAX_AGE_DAYS` na tabela de variáveis do `backend/README.md` e status de RNF03, RNF09 e B9 (`docs/requisitos.md`, `docs/tarefas.md`, `docs/deploy.md`, `infra/.env.example`) | Claude Code (Claude Opus 5.5) | Texto escrito a partir dos logs do `job-nrt` e do `job-risco` e do `docker stats` da VPS em 15/11, colados pela equipe. A equipe revisa no PR |
+| Abertura com o globo em `frontend/` (`src/hero/OrbitalOpening.tsx`, `OrbitalScene.tsx`, `globeTransition.ts`, `openingCopy.ts`, `assets/`, testes) e indicadores em destaque do RD06 (`src/summary/indicatorsModel.ts`, `IndicatorRow.tsx`, teste) | Claude Code (Claude Opus 5.5) | Porte da abertura de `lovable/` para o front oficial (Vite + React), com a descida terminando no mapa do explorador (mesmo enquadramento e mesma camada do GIBS), correção da emenda pontilhada da textura, tema claro pelas variáveis do `styles.css` e fileira de indicadores com os campos `indicators` da API. Teste antes do código; conferido no navegador no desktop e no celular. A equipe revisa no PR |
 
 ## Dados e créditos
 
 - Focos de calor: [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) (MODIS C6.1 e VIIRS C2)
 - Polígonos de biomas: IBGE, Biomas do Brasil 1:250.000
 - Série de validação: INPE, Programa Queimadas
-- Textura da Terra na abertura (`lovable/`): [NASA GIBS](https://www.earthdata.nasa.gov/gibs), camada `BlueMarble_ShadedRelief_Bathymetry`
+- Textura da Terra na abertura (`frontend/src/hero/` e `lovable/`): [NASA GIBS](https://www.earthdata.nasa.gov/gibs), camada `BlueMarble_ShadedRelief_Bathymetry`
 - Modelos 3D do Aqua e do Suomi NPP: [NASA 3D Resources](https://github.com/nasa/NASA-3D-Resources)
 - Limites de países: [datasets/geo-countries](https://github.com/datasets/geo-countries) (Natural Earth)
