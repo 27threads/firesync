@@ -207,6 +207,26 @@ def test_rate_limit_retry_and_ip_isolation(repository):
         assert other.get('/api/v1/health').status_code == 200
 
 
+def test_rate_limit_behind_cloudflare_uses_trusted_client_ip_header(repository):
+    # Behind Cloudflare Tunnel every request reaches uvicorn from the same cloudflared socket.
+    from backend.adapters.inbound.http.app import create_app
+    app = create_app(repository=repository, clock=lambda: NOW, limits={'general': 1, 'calendar': 1, 'export': 1},
+                     rate_window=60, client_ip_header='CF-Connecting-IP')
+    with TestClient(app) as client:
+        assert client.get('/api/v1/health', headers={'CF-Connecting-IP': '198.51.100.1'}).status_code == 200
+        assert client.get('/api/v1/health', headers={'CF-Connecting-IP': '198.51.100.2'}).status_code == 200
+        assert client.get('/api/v1/health', headers={'CF-Connecting-IP': '198.51.100.1'}).status_code == 429
+
+
+def test_rate_limit_ignores_client_ip_header_when_not_configured(repository):
+    from backend.adapters.inbound.http.app import create_app
+    app = create_app(repository=repository, clock=lambda: NOW, limits={'general': 1, 'calendar': 1, 'export': 1},
+                     rate_window=60)
+    with TestClient(app) as client:
+        assert client.get('/api/v1/health', headers={'CF-Connecting-IP': '198.51.100.1'}).status_code == 200
+        assert client.get('/api/v1/health', headers={'CF-Connecting-IP': '198.51.100.2'}).status_code == 429
+
+
 def test_cache_refresh_etag_and_cors(client, repository):
     first = client.post('/api/v1/calendar', json=REQUEST)
     cached = client.post('/api/v1/calendar', json=REQUEST)

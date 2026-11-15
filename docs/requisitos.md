@@ -54,10 +54,10 @@ Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele
 
 Não vêm do texto do desafio. São necessários porque o sistema é público e precisa estar sempre atualizado para o público de emergência (RD07).
 
-- [ ] **RNF06:** **Limite de requisições na API.** A API é pública, e uma área grande (até 250 mil células) custa caro. Sem limite, uma pessoa ou um robô consegue derrubar o servidor. ⏳ **parcial:** limite por IP implementado na API, configurável, com `429 rate_limited` e `Retry-After` testados. Segundo limite no servidor web aguarda C7.
+- [ ] **RNF06:** **Limite de requisições na API.** A API é pública, e uma área grande (até 250 mil células) custa caro. Sem limite, uma pessoa ou um robô consegue derrubar o servidor. ⏳ **parcial:** limite por IP implementado na API, configurável, com `429 rate_limited` e `Retry-After` testados. Segundo limite: regra de rate limiting no WAF do Cloudflare, configurada no painel ([deploy.md](deploy.md)).
   - Limite por IP, com valores em configuração. Padrões implementados: 60 pedidos por minuto no geral, 10 por minuto em `POST /calendar` e 2 por minuto em `POST /export` ([variáveis](../backend/README.md)).
   - Acima do limite: HTTP `429` com o código `rate_limited` e o cabeçalho `Retry-After`.
-  - Um segundo limite no servidor web (ver `infra/`), antes de o pedido chegar à API.
+  - Um segundo limite no Cloudflare (WAF), antes de o pedido chegar à API.
 - [ ] **RNF07:** **Monitoramento.** ⏳ **parcial:** front avisa sobre dados com mais de 6 h; API registra endpoint, duração, células e status; pipeline e job NRT gravam logs estruturados em JSON ([pipeline-dados.md](pipeline-dados.md), seção "Logs estruturados"). Canal de aviso à equipe aguarda deploy.
   - **Dado velho:** se o `updated_at` passar de **6 horas** (duas rodadas do job NRT perdidas), a equipe recebe um aviso, e a tela mostra ao usuário que os dados podem estar desatualizados. Para o público de emergência, mostrar dado velho como se fosse atual é pior do que avisar.
   - **Logs da API:** cada pedido registra o endpoint, o tempo de resposta, o número de células da área e o status HTTP.

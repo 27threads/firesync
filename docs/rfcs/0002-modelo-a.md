@@ -1,6 +1,6 @@
 # RFC 0002: Modelo A, a chance de o MODIS ver um fogo do VIIRS (caminho C)
 
-- **Status:** Decidido pelo Weberson em 14/11/2026 (caminho C). **Etapa A concluída em 14/11/2026** (código e resultado no PR #53). Etapa B assumida pela frente B com os arquivos anuais públicos do FIRMS, não concluída
+- **Status:** Decidido pelo Weberson em 14/11/2026 (caminho C). **Etapa A concluída em 14/11/2026** (código e resultado no PR #53). **Etapa B concluída em 15/11/2026**, pela frente B com os arquivos anuais públicos do FIRMS (resultado em [decisoes-harmonizacao.md](../decisoes-harmonizacao.md), seção 5)
 - **Autor:** Weberson (frente B)
 - **Data:** 2026-11-14
 
@@ -84,7 +84,7 @@ A ordem de execução do caminho C. Cada passo só começa depois do anterior, e
 | 8 | Feito: `docs/img/modelo/curva_deteccao_2024.png`, com a legenda sugerida para a tela de Método |
 | 9 | Feito: PR #53, esteira verde, aguardando revisão |
 
-**Ainda não feitos:** a etapa B (passos 10 a 12), os passos 13 e 14 (registro final e entrega à frente D, que dependem da revisão e do merge dos PRs #26, #48 e #53) e o passo 0.1 (resposta dos revisores às duas perguntas do RFC).
+**Situação em 15/11/2026:** a etapa B (passos 10 a 12) está feita e registrada; os PRs #26, #48 e #53 entraram na `main`, e a curva de detecção está na tela de Método.
 
 ### Etapa B: modelo com o histórico (frente B, domingo de manhã, opcional)
 
@@ -94,7 +94,7 @@ A ordem de execução do caminho C. Cada passo só começa depois do anterior, e
 | 11 | Rodar com os arquivos anuais, **sem acessar o banco**: treino em 2019 a 2021, teste em 2022 a 2024, e gerar os CSVs | Frente B |
 | 12 | Comparar com a etapa A e ver se a deriva do Aqua atrapalha nos anos recentes | Frente B |
 
-A frente B assumiu a execução com os arquivos públicos do FIRMS, sem depender da disponibilidade da frente A ou do banco de teste. Só entra se couber sem atrasar as entregas essenciais; se não couber, fica declarado como próximo passo.
+A frente B executou com os arquivos públicos do FIRMS, sem depender da frente A nem do banco de teste. O código está em `harmonizacao/modelo_a.py` (`--pasta`, `--treino`, `--teste`, `--cache`) e processa um ano de cada vez, em cerca de 20 segundos por ano. Resultado: o modelo treinado em 2019 a 2021 vale em 2022 a 2024, e a deriva do Aqua não o desalinha (AUC de 0,72 a 0,75 e erro de calibração de até 1,3 ponto percentual). Detalhes em `decisoes-harmonizacao.md`, seção 5.
 
 ### Registro e entrega
 
@@ -118,7 +118,7 @@ O gradient boosting precisa do **scikit-learn** no `requirements.txt` do `data-p
 
 - **Viés da regra dos 50 km:** ela descarta justamente as áreas onde o VIIRS viu fogo e o MODIS não viu nada perto, então a chance de detecção sai mais alta do que é.
 - **O pixel do MODIS onde ele não detectou** é aproximado pelo tamanho mediano dos pixels daquela passagem.
-- **Etapa A com um ano só (2024)** e corte no espaço: não mede a deriva do Aqua. Isso fica para a etapa B.
+- **Etapa A com um ano só (2024)** e corte no espaço: não mede a deriva do Aqua. A etapa B mediu, com corte no tempo (2019 a 2021 para treino e 2022 a 2024 para teste), e o modelo se manteve. A janela de 90 minutos nos três anos de teste continua misturando a sensibilidade do sensor com a mudança do fogo entre as passagens.
 - **O modelo não converte a série histórica.** A conversão do calendário é o fator por contagens.
 
 ## Impacto nas frentes

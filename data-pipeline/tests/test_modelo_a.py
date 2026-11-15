@@ -210,6 +210,102 @@ def test_ponta_a_ponta_com_dados_inventados_recupera_que_so_fogo_forte_e_visto()
     assert "janela" in r["relatorio"]
 
 
+def raw_ano(ano, forca=1.0, semente=0, n=5000):
+    """Arquivos brutos INVENTADOS de um ano: a chance de o MODIS ver cresce com a potência, vezes `forca` (deriva)."""
+    rng = np.random.default_rng(semente + ano)
+    frp = rng.lognormal(1.5, 1.0, n)
+    lat, lon = rng.uniform(-9.9, -9.1, n), rng.uniform(-59.9, -59.1, n)
+    dia = rng.integers(1, 20, n)
+    visto = rng.random(n) < forca / (1 + np.exp(-(1.2 * np.log(frp) - 3.0)))
+    comum = {"acq_time": "1800", "confidence": "n", "daynight": "D", "type": 0}
+    data = [f"{ano}-08-{d:02d}" for d in dia]
+    snpp = pd.DataFrame({"latitude": lat, "longitude": lon, "brightness": 330.0, "bright_t31": 290.0, "scan": 0.4,
+                         "track": 0.4, "acq_date": data, "satellite": "N", "version": "2", "frp": frp, **comum})
+    aqua = pd.DataFrame({"latitude": lat[visto], "longitude": lon[visto], "brightness": 330.0, "bright_t31": 290.0,
+                         "scan": 1.0, "track": 1.0, "acq_date": [data[i] for i in np.where(visto)[0]],
+                         "satellite": "Aqua", "version": "61.03", "frp": frp[visto] * 4, **{**comum, "confidence": "80"}})
+    return aqua, snpp
+
+
+def pares_por_ano(anos_e_forca, biomas):
+    return {ano: m.preparar_ano(*raw_ano(ano, forca), biomas, janela=10) for ano, forca in anos_e_forca.items()}
+
+
+def test_preparar_ano_guarda_so_os_fogos_olhados_e_os_totais():
+    biomas = m.preparar_biomas(biomas_de_teste())
+    r = m.preparar_ano(*raw_ano(2019), biomas, janela=10)
+    assert r["totais"]["ano"] == 2019 and r["totais"]["snpp"] > 0 and r["totais"]["aqua"] > 0
+    assert r["totais"]["olhando"] == len(r["olhados"]) and r["totais"]["janela"] == 10
+    assert r["olhados"]["olhando"].all() and {"viu", "frp", "bioma", "bright_ti4"} <= set(r["olhados"].columns)
+    assert set(r["olhados"]["acq_date"].str[:4]) == {"2019"}
+
+
+def test_temporal_treina_so_nos_anos_de_treino_e_mede_cada_ano_de_teste():
+    biomas = m.preparar_biomas(biomas_de_teste())
+    pares = pares_por_ano({2019: 1.0, 2020: 1.0, 2021: 1.0, 2022: 1.0, 2023: 1.0}, biomas)
+    r = m.executar_temporal(pares, [2019, 2020, 2021], [2022, 2023], biomas)
+    assert list(r["medidas"]["ano"].unique()) == [2022, 2023]
+    assert set(r["medidas"]["modelo"]) == {"referencia", "tabela", "boosting"}
+    assert "2019" in r["relatorio"] and "2022" in r["relatorio"]
+    boosting = r["medidas"].query("modelo == 'boosting'").set_index("ano")
+    assert (boosting["auc"] > 0.7).all()                            # sem deriva, o modelo vale nos anos que não viu
+    assert (boosting["taxa_prevista"] - boosting["taxa_observada"]).abs().max() < 0.03
+
+
+def test_temporal_mostra_a_deriva_quando_o_modis_passa_a_ver_menos():
+    """Plantado: em 2023 o MODIS vê só 60% do que via. A chance prevista fica acima da observada naquele ano."""
+    biomas = m.preparar_biomas(biomas_de_teste())
+    pares = pares_por_ano({2019: 1.0, 2020: 1.0, 2022: 1.0, 2023: 0.6}, biomas)
+    r = m.executar_temporal(pares, [2019, 2020], [2022, 2023], biomas)
+    b = r["medidas"].query("modelo == 'boosting'").set_index("ano")
+    assert abs(b.loc[2022, "taxa_prevista"] - b.loc[2022, "taxa_observada"]) < 0.03
+    assert b.loc[2023, "taxa_prevista"] - b.loc[2023, "taxa_observada"] > 0.08
+    curva = r["curva_por_ano"].query("bioma == 'todos' and faixa == '25+'").set_index("ano")
+    assert curva.loc[2023, "taxa_viu"] < curva.loc[2022, "taxa_viu"] - 0.1
+
+
+def test_temporal_recusa_ano_de_teste_que_tambem_e_de_treino_ou_sem_dados():
+    biomas = m.preparar_biomas(biomas_de_teste())
+    pares = pares_por_ano({2019: 1.0, 2020: 1.0}, biomas)
+    with pytest.raises(ValueError, match="treino e teste"):
+        m.executar_temporal(pares, [2019, 2020], [2020], biomas)
+    with pytest.raises(ValueError, match="sem dados"):
+        m.executar_temporal(pares, [2019], [2021], biomas)
+
+
+def csvs_por_ano(pasta, anos):
+    for ano in anos:
+        aqua, snpp = raw_ano(ano)
+        aqua.to_csv(pasta / f"modis_{ano}_Brazil.csv", index=False)
+        snpp.to_csv(pasta / f"viirs-snpp_{ano}_Brazil.csv", index=False)
+    biomas_de_teste().to_file(pasta / "biomas.geojson", driver="GeoJSON")
+
+
+def test_linha_de_comando_temporal_le_a_pasta_por_ano_e_grava_os_arquivos(tmp_path, monkeypatch):
+    csvs_por_ano(tmp_path, (2019, 2020, 2021))
+    monkeypatch.setattr(sys, "argv", ["modelo_a.py", "--pasta", str(tmp_path), "--treino", "2019", "2020", "--teste", "2021",
+                                      "--biomas", str(tmp_path / "biomas.geojson"), "--saida", str(tmp_path / "saida"),
+                                      "--janela", "10"])
+    m.main()
+    for nome in ("medidas_por_ano.csv", "curva_por_ano.csv", "totais_por_ano.csv", "relatorio_temporal.txt"):
+        assert (tmp_path / "saida" / nome).exists(), nome
+
+
+def test_linha_de_comando_temporal_reaproveita_o_cache_dos_pares(tmp_path, monkeypatch):
+    csvs_por_ano(tmp_path, (2019, 2020))
+    monkeypatch.setattr(sys, "argv", ["modelo_a.py", "--pasta", str(tmp_path), "--treino", "2019", "--teste", "2020",
+                                      "--biomas", str(tmp_path / "biomas.geojson"), "--saida", str(tmp_path / "saida"),
+                                      "--janela", "10", "--cache", str(tmp_path / "cache")])
+    m.main()
+    assert {p.name for p in (tmp_path / "cache").iterdir()} == {"pares_2019_j10.parquet", "pares_2020_j10.parquet"}
+    primeiro = (tmp_path / "saida" / "medidas_por_ano.csv").read_text()
+    for ano in (2019, 2020):                                       # sem os CSV, só o cache: o resultado sai igual
+        (tmp_path / f"modis_{ano}_Brazil.csv").unlink()
+        (tmp_path / f"viirs-snpp_{ano}_Brazil.csv").unlink()
+    m.main()
+    assert (tmp_path / "saida" / "medidas_por_ano.csv").read_text() == primeiro
+
+
 def test_linha_de_comando_grava_os_arquivos(tmp_path, monkeypatch):
     aqua, snpp = raw_aqua_e_snpp()
     aqua.to_csv(tmp_path / "aqua.csv", index=False)

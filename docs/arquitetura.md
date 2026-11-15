@@ -31,7 +31,7 @@ Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir"
 | 9 | Formato do download (RF13) | PNG, PDF, CSV | ZIP de auditoria com CSVs (`POST /export`); o PNG do calendário é gerado no front ([requisitos.md](requisitos.md), seção 4; [api.md](api.md)) | equipe |
 | 10 | Granularidade mostrada no calendário | mensal ou diária | Mensal no calendário; diária só na janela recente e no alerta ([requisitos.md](requisitos.md), seção 4) | equipe |
 | 11 | Onde roda o job NRT e a recarga SP | | Job NRT no serviço `job-nrt` do `docker compose` da VPS ([banco.md](banco.md)). A recarga SP ficou fora da submissão | frente A |
-| 12 | Hospedagem pública (front, API e banco) | VPS; Postgres gerenciado | VPS com `docker compose`, incluindo `focos` (decidido no PR #2, ver [banco.md](banco.md)) | frentes A e C |
+| 12 | Hospedagem pública (front, API e banco) | VPS; Postgres gerenciado; front no Cloudflare | Front estático no Cloudflare. Banco, API e job NRT na VPS com `docker compose`, incluindo `focos` (PR #2), sem porta aberta: a API sai pelo Cloudflare Tunnel. O front fica perto do jurado em qualquer país e o IP da VPS não aparece ([deploy.md](deploy.md)) | frentes A e C |
 | 13 | Cálculo da anomalia (RF11, RF12) | mediana histórica, média de vários anos | mediana dos anos de referência, em todo lugar, com todos os anos completos menos o próprio ano (decidido em 15/11/2026, [api.md](api.md), "Decisões fechadas", itens 2 e 3; implementação do indicador na issue #78) | equipe |
 
 Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases, por que ela foi escolhida.
@@ -72,6 +72,9 @@ Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases,
 | `FIRMS_MAP_KEY` | API do FIRMS (download e job NRT) | `.env` da VPS, nunca no git ([banco.md](banco.md)) |
 | `DATABASE_URL` | Pipeline e API | `.env` da VPS, nunca no git ([banco.md](banco.md)) |
 | `POSTGRES_PASSWORD` | Serviço `db` do compose | `.env` da VPS, nunca no git |
+| `API_DB_PASSWORD` | Usuário só de leitura `firesync_api` do serviço `api` | `.env` da VPS, nunca no git ([deploy.md](deploy.md)) |
+| `CLOUDFLARE_TUNNEL_TOKEN` | Serviço `tunnel` do compose | `.env` da VPS, nunca no git ([deploy.md](deploy.md)) |
+| `VITE_API_URL` | Build do front no Cloudflare (pública, vai no JavaScript) | Variável de build do Cloudflare ([deploy.md](deploy.md)) |
 
 ## Princípios de código
 

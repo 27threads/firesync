@@ -65,10 +65,73 @@ As diferenças do clima são contra a `v1`. A do ONI e a da chuva bruta, de roda
 
 ## Decisão
 
-1. **O modelo de risco não entra no produto.** Menos de 1 ponto de ganho não justifica trocar uma regra transparente por um modelo de 13 pistas. O alerta continua sendo a `v1`.
+1. **O modelo da pergunta "fogo acima do normal?" não entra no produto.** Menos de 1 ponto de ganho não justifica trocar uma regra transparente por um modelo de 13 pistas. O alerta continua sendo a `v1`. (O modelo da pergunta "onde vai ter fogo?" **entra**, ver a seção seguinte.)
 2. **O resultado entra na tela de Método** como prova de que a regra simples foi testada contra um modelo treinado. Sugestão de frase, em inglês:
    > *We also trained a machine-learning model on 13 years of fire history plus rainfall, temperature, humidity, wind and El Niño data. With the same number of alerts, it was right only 0.9 points more often than rule v1 (26.4% vs 25.5%, 2017–2023), so we kept the simpler, explainable rule.*
 3. **O código fica no repositório** (`data-pipeline/validacao/modelo_risco.py`), com testes, para quem quiser refazer.
+
+## Segunda pergunta: "onde vai ter fogo nos próximos 14 dias?" (entra no produto)
+
+Decisão do Weberson (15/11/2026). A pergunta é outra: não "vai passar do normal?", e sim **em quais células de ~1.770 km² haverá fogo relevante (10 ou mais detecções) nos 14 dias seguintes**. É o que um comandante precisa para posicionar equipes.
+
+**O modelo** é um gradient boosting com 10 variáveis, todas da contagem diária de detecções por célula: fogo de 7, 14 e 30 dias, tendência, fogo nas células vizinhas, o que aconteceu na mesma época em anos anteriores, semana do ano e posição. Ele dá uma **probabilidade** para cada célula, que vira faixa de risco (`config/risk_rules.json`).
+
+| Faixa | Probabilidade | Frequência observada de fogo relevante nos 14 dias seguintes | Parte das células |
+| --- | --- | --- | --- |
+| Muito alto | 60% ou mais | **82%** | 11% (29% na temporada de ago a out) |
+| Alto | 40% a 60% | 46% | 5% |
+| Médio | 20% a 40% | 27% | 7% |
+| Menor | abaixo de 20% | 3% | 77% |
+
+Teste ano a ano, treinando só com anos anteriores (2021 a 2024, sem o Pantanal, que tem anomalias): a probabilidade prevista fica a cerca de 4 pontos da observada, na temporada e fora dela, então a legenda vale o ano todo.
+
+**O que o teste mostrou**
+- Contra a melhor régua simples (fogo dos últimos 30 dias mais a média da mesma época), o modelo acerta **2,4 pontos a mais** nas 10% de células mais arriscadas (59,7% contra 57,5%, com o modelo base de 12 variáveis), em 8 de 8 anos.
+- **Mais variáveis não ajudam.** Dez variáveis extras (fogo de 90 dias, dias com fogo, dias desde o último fogo, vizinhança de 2º anel, frequência histórica da janela) somaram só +0,1 a +0,2 ponto, abaixo do critério de +0,5 fixado antes. O clima da NASA POWER (chuva, temperatura, umidade e vento, só do passado, em grade de ~55 km) também não ajudou **neste teste, que foi parcial** (6 de 8 anos: melhorou em 0 de 6, média de −0,15 ponto). Isso **não é uma conclusão sobre clima em geral**: o clima foi testado com mais cuidado só na pergunta antiga ("acima do normal?"), e a comparação com o índice oficial de risco de fogo do INPE (120 dias de chuva, dias sem chuva, vegetação) está em andamento. Para subir o acerto, o que falta é informação nova (previsão do tempo, secura da vegetação), e não mais variáveis de fogo.
+- Dentro de cada bioma o ranking funciona (49% a 62% de acerto nas 10% mais arriscadas), exceto no Pampa, onde quase não há fogo.
+
+**Comparação com o índice oficial de Risco de Fogo do INPE (15/11/2026, exploratória).** O INPE publica um índice diário de 0 a 1 de **propensão** da vegetação a queimar (chuva dos últimos 120 dias, dias sem chuva, temperatura, umidade, tipo de vegetação e focos recentes), em arquivos NetCDF de ~1 km (versão 2.2). Comparei os domingos de **quatro anos (2021 a 2024)**, mais de 200 semanas (arquivos do servidor público do INPE, todos da mesma versão 2.2), com o índice convertido para as nossas células e o mesmo alvo (10 ou mais detecções nos 14 dias seguintes), sem o Pantanal. Em cada ano de teste, o nosso modelo foi treinado só com os anos anteriores. O critério foi fixado antes de rodar: a conclusão só se mantém se o nosso modelo ganhar do INPE em **cada** um dos anos.
+
+| Ano | Acerto nas 10% mais arriscadas: nosso modelo | Régua simples | Índice do INPE | AUC: nosso | AUC: INPE |
+| --- | --- | --- | --- | --- | --- |
+| 2021 | **59%** | 57% | 27% | 0,947 | 0,776 |
+| 2022 | **59%** | 57% | 25% | 0,944 | 0,739 |
+| 2023 | **63%** | 60% | 29% | 0,948 | 0,763 |
+| 2024 | **64%** | 61% | 31% | 0,952 | 0,808 |
+
+Na temporada (ago a out) o nosso acerto fica entre 94% e 98% e o do INPE entre 54% e 55%; fora dela, 46% a 53% contra 15% a 23%.
+
+- **O INPE ordena pior que o nosso modelo para esta pergunta, em todos os anos**, e não acrescenta informação a ele: numa regressão com validação cruzada por semana, o acerto nas 10% mais arriscadas é o mesmo com e sem o INPE nos quatro anos (diferença máxima de −0,01 ponto). Os dois critérios fixados antes de rodar foram mantidos.
+- **Isso não diz que o INPE seja um mau indicador de perigo.** Ele mede a secura do combustível, que é outra coisa; o nosso alvo é a contagem de detecções, que depende muito do fogo recente (variável que o nosso modelo usa). A comparação mostra só que, **para "onde vai ter fogo nos próximos 14 dias", o índice não melhora o nosso modelo**.
+- Limites: quatro anos (2021 a 2024), todos com a mesma versão do índice; o índice de ~1 km foi reduzido à média sobre as células de ~1.770 km²; a combinação foi linear (uma interação com a época do ano ou com o bioma não foi testada); a previsão de 3 dias do INPE não foi usada.
+- **Hipóteses de viés testadas para tentar derrubar a conclusão** (todas refutadas: o nosso modelo continua à frente; os quatro primeiros testes em 2024, sem o Pantanal, AUC e acerto nas 10% mais arriscadas; o de células quietas foi repetido nos quatro anos e deu 0,92 a 0,94 para o nosso modelo contra 0,76 a 0,84 do INPE):
+  - **A média escondia o INPE?** Não: com o máximo da célula o INPE tem AUC de 0,796 e acerto de 32%; com o P90, 0,795 e 32%; com a média, 0,808 e 31%. O nosso modelo: 0,952 e 64%.
+  - **O alvo favorece quem usa fogo recente?** Não: em células quietas nos 30 dias anteriores (início de fogo), o nosso AUC é 0,92 contra 0,81 do INPE; com 1 a 9 detecções, 0,86 contra 0,72; com 10 a 99, 0,85 contra 0,69; com 100 ou mais, 0,89 contra 0,68.
+  - **O INPE ganha em algum bioma?** Não: Amazônia 0,97 contra 0,86, Caatinga 0,93 contra 0,70, Cerrado 0,93 contra 0,79, Mata Atlântica 0,92 contra 0,78 e Pampa 0,89 contra 0,55.
+  - **O INPE ganha em horizontes curtos?** Não: com alvo de 5 ou mais detecções em 3 dias, nosso 0,94 contra 0,80; em 7 dias, 0,95 contra 0,81.
+  - **Um só ano (2024, excepcional)?** Não: o resultado se repete em 2021, 2022 e 2023, com o nosso acerto 27 a 34 pontos acima do INPE em todos os anos.
+  - **Ainda não refutada:** o alvo é de detecções e, portanto, é "nosso": um alvo próprio do INPE (por exemplo, área queimada) não foi testado. Também não foram testados 2025 e 2026.
+- **Uso no projeto (decisão do Weberson, 15/11/2026):** o índice do INPE fica registrado como **validação externa**: uma comparação independente com a referência oficial (o INPE é agência parceira), e **não** entra no modelo. Integrá-lo ao job pediria ler NetCDF todo dia e cruzar com as células, sem ganho medido.
+- **Texto para a tela de Método (inglês).** Por regra da equipe, a tela não usa "validated" nem "accuracy", e o texto precisa dizer que as duas medidas são diferentes:
+  > *We benchmarked our model against INPE's official fire-risk index over four years (2021–2024). INPE's index measures how dry and flammable the vegetation is, not where satellite detections will occur. For the question we answer (10 or more detections in a 1,770 km² area over the next 14 days), our model ranked areas better in every year: 59–64% of its top 10% areas had significant fire, against 25–31% for INPE's index.*
+- Citar o INPE em "Data & credits" e nas referências da página do projeto (o `INPE, Programa Queimadas` já consta).
+
+**Como entra no produto:** o cálculo roda **fora da API**, no job `data-pipeline/risco_celulas.py`, que treina com tudo o que existe até a data, pontua as células e grava em `risco_celulas` (migration 005). A API só lê a tabela (combinado na issue #90). Não há modelo nem scikit-learn no backend.
+
+**Exemplo real, só com dados até a data** (o modelo não viu os 14 dias seguintes):
+
+| Data | Células com fogo relevante nos 14 dias seguintes | Muito alto: previsto / observado | As 10% mais arriscadas acertaram |
+| --- | --- | --- | --- |
+| 8/9/2024 (pico) | 45% | 86% / 82% | 99% |
+| 4/2/2024 (fora do pico) | 3% | 80% / 71% | 23% |
+
+São duas datas escolhidas para ilustrar, e não uma medição. Na segunda, as faixas média e alta ficaram abaixo do previsto (12% e 34% observados, para 28% e 50% previstos). Isso é bem mais que a diferença média de cerca de 4 pontos medida em 2021 a 2024: numa data isolada o desvio pode ser grande, e a legenda mostra uma média do passado.
+
+**Limites**
+- O teste foi exploratório e sem o Pantanal. O treino usa semanas que terminam no domingo, e o job aplica o modelo em qualquer dia, o que não foi testado.
+- As faixas e as taxas são do modelo final de 10 variáveis, o mesmo do job. Tirar a potência do fogo e o bioma não custou nada (acerto das 10% mais arriscadas: 59,7% nos dois modelos, em 2017 a 2024).
+- O job precisa do banco com `agregados_diarios` e de um servidor onde rodar. Sem a VPS, as notas podem ser calculadas no banco local e levadas no dump.
+- A frequência de uma faixa é uma média do passado, e não uma previsão para aquele lugar.
 
 ## Limites
 
