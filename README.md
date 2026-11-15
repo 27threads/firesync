@@ -175,6 +175,16 @@ Em outro terminal: `cd frontend` e `VITE_DEV_API_PROXY=http://127.0.0.1:8000 npm
 
 O gerador `backend/scripts/demo_data.py` é exclusivo de banco vazio e descartável com nome terminado em `_test` ou `_demo`. Instalação do pipeline, carga sintética e Playwright: [backend](backend/README.md), [pipeline](data-pipeline/README.md) e [testes](docs/testes.md).
 
+## 13. Leitura recomendada e referências
+
+| Documento | Quando consultar |
+| --- | --- |
+| [Índice e ordem de leitura](docs/indice-documentacao.md) | Antes de iniciar uma tarefa; preserva o catálogo de documentos do projeto. |
+| [Requisitos](docs/requisitos.md), [arquitetura](docs/arquitetura.md) e [API](docs/api.md) | Especificação, decisões e contratos detalhados. |
+| [Histórico de uso de IA](docs/uso-de-ia.md) | Atribuições completas das contribuições anteriores. |
+
+Fontes: [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) (MODIS C6.1 e VIIRS C2), IBGE (biomas 1:250.000), INPE (Programa Queimadas), [NASA GIBS](https://www.earthdata.nasa.gov/gibs), [NASA 3D Resources](https://github.com/nasa/NASA-3D-Resources) e [Natural Earth/geo-countries](https://github.com/datasets/geo-countries). Referências técnicas: [FastAPI](https://fastapi.tiangolo.com/), [PostGIS](https://postgis.net/documentation/), [H3](https://h3geo.org/docs/) e [SemVer](https://semver.org/lang/pt-BR/). Estrutura documental: template PDSI2, UFU, 2026, fornecido pelo responsável pela documentação.
+
 ## Uso de IA
 
 | Parte | Ferramenta | Como foi usada |

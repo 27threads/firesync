@@ -97,7 +97,7 @@ Ler antes: [requisitos.md](requisitos.md), [importacao-regioes.md](importacao-re
 
 | ID | Tarefa | Status | Pronto quando |
 | --- | --- | --- | --- |
-| DOC1 | Resumir a documentação do sistema no README conforme o template PDSI2 | fazendo | Capítulos principais com fontes rastreáveis, links conferidos e branch enviada para revisão da equipe |
+| DOC1 | Resumir a documentação do sistema no README conforme o template PDSI2 | feito (documentação preparada; revisão da equipe pendente) | Capítulos principais com fontes rastreáveis, links conferidos e branch enviada para revisão da equipe |
 
 ## D. Frontend e demo
 
