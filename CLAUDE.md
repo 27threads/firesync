@@ -74,4 +74,4 @@ Jornadas de usuário (a partir de `frontend/e2e/`): `npm ci` e `npx playwright t
 
 Front (a partir de `frontend/`): `npm ci`, `npm test` (Vitest), `npm run dev` (porta 5173) e `npm run build`.
 
-O resto da API: a preencher quando a stack estiver definida.
+Os comandos de execução HTTP da API serão acrescentados quando as rotas estiverem implementadas.

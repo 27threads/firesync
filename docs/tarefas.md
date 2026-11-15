@@ -78,9 +78,9 @@ Ler antes: [requisitos.md](requisitos.md), [importacao-regioes.md](importacao-re
 | --- | --- | --- | --- | --- |
 | C1 | Esqueleto da API respondendo o JSON de exemplo do `api.md` | T00, T02 | a fazer | D consegue apontar o front para ela |
 | C2 | Gerar `agregados` falsos no formato do contrato, para testar sem esperar B | T01 | a fazer | Script versionado |
-| C3 | Converter a área (polígono, retângulo ou lat/lon) em células H3 e somar os `agregados` | C1 | a fazer | Calendário meses × anos correto para uma área de teste |
-| C4 | Sazonalidade, ranking de anos, mediana do mês atual e anomalias (RF09–RF12) | C3 | a fazer | Valores conferidos à mão para uma área |
-| C5 | Resposta "sem dados" fora da `cobertura` e marcação dos dias de `dias_sem_dados` | C3 | a fazer | Área fora do Brasil devolve o aviso, não um calendário vazio |
+| C3 | Converter a área (polígono, retângulo ou lat/lon) em células H3 e somar os `agregados` | C1 | fazendo (parcial: seleção H3, repositório PostgreSQL e calendário testados; faltam rota HTTP e validação com o histórico real) | Calendário meses × anos correto para uma área de teste |
+| C4 | Sazonalidade, ranking de anos, mediana do mês atual e anomalias (RF09–RF12) | C3 | fazendo (parcial: sazonalidade, ranking e anomalias históricas testados; faltam indicadores da janela recente e rota HTTP) | Valores conferidos à mão para uma área |
+| C5 | Resposta "sem dados" fora da `cobertura` e marcação dos dias de `dias_sem_dados` | C3 | fazendo (parcial: cobertura e dias sem dados tratados no serviço; falta expor e validar a resposta pela rota HTTP) | Área fora do Brasil devolve o aviso, não um calendário vazio |
 | C6 | Export CSV dos focos da busca (RD05) | C3 | a fazer | Arquivo abre no Excel |
 | C7 | Deploy público de banco, API e front | T00, M2 | a fazer | Link funciona numa janela anônima |
 | C8 | Pedir a classificação FortiGuard do site | C7 | a fazer | Pedido enviado |

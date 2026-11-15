@@ -60,7 +60,7 @@ Cada jornada roda no desktop e no celular. Os seletores usam papéis e textos ac
 | Parte | Medida | Mínimo | Onde fica o mínimo |
 | --- | --- | --- | --- |
 | `data-pipeline/` | Linhas e ramos, juntando unidade e integração | **56%**, o medido na primeira esteira (PR #24): `agregar.py` 80%, `job_nrt.py` 85%, `pipeline.py` 51% | `data-pipeline/.coveragerc` |
-| `backend/src/` | Linhas e ramos | **90%**, a partir do primeiro código | `.github/workflows/ci.yml` |
+| `backend/src/` | Linhas e ramos | **94,2%**, após a integração do backend | `.github/workflows/ci.yml` |
 
 O `eda.py` (análise exploratória) fica fora da cobertura. Download, `stage`, `clean` e `cadastrar` dependem do FIRMS e do IBGE, e são as próximas partes a ganhar teste.
 
@@ -76,7 +76,7 @@ Arquivo: `.github/workflows/ci.yml`. Roda em todo PR e em todo push na `main`.
 | **Código morto** | `ruff check .` (imports, variáveis e redefinições sem uso) e `vulture` (funções, classes e variáveis nunca usadas), fora dos testes |
 | **Pipeline · unidade** | `test_pipeline.py` |
 | **Pipeline · integração com PostGIS** | Migrations aplicadas duas vezes (precisam rodar de novo sem erro), `test_banco.py`, job NRT com o FIRMS simulado e o relatório de cobertura, que aparece no resumo do job |
-| **API · contrato e especificação TDD** | Contrato do `api-exemplo.json` e do `alert_rules.json`, mais a especificação do domínio. Com código em `backend/src/`, também a cobertura de 90% |
+| **API · contrato e especificação TDD** | Contrato do `api-exemplo.json` e do `alert_rules.json`, mais a especificação do domínio. As especificações já implementadas não usam `xfail`. Com código em `backend/src/`, também a cobertura mínima de 94,2% com PostGIS |
 | **Front · unidade e jornadas** | As jornadas compilam. Com o front criado (`frontend/package.json`), roda os testes de unidade (Vitest), o build (com `tsc`, que barra variável e parâmetro sem uso), sobe o site e roda as jornadas no Chromium |
 
 ## Como rodar no seu computador
@@ -96,8 +96,9 @@ cd data-pipeline && TEST_DATABASE_URL=postgresql://postgres:teste@localhost:5434
 ```
 
 ```bash
-# API: contrato e especificação TDD
-pip install -r backend/requirements-dev.txt && pytest backend/tests -rxX
+# API: unidade e contrato; integração exige um PostGIS descartável
+pip install -r backend/requirements-dev.txt
+TEST_DATABASE_URL=postgresql://usuario@localhost/banco_descartavel python -m pytest backend/tests -rxX --cov=backend/src --cov-branch --cov-fail-under=94.2
 ```
 
 ```bash
@@ -109,5 +110,7 @@ O teste do job NRT (`data-pipeline/tests/`) precisa de um banco próprio, com "t
 
 ```bash
 # código morto (a partir da raiz)
-pip install ruff vulture && ruff check . && vulture data-pipeline --exclude "tests,test_*.py" --min-confidence 60
+pip install ruff vulture && ruff check . && vulture data-pipeline backend/src backend/vulture_whitelist.py --exclude "tests,test_*.py" --min-confidence 60
 ```
+
+O arquivo `backend/vulture_whitelist.py` registra apenas as entradas públicas já usadas pelos testes (repositório PostgreSQL e `CalendarService.calculate`). Como a análise exclui testes, esses usos não seriam vistos. A lista é explícita, justificada por símbolo e não faz parte do pacote instalado.
