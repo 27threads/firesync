@@ -130,7 +130,6 @@ export default function RecentWorkspace({
   useEffect(() => {
     if (!active) return;
     const controller = new AbortController();
-    setData(null);
     setSelected(null);
     setLoading(true);
     setError("");

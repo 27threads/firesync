@@ -30,7 +30,7 @@ export default function AreaMap({ onSelect, selection, immersive = false, active
   };
   useEffect(() => {
     if (!container.current) return;
-    const map = L.map(container.current, { zoomControl: false, scrollWheelZoom: immersive ? false : true, preferCanvas: true, ...(immersive ? { minZoom: SURFACE_VIEW.zoom } : {}) }).setView([SURFACE_VIEW.latitude, SURFACE_VIEW.longitude], immersive ? SURFACE_VIEW.zoom : 5);
+    const map = L.map(container.current, { zoomControl: false, scrollWheelZoom: immersive ? false : true, preferCanvas: true, ...(immersive ? { minZoom: SURFACE_VIEW.zoom, zoomSnap: 0, zoomDelta: 1 } : {}) }).setView([SURFACE_VIEW.latitude, SURFACE_VIEW.longitude], immersive ? SURFACE_VIEW.zoom : 5);
     mapRef.current = map;
     const imagery = L.tileLayer(BLUE_MARBLE_TILES, { attribution: 'Imagery: <a href="https://earthdata.nasa.gov/gibs">NASA GIBS · Blue Marble</a>', maxNativeZoom: 8, maxZoom: 14 });
     imagery.once('load', () => readyCallback.current?.());
@@ -115,9 +115,10 @@ export default function AreaMap({ onSelect, selection, immersive = false, active
     };
     drawRings();
     const restyle=()=>marks.setStyle(styleOf);
-    map.on('zoomend',drawRings);
-    map.on('zoomend',restyle);
-    return ()=>{map.off('zoomend',drawRings);map.off('zoomend',restyle);map.removeLayer(marks);map.removeLayer(rings);};
+    let settle = 0;
+    const settled = () => { window.clearTimeout(settle); settle = window.setTimeout(() => { drawRings(); restyle(); }, 140); };
+    map.on('zoomend', settled);
+    return ()=>{window.clearTimeout(settle);map.off('zoomend',settled);map.removeLayer(marks);map.removeLayer(rings);};
   },[recent,layer,levels,intensities,tiers,quietOnly]);
   useEffect(()=>{if(focus) mapRef.current?.setView([focus.center[1],focus.center[0]],8,{animate:false});},[focus]);
   useEffect(() => {
@@ -137,19 +138,29 @@ export default function AreaMap({ onSelect, selection, immersive = false, active
     // Mesma direção da abertura: rolar para baixo aproxima, para cima afasta. No enquadramento inicial,
     // rolar para cima deixa a página subir de volta ao globo (não bloqueia o scroll da página).
     const el = map.getContainer();
-    let last = 0;
+    let target = map.getZoom();
+    let anchor = map.getSize().divideBy(2);
+    let raf = 0;
+    const step = () => {
+      raf = 0;
+      const z = map.getZoom();
+      const diff = target - z;
+      if (Math.abs(diff) < 0.01) { map.setZoomAround(anchor, target, { animate: false }); return; }
+      map.setZoomAround(anchor, z + diff * 0.28, { animate: false });
+      raf = requestAnimationFrame(step);
+    };
     const onWheel = (e: WheelEvent) => {
       const down = e.deltaY > 0;
-      if (!down && map.getZoom() <= SURFACE_VIEW.zoom) return;
+      if (!down && map.getZoom() <= SURFACE_VIEW.zoom + 0.001) return;
       e.preventDefault();
-      const now = performance.now();
-      if (now - last < 180) return;
-      last = now;
-      if (down) map.zoomIn(1, { animate: false });
-      else map.zoomOut(1, { animate: false });
+      const unit = e.deltaMode === 1 ? 33 : 120;
+      if (!raf) target = map.getZoom();
+      target = Math.max(SURFACE_VIEW.zoom, Math.min(map.getMaxZoom(), target + Math.max(-1, Math.min(1, e.deltaY / unit)) * 0.6));
+      anchor = map.mouseEventToContainerPoint(e);
+      if (!raf) raf = requestAnimationFrame(step);
     };
     const timer = window.setTimeout(() => el.addEventListener('wheel', onWheel, { passive: false }), MAP_WHEEL_SETTLE_MS);
-    return () => { window.clearTimeout(timer); el.removeEventListener('wheel', onWheel); };
+    return () => { window.clearTimeout(timer); if (raf) cancelAnimationFrame(raf); el.removeEventListener('wheel', onWheel); };
   }, [active, immersive]);
   useEffect(() => {
     const map = mapRef.current;
