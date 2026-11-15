@@ -225,14 +225,18 @@
               </p>
               <h4>Local-area results</h4>
               <p>
-                The test groups detections into H3 resolution 4 cells. Results describe these test cells on average;
-                they do not establish performance for each area drawn on the map. Final figures are pending selection
-                and evaluation of rule v1.
+                Rule v1, backtested 2013–2024 on H3 resolution 4 cells (about 1,770 km²): when it flagged Critical, the
+                next 14 days had unusually high VIIRS detections 26.6% of the time, 6.0 points more than a simple
+                persistence rule at the same alert frequency (95% interval: 4.1 to 8.0 points, resampling whole years).
+                The gain held in all 12 years. Under a stricter definition of a high-detection period (above the 95th
+                percentile), the gain is small and its interval reaches zero. It measures detections, not burned area.
               </p>
               <p>
-                The reported percentage will mean the share of Critical alerts followed by unusually high detections,
-                alongside the difference from the persistence rule. It is not the share of all high-detection periods
-                caught by the alert.
+                The levels work as a scale of recent risk. Across the test cells, the following 14 days had unusually
+                high detections after 2.6% of Normal weeks, 10.7% of Attention weeks and 26.6% of Critical weeks,
+                against 4.2% on average. These are past frequencies, not a forecast, and they describe the test cells
+                on average, not each area drawn on the map. The levels do not catch everything: 52% of the
+                high-detection periods followed a week rated Normal.
               </p>
               <h4>Why a simple rule and not a trained model</h4>
               <p>
@@ -243,15 +247,18 @@
               </p>
               <h4>Whole-biome results</h4>
               <p>
-                Local-area performance does not carry over to a whole biome. Biome results will report how often
-                each alert level occurs, without a predictive success percentage. Final frequencies are pending the
-                evaluation of rule v1.
+                Local-area performance does not carry over to a whole biome: over a whole biome, rule v1 did not beat
+                the persistence rule in five of six biomes. So for biomes we only report how often each level occurred
+                in 2013–2024: Amazon 8.7% of weeks Critical and 17.1% Attention; Caatinga 2.7% and 18.4%; Cerrado
+                3.5% and 17.8%; Atlantic Forest 4.2% and 20.4%; Pampa 10.9% and 16.0%; Pantanal 13.8% and 13.5%.
               </p>
               <h4>Historical example: Pantanal, 2020</h4>
               <p>
                 The Pantanal case compares alert levels with the date of the Mato Grosso do Sul emergency decree
                 (<a href="https://www.semadesc.ms.gov.br/?p=108045" rel="noopener">Decree 080/2020, official state source</a>).
-                The final lead time will be reported with the selected rule. An alert before a decree indicates
+                With rule v1, the Pantanal reached Critical 40 days before the decree (24 July 2020) and stayed at
+                Attention or Critical until it. In the other two known events, the continuous lead time was 20 days
+                (Amazon, 2019) and 15 days (Pantanal, 2024). An alert before a decree indicates
                 elevated activity before the official response; it does not show that the alert predicted a fire
                 before it started. This case is an illustration, not statistical evidence.
               </p>

@@ -79,7 +79,7 @@ describe('index.html (static page shell)', () => {
 
   // Rodada final da v1 no banco (issue #84) e intervalo de 95% (PR #85).
   it('reports the measured result of rule v1, its interval and its weak spot', () => {
-    const method = doc.getElementById('method')?.textContent ?? '';
+    const method = (doc.getElementById('method')?.textContent ?? '').replace(/\s+/g, ' ');
     expect(method).toContain('26.6%');
     expect(method).toMatch(/6\.0 points more than a simple persistence rule/);
     expect(method).toMatch(/4\.1 to 8\.0/);
@@ -98,7 +98,7 @@ describe('index.html (static page shell)', () => {
     const method = doc.getElementById('method')?.textContent ?? '';
     expect(method).toMatch(/Pantanal[^.]*13\.8%/);
     expect(method).toMatch(/40 days before/);
-    expect(method).not.toMatch(/pending/i);
+    expect(method).not.toMatch(/\bpending\b/i);
   });
 
   it('has the mount point for the interactive tool', () => {
