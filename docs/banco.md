@@ -2,7 +2,7 @@
 
 Nov 14, 2026 · frente A → frente C · revisado no PR #2
 
-Este documento junta o que o backend precisa para montar o `docker-compose.yml` e o `Dockerfile` e consultar o banco. O schema está em [`data-pipeline/migrations/`](../data-pipeline/migrations/): `001_inicial.sql` e `002_celulas_sem_dados.sql`, aplicadas nessa ordem.
+Este documento junta o que o backend precisa para montar o `docker-compose.yml` e o `Dockerfile` e consultar o banco. O schema está em [`data-pipeline/migrations/`](../data-pipeline/migrations/), de `001_inicial.sql` em diante, aplicadas em ordem.
 
 ## Decisões
 
@@ -166,24 +166,46 @@ volumes:
 
 ## Carga na VPS (roteiro)
 
-O banco local já tem tudo carregado e conferido. Na VPS, em vez de baixar e processar de novo (~1 h), leva-se o banco pronto (comandos em bash):
+Em vez de baixar e processar o histórico de novo na VPS (~1 h, mais o FIRMS), leva-se o banco pronto da máquina da frente A. O banco local tem **13 GB** (12 GB só em `focos`, com 46,4 milhões de linhas). Contando a cópia e o restore, são cerca de 2 horas, quase tudo de espera. O dump e o restore foram testados em 14/11/2026, sem erro e com `focos`, `agregados` e `config` conferidos.
 
-1. Na VPS, subir só o `db` do compose: `docker compose up -d db`. As migrations rodam no primeiro boot.
-2. Na máquina local, gerar o dump comprimido (~12 GB de banco; o arquivo fica bem menor):
-   `docker exec firesync-db-test pg_dump -U postgres -d firesync -Fc --no-owner -f /tmp/firesync.dump && docker cp firesync-db-test:/tmp/firesync.dump .`
-3. Copiar para a VPS: `scp firesync.dump usuario@vps:/tmp/`
-4. Restaurar por cima do schema que as migrations criaram:
-   `docker compose cp /tmp/firesync.dump db:/tmp/ && docker compose exec db pg_restore -U firesync -d firesync --clean --if-exists --no-owner /tmp/firesync.dump`
-5. Conferir: `SELECT satelite, count(*) FROM focos GROUP BY 1` deve dar os números de [pipeline-dados.md](pipeline-dados.md), e `SELECT * FROM config` deve ter `data_version`.
-6. Subir o job: `docker compose up -d job-nrt`. A primeira rodada traz as últimas 48 h e grava `atualizado_em`.
+**Antes de começar (frente C):** VPS com Docker, o repositório clonado e `infra/.env` preenchido (`infra/.env.example`); acesso SSH para a frente A; **pelo menos 30 GB livres** (banco, dump e folga para o restore) e de preferência 4 GB de RAM ou mais.
 
-Reservar ~30 GB livres (banco + dump + folga). Roteiro testado em 14/11/2026: dump de um banco com dados, restauração por cima de um banco recém-criado pelas migrations, sem erro e com `focos`, `agregados` e `config` conferidos. No Git Bash do Windows, rodar antes `export MSYS_NO_PATHCONV=1`, senão ele troca `/tmp` por um caminho do Windows dentro dos comandos do Docker.
+**Ordem:** na carga, suba **só o `db`**. A `api`, o `job-nrt` e o `tunnel` sobem depois do restore (passo 8). Com eles no ar, o `pg_restore --clean` disputa o banco com as conexões deles, e o job pode rodar no banco vazio.
+
+**Prazo:** o job NRT busca no máximo 5 dias para trás. Se o banco chegar à VPS mais de 5 dias depois do último NRT local (`SELECT max(datahora_utc) FROM focos WHERE qualidade = 'NRT'`), os dias do meio ficam vazios. Nesse caso, rode o job uma vez na máquina local antes do dump.
+
+Comandos em bash. Na VPS, a partir de `infra/`. No Git Bash do Windows, rode antes `export MSYS_NO_PATHCONV=1`, senão ele troca `/tmp` por um caminho do Windows dentro dos comandos do Docker.
+
+| # | Onde | Comando ou ação | Tempo |
+| --- | --- | --- | --- |
+| 1 | local | Dump comprimido: `docker exec firesync-db-test pg_dump -U postgres -d firesync -Fc --no-owner -f /tmp/firesync.dump && docker cp firesync-db-test:/tmp/firesync.dump . && sha256sum firesync.dump` | 10–20 min |
+| 2 | local → VPS | `rsync -P firesync.dump usuario@vps:/tmp/` (retoma se a conexão cair). Na VPS, `sha256sum /tmp/firesync.dump` tem que dar o mesmo valor | depende do upload |
+| 3 | VPS | `docker compose up -d db`. Com o volume vazio, as migrations rodam no primeiro boot | 1 min |
+| 4 | VPS | `docker compose cp /tmp/firesync.dump db:/tmp/ && docker compose exec db pg_restore -U firesync -d firesync --clean --if-exists --no-owner -j 4 /tmp/firesync.dump` | 30–60 min |
+| 5 | VPS | **Estatísticas:** `docker compose exec db vacuumdb -U firesync -d firesync --analyze-in-stages`. O `pg_restore` não leva as estatísticas, e sem elas o Postgres pode escolher planos muito lentos | 5–10 min |
+| 6 | VPS | Conferir contra o banco local: `SELECT satelite, count(*) FROM focos GROUP BY 1`, `SELECT count(*) FROM agregados`, `SELECT count(*) FROM agregados_diarios` e `SELECT * FROM config` (com `data_version` e `atualizado_em`). Os números têm que ser iguais aos da máquina local | 5 min |
+| 7 | VPS | Usuário só de leitura para a API (abaixo) | 2 min |
+| 8 | VPS | `docker compose up -d --build`, para subir `api`, `job-nrt` e `tunnel`. Depois, `docker compose logs -f job-nrt`: a primeira rodada termina com `nrt_run_finished` e mostra em `days` quantos dias ela buscou. E `GET /api/v1/health` pelo túnel | 10 min |
+| 9 | VPS | Apagar o dump (`/tmp/firesync.dump` na VPS e `docker compose exec db rm /tmp/firesync.dump`) e ligar o backup (abaixo) | — |
+
+**Usuário só de leitura da API.** A API nunca escreve. Com um usuário só de leitura, um erro na API não apaga dados, e o tempo máximo por consulta protege o pool de conexões. O SQL abaixo foi testado num banco descartável: o usuário lê e a escrita é recusada. Para usar, o `DATABASE_URL` do serviço `api` no `infra/docker-compose.yml` passa a ser `postgresql://firesync_api:${API_DB_PASSWORD}@db:5432/firesync`, com `API_DB_PASSWORD` no `.env`.
+
+```sql
+CREATE ROLE firesync_api LOGIN PASSWORD '<API_DB_PASSWORD do .env>';
+GRANT CONNECT ON DATABASE firesync TO firesync_api;
+GRANT USAGE ON SCHEMA public TO firesync_api;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO firesync_api;
+ALTER DEFAULT PRIVILEGES FOR ROLE firesync IN SCHEMA public GRANT SELECT ON TABLES TO firesync_api;
+ALTER ROLE firesync_api SET statement_timeout = '30s';
+```
+
+**Backup.** Um `pg_dump -Fc` por dia, um arquivo por dia da semana (o de 7 dias atrás é sobrescrito), e uma cópia **fora** da VPS, porque um backup no mesmo disco some junto com ele. Exemplo de cron na VPS: `0 4 * * * cd /caminho/do/repo/infra && docker compose exec -T db pg_dump -U firesync -d firesync -Fc > /backup/firesync-$(date +\%u).dump`. Para restaurar, use os passos 4 a 6.
 
 ## Variáveis de ambiente
 
 | Variável | Quem usa | Exemplo |
 | --- | --- | --- |
-| `DATABASE_URL` | pipeline e API | `postgresql://firesync:<senha>@db:5432/firesync` |
+| `DATABASE_URL` | pipeline (usuário `firesync`, escreve) e API (de preferência o usuário `firesync_api`, só leitura; ver o roteiro de carga) | `postgresql://firesync:<senha>@db:5432/firesync` |
 | `POSTGRES_PASSWORD` | compose (serviço `db`) | só no `.env` |
 | `FIRMS_MAP_KEY` | pipeline (`download`) | só no `.env` |
 
