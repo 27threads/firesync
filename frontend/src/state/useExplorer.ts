@@ -69,7 +69,7 @@ export interface Explorer {
   hero: { data: CalendarResponse; isDemo: boolean; label: string };
   stale: boolean;
   periodIgnoredInDemo: boolean;
-  selectArea: (area: AreaInput) => void;
+  selectArea: (area: AreaInput, period?: Period) => void;
   setPeriod: (period: Period) => void;
   showExample: () => void;
   retry: () => void;
@@ -158,7 +158,7 @@ export function useExplorer(): Explorer {
   }, []);
 
   const selectArea = useCallback(
-    (area: AreaInput) => {
+    (area: AreaInput, nextPeriod?: Period) => {
       userActedRef.current = true;
       setSelection({
         area,
@@ -166,7 +166,8 @@ export function useExplorer(): Explorer {
         shape: shapeFor(area, regionsRef.current),
         isExample: false,
       });
-      void run(area, period);
+      if (nextPeriod) setPeriodState(nextPeriod);
+      void run(area, nextPeriod ?? period);
     },
     [period, run],
   );

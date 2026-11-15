@@ -29,29 +29,20 @@
     </header>
 
     <main>
-      <section class="hero" id="top" aria-labelledby="hero-title">
-        <div class="hero__copy">
-          <h1 id="hero-title" class="hero__title">Two satellites. <span>One fire history.</span></h1>
-          <p class="hero__lede">
-            Explore a harmonized record of fire detections since 2003. See how recent activity compares with what is
-            typical for a place and season.
-          </p>
-          <div class="hero__actions">
-            <a class="btn btn--primary" href="#explore" data-explore-link>Explore an area</a>
-            <a class="btn btn--ghost" href="#method">How it works</a>
-          </div>
-          <dl class="hero__facts">
-            <div><dt>Record</dt><dd>Jan 2003 onward, monthly</dd></div>
-            <div><dt>Sensors</dt><dd>MODIS Aqua, then VIIRS</dd></div>
-            <div><dt>Source</dt><dd><a href="https://firms.modaps.eosdis.nasa.gov/" rel="noopener">NASA FIRMS</a> · MODIS C6.1, VIIRS C2</dd></div>
-          </dl>
+      <div id="top">
+        <div id="opening-root">
+          <section class="opening opening--static" aria-labelledby="opening-title">
+            <div class="opening__copy">
+              <h1 id="opening-title" class="opening__brand">firesync<span>.</span></h1>
+              <div class="opening__chapter">
+                <h2>Is this fire normal?<br />Here, this season.</h2>
+                <p>NASA FIRMS shows where fire is. firesync tells you if it's normal.</p>
+              </div>
+              <a class="btn btn--primary" href="#explore">Explore an area</a>
+            </div>
+          </section>
         </div>
-        <div class="hero__viz" id="hero-viz">
-          <noscript>
-            <p class="hero__noscript">The interactive fire calendar needs JavaScript. The method and data sources below are readable without it.</p>
-          </noscript>
-        </div>
-      </section>
+      </div>
 
       <section id="explore" class="explore" aria-labelledby="explore-title">
         <div id="tool-root"></div>
@@ -142,6 +133,7 @@
             </figcaption>
             <img src="/img/curva_deteccao_2024.png" width="910" height="546" loading="lazy"
               alt="Line chart: the chance that MODIS also detects a fire seen by VIIRS rises with fire power, by day from 15% under 2 MW to 71% at 25 MW or more, and by night from 18% to 87%." />
+            <a class="method__figure-full" href="/img/curva_deteccao_2024.png">Open the detection curve at full size</a>
           </figure>
 
           <div class="method__points">
@@ -300,9 +292,10 @@
             <li>Biome boundaries: IBGE, Biomas do Brasil 1:250,000.</li>
             <li>Reference series for validation: INPE, Programa Queimadas.</li>
             <li>Historical alert example: Government of Mato Grosso do Sul, <a href="https://www.semadesc.ms.gov.br/?p=108045" rel="noopener">Decree 080/2020</a>, environmental emergency in the Pantanal (24 July 2020).</li>
-            <li>Base maps: <a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs" rel="noopener">NASA EOSDIS GIBS</a> (VIIRS Black Marble, Blue Marble Next Generation, Coastlines), with coastline data from <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a> contributors.</li>
+            <li>Base maps: <a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs" rel="noopener">NASA EOSDIS GIBS</a> (Blue Marble Shaded Relief and Bathymetry, VIIRS Black Marble, Coastlines), with coastline data from <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a> contributors.</li>
+            <li>Opening globe: Earth imagery from <a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs" rel="noopener">NASA EOSDIS GIBS</a> (BlueMarble_ShadedRelief_Bathymetry); Aqua and Suomi NPP spacecraft models from <a href="https://github.com/nasa/NASA-3D-Resources" rel="noopener">NASA 3D Resources</a> (Brian E. Kumanchik and Christian A. Lopez, NASA). Orbits and sizes are illustrative. No NASA endorsement is implied.</li>
             <li>Color scale: cividis (Nuñez, Anderton and Renslow, 2018), through d3-scale-chromatic.</li>
-            <li>Interface libraries: React, Vite, D3, GSAP, Leaflet, and Leaflet-Geoman. Typeface: Archivo (SIL Open Font License), through Fontsource.</li>
+            <li>Interface libraries: React, Vite, D3, GSAP, three.js, Leaflet, and Leaflet-Geoman. Typeface: Archivo (SIL Open Font License), through Fontsource.</li>
             <li>Built for the NASA Space Apps Challenge 2026, challenge "MODIS and VIIRS Hot Spots". Parts of the code were written with AI assistance (Claude Code); the full list is in the project repository.</li>
           </ul>
         </div>

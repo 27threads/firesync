@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import '@geoman-io/leaflet-geoman-free';
-import countryAsset from '@/assets/geography/country-boundaries.geojson.asset.json';
+import countryBoundariesUrl from '@/assets/geography/country-boundaries.geojson?url';
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
 import { BLUE_MARBLE_TILES, MAP_WHEEL_SETTLE_MS, restoreSurfaceView, SURFACE_VIEW } from '@/lib/globe-transition';
 import { LocateFixed, MapPin, Minus, Pentagon, Plus, X } from 'lucide-react';
@@ -55,7 +55,7 @@ export default function AreaMap({ onSelect, selection, immersive = false, active
     });
     map.on('pm:remove', () => { drawn.current = drawn.current.filter(layer => map.hasLayer(layer)); if (!drawn.current.length) callback.current(null); });
     const controller = new AbortController();
-    if (immersive && !operational) void fetch(countryAsset.url, { signal: controller.signal }).then(response => { if (!response.ok) throw new Error('Boundaries unavailable'); return response.json() as Promise<FeatureCollection>; }).then(data => {
+    if (immersive && !operational) void fetch(countryBoundariesUrl, { signal: controller.signal }).then(response => { if (!response.ok) throw new Error('Boundaries unavailable'); return response.json() as Promise<FeatureCollection>; }).then(data => {
       setCountries(data.features.slice().sort((a, b) => String(a.properties?.['name']).localeCompare(String(b.properties?.['name']))));
       L.geoJSON(data, { style: { color: tokens.getPropertyValue('--map-selection').trim(), weight: 0.7, fillOpacity: 0.015 }, onEachFeature: (feature, layer) => {
         layer.bindTooltip(String(feature.properties?.['name'] ?? ''), { sticky: true });

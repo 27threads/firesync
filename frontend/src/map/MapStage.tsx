@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type TouchEvent as ReactTouchEvent,
+} from 'react';
 import type * as LTypes from 'leaflet';
 import { fetchRecentDetections } from '../api/client';
 import type {
@@ -7,6 +14,7 @@ import type {
   RecentHours,
 } from '../api/types';
 import { bboxToPolygon, closePolygonRing, DEFAULT_MAP_BBOX } from '../controls/areaPeriodModel';
+import { BLUE_MARBLE_TILES, SURFACE_VIEW } from '../hero/globeTransition';
 import { loadLeafletWithGeoman, type LeafletModule } from '../controls/leafletLoader';
 import {
   computeHexagonDomain,
@@ -32,6 +40,14 @@ interface DragBox {
 interface MapStageProps {
   shape: MapShape;
   onSelectPolygon: (geometry: GeoJsonPolygon) => void;
+  /** Com o exemplo na tela, o mapa abre onde a descida do globo termina, em vez de enquadrar a área. */
+  startOnArrival?: boolean;
+}
+
+// O mapa continua a descida da abertura: mesmo centro e mesmo zoom do fim do globo (SURFACE_VIEW).
+export function arrivalView(startOnArrival: boolean): { center: [number, number]; zoom: number } | null {
+  if (!startOnArrival) return null;
+  return { center: [SURFACE_VIEW.latitude, SURFACE_VIEW.longitude], zoom: SURFACE_VIEW.zoom };
 }
 
 type DetectionsState = 'idle' | 'ready' | 'unavailable';
@@ -53,13 +69,14 @@ const GIBS = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best';
 const GIBS_ATTRIBUTION =
   'Imagery: <a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs">NASA EOSDIS GIBS</a> · Coastlines: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
-// Mapas base do NASA GIBS, sem chave de API. Black Marble é o próprio VIIRS de noite: escuro e da NASA.
+// Mapas base do NASA GIBS, sem chave de API. O Blue Marble é a mesma camada da descida do globo;
+// o Black Marble é o próprio VIIRS de noite.
 function applyBasemapLayers(L: LeafletModule, group: LTypes.LayerGroup, basemap: BasemapId): void {
   group.clearLayers();
   const base =
     basemap === 'black-marble'
       ? `${GIBS}/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png`
-      : `${GIBS}/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg`;
+      : BLUE_MARBLE_TILES;
   L.tileLayer(base, { maxZoom: 12, maxNativeZoom: 8, attribution: GIBS_ATTRIBUTION }).addTo(group);
   L.tileLayer(`${GIBS}/Coastlines_15m/default/GoogleMapsCompatible_Level13/{z}/{y}/{x}.png`, {
     maxZoom: 12,
@@ -137,8 +154,10 @@ function renderRecentDetections(
   }
 }
 
-export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
+export function MapStage({ shape, onSelectPolygon, startOnArrival = false }: MapStageProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const startOnArrivalRef = useRef(startOnArrival);
+  startOnArrivalRef.current = startOnArrival;
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const leafletRef = useRef<LeafletModule | null>(null);
   const mapRef = useRef<LTypes.Map | null>(null);
@@ -148,7 +167,7 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
   const currentBboxRef = useRef<[number, number, number, number]>(DEFAULT_MAP_BBOX);
   const currentZoomRef = useRef<number>(4);
   const drawModeRef = useRef<DrawMode>(null);
-  const basemapRef = useRef<BasemapId>('black-marble');
+  const basemapRef = useRef<BasemapId>('blue-marble');
   const showHotSpotsRef = useRef<boolean>(true);
   const hotSpotsHoursRef = useRef<RecentHours>(24);
   // Os pedidos de focos recentes nunca são cancelados: um contador descarta respostas antigas.
@@ -160,13 +179,16 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
   const suppressClickOnceRef = useRef(false);
   const initPromiseRef = useRef<Promise<void> | null>(null);
   const dragStartRef = useRef<{ clientX: number; clientY: number } | null>(null);
+  const oneFingerStartRef = useRef<{ clientX: number; clientY: number } | null>(null);
+  const twoFingerTimerRef = useRef<number | null>(null);
   const shapeRef = useRef<MapShape>(shape);
   const pendingFocusRef = useRef<[number, number] | null>(null);
 
-  const [basemap, setBasemap] = useState<BasemapId>('black-marble');
+  const [basemap, setBasemap] = useState<BasemapId>('blue-marble');
   const [drawMode, setDrawMode] = useState<DrawMode>(null);
   const [polygonPoints, setPolygonPoints] = useState<[number, number][]>([]);
   const [dragBox, setDragBox] = useState<DragBox | null>(null);
+  const [twoFingerHint, setTwoFingerHint] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const [showHotSpots, setShowHotSpots] = useState<boolean>(true);
   const [hotSpotsHours, setHotSpotsHours] = useState<RecentHours>(24);
@@ -206,12 +228,17 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
     map.pm.disableDraw();
     if (mode === 'rectangle') {
       map.dragging.disable();
+      map.touchZoom.disable();
       map.pm.enableDraw('Rectangle', { snappable: false });
     } else if (mode === 'polygon') {
       map.dragging.disable();
+      map.touchZoom.disable();
       map.pm.enableDraw('Polygon', { snappable: true });
-    } else if (!isCoarsePointer()) {
-      map.dragging.enable();
+    } else {
+      map.touchZoom.enable();
+      if (!isCoarsePointer()) {
+        map.dragging.enable();
+      }
     }
   }, []);
 
@@ -226,11 +253,13 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
         if (!canvasHostRef.current || mapRef.current) return;
 
         const coarse = isCoarsePointer();
+        // No celular (pointer: coarse), 1 dedo rola a página (dragging desligado, touch-action: pan-x pan-y)
+        // e 2 dedos movem e dão zoom no mapa (touchZoom ligado).
         const map = L.map(canvasHostRef.current, {
           preferCanvas: true,
           scrollWheelZoom: false,
           dragging: !coarse,
-          touchZoom: !coarse,
+          touchZoom: true,
           pmIgnore: false,
         });
 
@@ -248,7 +277,9 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
         const selectionGroup = L.layerGroup().addTo(map);
         applyBasemapLayers(L, baseGroup, basemapRef.current);
         const initialBounds = renderShape(L, selectionGroup, shapeRef.current);
-        if (initialBounds) map.fitBounds(initialBounds, { padding: [48, 48], maxZoom: 7, animate: false });
+        const arrival = arrivalView(startOnArrivalRef.current);
+        if (arrival) map.setView(arrival.center, arrival.zoom, { animate: false });
+        else if (initialBounds) map.fitBounds(initialBounds, { padding: [48, 48], maxZoom: 7, animate: false });
         currentZoomRef.current = Math.round(map.getZoom() || 4);
 
         const updateBoundsAndFetch = () => {
@@ -291,6 +322,7 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
             setDrawMode(null);
             setPolygonPoints([]);
             map.pm.disableDraw();
+            map.touchZoom.enable();
             if (!isCoarsePointer()) map.dragging.enable();
             onSelectPolygonRef.current(geometry);
           }
@@ -354,6 +386,9 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
       if (moveDebounceRef.current !== null) {
         window.clearTimeout(moveDebounceRef.current);
       }
+      if (twoFingerTimerRef.current !== null) {
+        window.clearTimeout(twoFingerTimerRef.current);
+      }
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -406,7 +441,8 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
       return;
     }
     const bounds = renderShape(L, selectionGroup, shape);
-    if (bounds) map.fitBounds(bounds, { padding: [48, 48], maxZoom: 7, animate: false });
+    // Quando o mapa acaba de carregar no enquadramento da chegada, a área do exemplo só é desenhada.
+    if (bounds && (changed || !startOnArrivalRef.current)) map.fitBounds(bounds, { padding: [48, 48], maxZoom: 7, animate: false });
   }, [shape, mapReady, requestRecentDetections]);
 
   // Depois do efeito acima: se o clique na lista carregou o mapa, o enquadramento da área não desfaz o foco.
@@ -503,6 +539,97 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
     [finishRectangleDrag],
   );
 
+  const handleTouchStart = useCallback(
+    (event: ReactTouchEvent<HTMLDivElement>) => {
+      if (drawModeRef.current === 'rectangle' && event.touches.length === 1) {
+        const firstTouch = event.touches[0];
+        if (!firstTouch) return;
+        const start = { clientX: firstTouch.clientX, clientY: firstTouch.clientY };
+        dragStartRef.current = start;
+        let lastPoint = start;
+
+        const computeBox = (cx: number, cy: number): DragBox | null => {
+          const rect = viewportRef.current?.getBoundingClientRect();
+          if (!rect) return null;
+          return {
+            left: Math.min(start.clientX, cx) - rect.left,
+            top: Math.min(start.clientY, cy) - rect.top,
+            width: Math.abs(cx - start.clientX),
+            height: Math.abs(cy - start.clientY),
+          };
+        };
+
+        const onWindowTouchMove = (moveEvent: TouchEvent) => {
+          const t = moveEvent.touches[0];
+          if (!t) return;
+          lastPoint = { clientX: t.clientX, clientY: t.clientY };
+          if (Math.hypot(t.clientX - start.clientX, t.clientY - start.clientY) >= 5) {
+            setDragBox(computeBox(t.clientX, t.clientY));
+          }
+        };
+
+        const onWindowTouchEnd = () => {
+          window.removeEventListener('touchmove', onWindowTouchMove);
+          window.removeEventListener('touchend', onWindowTouchEnd);
+          window.removeEventListener('touchcancel', onWindowTouchEnd);
+          setDragBox(null);
+          dragStartRef.current = null;
+          if (Math.hypot(lastPoint.clientX - start.clientX, lastPoint.clientY - start.clientY) >= 5) {
+            finishRectangleDrag(start.clientX, start.clientY, lastPoint.clientX, lastPoint.clientY);
+          }
+        };
+
+        window.addEventListener('touchmove', onWindowTouchMove);
+        window.addEventListener('touchend', onWindowTouchEnd);
+        window.addEventListener('touchcancel', onWindowTouchEnd);
+        return;
+      }
+
+      if (drawModeRef.current !== null || event.touches.length >= 2) {
+        oneFingerStartRef.current = null;
+        if (twoFingerTimerRef.current !== null) {
+          window.clearTimeout(twoFingerTimerRef.current);
+          twoFingerTimerRef.current = null;
+        }
+        setTwoFingerHint(false);
+        return;
+      }
+
+      const touch = event.touches[0];
+      if (touch) {
+        oneFingerStartRef.current = { clientX: touch.clientX, clientY: touch.clientY };
+      }
+    },
+    [finishRectangleDrag],
+  );
+
+  const handleTouchMove = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    if (drawModeRef.current !== null || event.touches.length >= 2) {
+      oneFingerStartRef.current = null;
+      if (twoFingerTimerRef.current !== null) {
+        window.clearTimeout(twoFingerTimerRef.current);
+        twoFingerTimerRef.current = null;
+      }
+      setTwoFingerHint(false);
+      return;
+    }
+
+    const start = oneFingerStartRef.current;
+    const touch = event.touches[0];
+    if (!start || !touch) return;
+
+    if (Math.hypot(touch.clientX - start.clientX, touch.clientY - start.clientY) >= 8) {
+      setTwoFingerHint(true);
+      if (twoFingerTimerRef.current !== null) {
+        window.clearTimeout(twoFingerTimerRef.current);
+      }
+      twoFingerTimerRef.current = window.setTimeout(() => {
+        setTwoFingerHint(false);
+        twoFingerTimerRef.current = null;
+      }, 1800);
+    }
+  }, []);
+
   const handleViewportClickCapture = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
     if (suppressClickOnceRef.current) {
       suppressClickOnceRef.current = false;
@@ -547,6 +674,7 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
     const nextMode = drawMode === mode ? null : mode;
     // Ao entrar no modo de desenho, o mapa precisa estar na tela para receber o arrasto.
     if (nextMode) viewportRef.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' as ScrollBehavior });
+    setTwoFingerHint(false);
     setDrawMode(nextMode);
     setPolygonPoints([]);
     syncDrawModeToMap(nextMode);
@@ -570,7 +698,9 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
       ? 'Drag across the map to draw a rectangle.'
       : drawMode === 'polygon'
         ? `Click to add points (${polygonPoints.length} so far), then finish the polygon.`
-        : null;
+        : twoFingerHint
+          ? 'Use two fingers to move the map.'
+          : null;
 
   const windowLabel = hotSpotsHours === 168 ? 'last 7 days' : `last ${hotSpotsHours} h`;
 
@@ -637,6 +767,8 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
         aria-label="Area selection map"
         className={`map-stage__viewport${drawMode ? ' map-stage__viewport--drawing' : ''}`}
         onMouseDownCapture={handleMouseDownCapture}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onClickCapture={handleViewportClickCapture}
         onClick={handleViewportClick}
         onDoubleClick={() => {

@@ -28,11 +28,17 @@ O proxy existente encaminha `/api` para a API. `VITE_API_URL` permite uma API em
 | `DATABASE_URL` | obrigatória | PostgreSQL com a carga, via psycopg 3 e pool |
 | `FRONTEND_ORIGIN` | `http://localhost:5173` | Única origem permitida pelo CORS |
 | `CLIENT_IP_HEADER` | vazio (IP do socket) | Header com o IP real do usuário para o rate limit. Só atrás de proxy que sobrescreve o header (`CF-Connecting-IP` no Cloudflare Tunnel, [deploy.md](../docs/deploy.md)) |
+| `RISK_MAX_AGE_DAYS` | `2` | Idade máxima, em dias, da nota de risco que o mapa mostra (`risco_celulas`). Mais velha que isso, os campos de risco não vêm. Na VPS está em 10: se o `job-risco` parar, o mapa segura a última nota por mais tempo ([deploy.md](../docs/deploy.md)) |
 | `RATE_LIMIT_GENERAL` | `60` | Pedidos aceitos por IP na janela |
 | `RATE_LIMIT_CALENDAR` | `10` | Pedidos de calendário por IP na janela |
 | `RATE_LIMIT_EXPORT` | `2` | Pedidos de exportação por IP na janela |
 | `RATE_LIMIT_WINDOW` | `60` | Duração da janela móvel, em segundos |
 | `RESPONSE_CACHE_SIZE` | `128` | Máximo de respostas no LRU |
+| `ASSISTANT_PROVIDERS` | vazio (assistente desligado) | Provedores do `POST /ask` em ordem de fallback, no formato OpenAI chat completions: `base_url|chave|modelo[|reasoning_effort]`, separados por vírgula. O 4º campo só vai quando preenchido: modelos que raciocinam (Qwen, Gemini) gastam o `max_tokens` pensando sem ele (testado: `none` na Cerebras, Groq e OpenRouter; `low` no Gemini). Segredo: só no `.env` da VPS. Valor inválido desliga só o assistente (erro no log), a API sobe normal |
+| `ASSISTANT_DAILY_LIMIT` | `500` | Pedidos do assistente que chegam a um provedor por dia (UTC), somando todos os IPs. Por processo; zera ao reiniciar |
+| `ASSISTANT_TIMEOUT_S` | `20` | Tempo máximo de cada chamada a um provedor |
+| `ASSISTANT_BUDGET_S` | `60` | Tempo máximo da pergunta inteira, somando rodadas e provedores. Fica abaixo dos ~100 s que o Cloudflare Tunnel espera |
+| `RATE_LIMIT_ASK` | `5` | Pedidos do assistente por IP na janela |
 | `ALERT_RULES_PATH` | `config/alert_rules.json` do checkout | Versão, limites do alerta e da classe de intensidade |
 
 Rate limit e cache são locais a cada processo. Para conservar o limite global configurado, rode um worker; o segundo limite no proxy pertence ao deploy C7. O IP vem da conexão ASGI: cabeçalhos encaminhados só devem ser confiados pelo Uvicorn quando vierem do proxy configurado. `429` inclui `Retry-After` em segundos. Os logs do Uvicorn incluem endpoint, status, duração e número de células.

@@ -32,7 +32,7 @@ Later note: after API connection and risk PR, use API four-tier risk legend and 
 - [x] Smooth and synchronize globe/map motion, wait for map imagery, and make return navigation reliable; verify slow scroll and controls.
 - [x] Turn the globe zoom into a full-opening functional map with country/area selection shared with the calendar; verify selection and map zoom.
 - [x] Keep the opening light; remove the dark override while retaining NASA blue/red accents.
-- [x] Compare MODIS/VIIRS host spacecraft geometry with NASA references and replace stand-ins with official Terra and Suomi NPP models.
+- [x] Compare MODIS/VIIRS host spacecraft geometry with NASA references and replace stand-ins with official Aqua and Suomi NPP models.
 - [x] Connect natural scrolling to text exit, globe zoom and the map/data reveal with NASA styling; verify wheel, mobile and reduced motion.
 - [x] Create a JavaScript globe opening with orbiting satellite geometry, a short text presentation, year selection and honest observation/alert availability; verify desktop/mobile.
 - [x] Replace the opening with an immersive interactive NASA basemap and historical year controls; verify desktop/mobile rendering.

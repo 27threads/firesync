@@ -8,6 +8,11 @@ Este documento define, para cada tela, o objetivo, as tarefas do usuário e as d
 
 Quem usa está muitas vezes sob pressão (RD07). Por isso a ordem é: **primeiro o agora, depois a história, por último o detalhe.**
 
+**Simples até para uma criança.** A resposta vem primeiro em palavras do dia a dia, e o número técnico fica um clique abaixo:
+
+- No topo do explorador, um veredito em uma frase: "More fire than usual", "About as much fire as usual" ou "Less fire than usual", com cor e um ícone de forma diferente (▲ ● ▼), para não depender só da cor. A régua é a mesma do cartão dos 7 dias (faixa P25–P75). A frase mostra a faixa em números inteiros arredondados para dentro, então um número na frase nunca contradiz o veredito. O link "Why? See the numbers" leva aos cartões com os percentis.
+- A escolha da área mostra só a região e o desenho no mapa. Latitude, longitude, raio e período ficam recolhidos em "More options".
+
 Cada tela separa dois tipos de decisão:
 
 - **No app:** o que o usuário escolhe ver.
