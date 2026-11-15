@@ -106,7 +106,7 @@ Detalhes de cada etapa: [importacao-regioes.md](docs/importacao-regioes.md).
 - [x] Levantamento do FIRMS e plano de extração
 - [x] Modelo de dados e processo de importação
 - [x] Dados de teste (Brasil, 2024)
-- [x] Stack e arquitetura definidas (pipeline, banco, API, front, mapa e gráficos decididos em [arquitetura.md](docs/arquitetura.md); falta só o ponto 13)
+- [x] Stack e arquitetura definidas (pipeline, banco, API, front, mapa e gráficos decididos em [arquitetura.md](docs/arquitetura.md))
 - [ ] Contrato da API ([api.md](docs/api.md) na `main`; falta A e D confirmarem, tarefa T02)
 - [x] Histórico do FIRMS baixado e análise por satélite ([pipeline-dados.md](docs/pipeline-dados.md))
 - [x] Importador, pipeline, agregação, job NRT e série do INPE ([pipeline-dados.md](docs/pipeline-dados.md))
@@ -125,6 +125,8 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `data-pipeline/pipeline.py`, `agregar.py`, `eda.py`, `test_pipeline.py`, `test_banco.py`, `job_nrt.py`, `Dockerfile`, `migrations/` | Claude Code (Claude Opus 5.5) | Código gerado a partir das especificações de filtro escritas pelo time de dados. Revisado pela equipe |
 | `docs/banco.md`, `data-pipeline/migrations/001_inicial.sql` | Claude Code (Claude Opus 5.5) | Schema e documento de decisões gerados a partir dos docs do repo e de um benchmark local. Revisado pela equipe |
 | `docs/pipeline-dados.md` | Claude Code (Claude Opus 5.5) | Redação do relatório do que foi feito e dos achados da análise exploratória |
+| Teste de paridade API/backtest e calendário bissexto (issue #64) | OpenAI Codex | Comparação desde a série diária sintética, testes de limites e correção de 29/02 no backtest após falha reproduzida |
+| Indicador anual da API, testes, contrato e tipo do frontend (issue #78) | OpenAI Codex | Ajuste em TDD para mediana dos anos de referência por cenário, conforme decisão da equipe na #75; integração do campo `reference_median` |
 | Código e testes em `backend/src/`, `backend/tests/`, configuração Python e CI do backend | OpenAI Codex | Implementação assistida do domínio, portas, PostgreSQL e análise histórica; C1–C6 com cinco rotas FastAPI, janelas recentes, alerta com piso contínuo da issue #59 e configuração v1.0, intensidade, rate limit/cache, ZIP auditável, carga sintética em `backend/scripts/`, testes HTTP/PostGIS e E2E via proxy. TDD e CI conforme documentação da equipe; carga real aguarda Eduardo |
 | Estrutura e documentação do `backend/`, ajustes em `docs/arquitetura.md`, `docs/tarefas.md`, `docs/importacao-regioes.md` e `docs/api.md` | OpenAI Codex | Organização das camadas e revisão da documentação; atualização dos READMEs, requisitos, tarefas, testes e roteiro `docs/validacao-api-eduardo.md`. Decisões de método referenciadas nos registros da equipe |
 | `docs/prompt-frontend.md` | Claude Code (Claude Opus 5.5) | Prompt do front escrito a partir dos docs do repo. A equipe aprova antes de usar |
@@ -143,6 +145,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `data-pipeline/logs.py`, logs em `pipeline.py`, `agregar.py`, `job_nrt.py`, `tests/test_logs.py`, `docs/simulacao.md` | Claude Code (Claude Opus 5.5) | Logs estruturados gerados a partir do RNF07 e dos pontos de decisão do pipeline. Revisado pela equipe |
 | `frontend/` (D1–D7: `index.html`, `src/`, configuração do Vite, testes unitários e E2E) | Claude Code (Claude Opus 5.5) em D1, D4, D5 e na fonte do decreto em Data & credits (#65); Antigravity em D2, D3, D6 e D7 | Esqueleto (D1), calendário (D4) e indicadores/gráficos (D5) gerados a partir do `prompt-frontend.md`, `api.md` e `ux-telas.md`. Seleção de área e período (D2–D3: mapa Leaflet + Geoman em `src/controls/`, cliente API `src/api/client.ts`, validação UTC, fallback demo), camada de focos recentes e integração com a API (D7: `GET /api/v1/detections/recent` em hexágonos `cividis` log e pontos por intensidade, proxy `/api` no Vite) e downloads/exportação (D6: pacote de auditoria `POST /api/v1/export`, CSVs e PNG do calendário em `src/export/` e todas as jornadas J1–J9 em `e2e/jornadas.spec.ts`) escritos em TDD a partir dos docs. A equipe revisa no PR |
 | Mapa base padrão NASA GIBS (`frontend/src/map/MapStage.tsx`, `MapStage.test.tsx`) | Claude Code (Claude Opus 5.5) | Revisão das fontes de dados do projeto e troca do padrão em TDD. A equipe revisa no PR |
+| Resultados da frente B na tela de Método (`frontend/index.html`, `frontend/public/img/`, `src/index-html.test.ts`) | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Textos em inglês escritos a partir de `docs/decisoes-harmonizacao.md` e do RFC 0003, com os números copiados dos documentos, e testes antes do texto. A equipe revisa no PR |
 
 ## Dados e créditos
 

@@ -128,7 +128,7 @@ def test_year_ranking_seasonality_and_latest_indicator():
     assert [r['year'] for r in result['years']] == [2021,2020,2019]
     assert [r['rank'] for r in result['years']] == [1,2,3]
     assert result['seasonality'][0] == {'month_of_year':1,'n_years':3,'median':3,'mean':3,'min':1,'max':5}
-    assert result['indicators']['latest_complete_year'] == {'year':2021,'detections':60,'reference_mean':24,'anomaly_pct':1.5}
+    assert result['indicators']['latest_complete_year'] == {'year':2021,'detections':60,'reference_median':24,'anomaly_pct':1.5}
 
 
 def test_mixed_year_and_empty_seasonality():
@@ -167,4 +167,41 @@ def test_no_reference_years_produces_null_anomaly():
     periods=({'region_id':1,'satellite':'SNPP','start':date(2020,1,1),'end':date(2020,12,31)},)
     result=run(fixture([count(2020,1,1)],periods=periods,meta={'last_month':'2020-12'}),'2020-01','2020-12')
     assert result['months'][0]['anomaly'] is None
-    assert result['indicators']['latest_complete_year']['reference_mean'] is None
+    assert result['indicators']['latest_complete_year']['reference_median'] is None
+
+
+@pytest.mark.parametrize('references,expected_reference,expected_anomaly', [
+    ([10, 10, 100], 10, 1),
+    ([10], 10, 1),
+    ([], None, None),
+    ([0], 0, None),
+])
+def test_latest_year_uses_reference_median(references, expected_reference, expected_anomaly):
+    first_year = 2019
+    latest_year = first_year + len(references)
+    counts = [count(first_year + offset, 1, amount)
+              for offset, amount in enumerate([*references, 20])]
+    periods = ({'region_id': 1, 'satellite': 'SNPP', 'start': date(first_year, 1, 1),
+                'end': date(latest_year, 12, 31)},)
+    data = fixture(counts, periods=periods, meta={'last_month': f'{latest_year}-12'})
+    narrow = run(data, f'{latest_year}-01', f'{latest_year}-12')['indicators']['latest_complete_year']
+    wide = run(data, f'{first_year}-01', f'{latest_year}-12')['indicators']['latest_complete_year']
+    assert narrow['anomaly_pct'] == expected_anomaly
+    assert narrow == wide == {'year': latest_year, 'detections': 20,
+                              'reference_median': expected_reference, 'anomaly_pct': expected_anomaly}
+
+
+def test_latest_year_median_and_percentage_preserve_scenarios():
+    # Reference medians per scenario: 10, 10, 110; median of annual medians would be 110.
+    # Current totals: 20, 40, 220. Percentages per scenario: 1, 3, 1; central result: 1.
+    values = [(2003, 1, (10, 10, 110)), (2004, 2, (10, 110, 110)),
+              (2005, 3, (110, 10, 110)), (2006, 4, (20, 40, 220))]
+    counts = [count(year, month, 1) for year, month, _ in values]
+    calibration = [row for _, month, vector in values
+                   for row in factors(month, dict(zip((2013, 2014, 2015), vector)))]
+    periods = ({'region_id': 1, 'satellite': 'Aqua', 'start': date(2003, 1, 1),
+                'end': date(2006, 12, 31)},)
+    data = fixture(counts, calibration, periods=periods, meta={'last_month': '2006-12'})
+    indicator = run(data, '2006-01', '2006-12')['indicators']['latest_complete_year']
+    assert indicator['anomaly_pct'] == 1
+    assert indicator == {'year': 2006, 'detections': 40, 'reference_median': 10, 'anomaly_pct': 1}

@@ -1652,6 +1652,16 @@ select {
   height: auto;
 }
 
+/* Curva de detecção (modelo A, RFC 0002): imagem estática, cabe na largura sem rolagem */
+.method__figure img {
+  display: block;
+  width: 100%;
+  max-width: 910px;
+  height: auto;
+  margin: 0 auto;
+  background: #fff;
+}
+
 .dia-axis line {
   stroke: var(--rule-strong);
 }
