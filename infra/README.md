@@ -14,3 +14,4 @@ Regras que valem aqui:
 
 - Segredos (`POSTGRES_PASSWORD`, `FIRMS_MAP_KEY`) só no `.env` da VPS, nunca no git.
 - As migrations ficam em `data-pipeline/migrations/` e são montadas no serviço `db`.
+- **O serviço `api` tem que confiar no IP que o proxy repassa:** `uvicorn ... --proxy-headers --forwarded-allow-ips=<IP ou rede do container web>`. O limite de requisições é por IP (`backend/README.md`), e o Uvicorn só aceita o `X-Forwarded-For` vindo de `127.0.0.1`. Sem a opção, toda requisição chega com o IP do proxy, e todos os usuários dividem o mesmo limite: o 11º calendário do minuto, somando todo mundo, recebe 429.
