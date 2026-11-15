@@ -52,7 +52,7 @@ firesync/
 └── infra/                 deploy na VPS: docker-compose, servidor web, .env.example (frente C)
 ```
 
-Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/` tem, por enquanto, os testes escritos antes do código (especificação TDD); `frontend/` já traz o esqueleto (D1), a seleção de área e período (D2–D3), o calendário (D4), os indicadores/gráficos (D5), os downloads e pacote de auditoria (D6) e os testes E2E em `frontend/e2e/`. `infra/` ainda não tem arquivos de deploy. `data-pipeline/data/` tem os quatro ZIPs de teste:
+Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/` tem o serviço histórico e seus testes; as rotas HTTP ainda faltam. `frontend/` já traz o esqueleto (D1), a seleção de área e período (D2–D3), o calendário (D4), os indicadores/gráficos (D5), os downloads e pacote de auditoria (D6) e os testes E2E em `frontend/e2e/`. `infra/` ainda não tem arquivos de deploy. `data-pipeline/data/` tem os quatro ZIPs de teste:
 
 | Arquivo | Conteúdo |
 | --- | --- |
@@ -110,6 +110,8 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `data-pipeline/pipeline.py`, `agregar.py`, `eda.py`, `test_pipeline.py`, `test_banco.py`, `job_nrt.py`, `Dockerfile`, `migrations/` | Claude Code (Claude Opus 5.5) | Código gerado a partir das especificações de filtro escritas pelo time de dados. Revisado pela equipe |
 | `docs/banco.md`, `data-pipeline/migrations/001_inicial.sql` | Claude Code (Claude Opus 5.5) | Schema e documento de decisões gerados a partir dos docs do repo e de um benchmark local. Revisado pela equipe |
 | `docs/pipeline-dados.md` | Claude Code (Claude Opus 5.5) | Redação do relatório do que foi feito e dos achados da análise exploratória |
+| Código e testes em `backend/src/`, `backend/tests/`, configuração Python e CI do backend | OpenAI Codex | Implementação assistida das partes 1–3 e integração da main: domínio, portas, adaptadores PostgreSQL, análise histórica, reorganização de src e CI, conforme documentação da equipe |
+| Estrutura e documentação do `backend/`, ajustes em `docs/arquitetura.md`, `docs/tarefas.md`, `docs/importacao-regioes.md` e `docs/api.md` | OpenAI Codex | Organização das camadas e revisão da documentação; decisões de método referenciadas nos registros da equipe |
 | `docs/prompt-frontend.md` | Claude Code (Claude Opus 5.5) | Prompt do front escrito a partir dos docs do repo. A equipe aprova antes de usar |
 | `docs/api.md`, `docs/api-exemplo.json` (issues #22 e #29) | Claude Code (Claude Opus 5.5) | Correções do contrato escritas a partir das issues da auditoria. Revisado pela equipe |
 | `docs/validacao-alerta.md`, `docs/rfcs/0001-backtest-alerta.md` | Claude Code (Claude Opus 5.5) | Proposta de validação do alerta e RFC de implementação, escritos a partir da issue #9 e da revisão do PR #42. Revisado pela equipe |
