@@ -76,6 +76,19 @@ O gabarito começa **no dia seguinte ao último dia usado pelo nível**. Nenhum 
 
 > *Rule v1, backtested 2013–2024: when it flagged Critical, the next 14 days had unusually high VIIRS detections X% of the time, Y points more than a simple persistence rule. It measures detections, not burned area.*
 
+### Entrega da tela de Método (frente D)
+
+A estrutura em inglês está em `frontend/index.html`, disponível também sem JavaScript. Enquanto a `v1` e sua rodada final estiverem pendentes, a tela explica o método e informa a pendência sem publicar percentuais provisórios ou a antecedência de outra regra.
+
+Para concluir a publicação dos resultados:
+
+1. **B:** registrar a regra escolhida e sua versão, o piso, a tendência, o ganho mínimo e o critério de sensibilidade.
+2. **A:** entregar os resultados da rodada dessa versão: frequência, acerto e ganho contra persistência nas células H3 res 4; frequências por bioma; antecedência do exemplo Pantanal 2020 e fonte oficial.
+3. **C:** confirmar que o `recent` usa a mesma regra e referência do teste.
+4. **D:** substituir os textos de pendência pelos resultados correspondentes. Usar o texto acima somente se passar no critério de decisão; caso contrário, usar a versão sem ganho. Nos biomas, publicar apenas as frequências. Vincular o exemplo à mesma versão e manter a explicação de que o decreto marca a resposta oficial, não o início do fogo.
+
+O acerto é a proporção dos alertas Crítico seguidos do evento definido, não a cobertura de todos os eventos. O resultado das células não representa uma garantia para cada polígono do usuário. Manter visível que a referência inclui anos posteriores e que o teste mede detecções VIIRS, não área queimada.
+
 ## Solução B: eventos conhecidos
 
 **Pergunta:** nas crises de fogo que todo mundo lembra, o alerta teria ficado Crítico, e com quantas semanas de antecedência?
