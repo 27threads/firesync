@@ -27,7 +27,6 @@
   --amber-ink: #8a5800;
 
   --zero-light: #ffffff;
-  --zero-dark: #22282e;
 
   --font: 'Archivo Variable', 'Archivo', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
@@ -670,11 +669,8 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
-.theme-dark .cal-axis {
-  fill: var(--fog-400);
-}
 
-.theme-light .cal-axis {
+:is(.calendar-svg-root, .legend) .cal-axis {
   fill: var(--ink-soft);
 }
 
@@ -692,12 +688,8 @@ select {
   stroke-width: 1;
 }
 
-.theme-dark .cal-zero {
-  fill: var(--zero-dark);
-  stroke: var(--fog-400);
-}
 
-.theme-light .cal-zero {
+:is(.calendar-svg-root, .legend) .cal-zero {
   fill: var(--zero-light);
   stroke: var(--ink-soft);
 }
@@ -706,19 +698,13 @@ select {
   stroke-width: 1.2;
 }
 
-.theme-dark .cal-zero-mark {
-  stroke: var(--fog-400);
-}
 
-.theme-light .cal-zero-mark {
+:is(.calendar-svg-root, .legend) .cal-zero-mark {
   stroke: var(--ink-soft);
 }
 
-.theme-dark .cal-nodata {
-  fill: url(#cal-nodata-dark);
-}
 
-.theme-light .cal-nodata {
+:is(.calendar-svg-root, .legend) .cal-nodata {
   fill: url(#cal-nodata-light);
 }
 
@@ -727,11 +713,8 @@ select {
   stroke-dasharray: 1 3;
 }
 
-.theme-dark .cal-outside {
-  stroke: var(--graphite-600);
-}
 
-.theme-light .cal-outside {
+:is(.calendar-svg-root, .legend) .cal-outside {
   stroke: var(--rule-strong);
 }
 
@@ -741,11 +724,8 @@ select {
   stroke-dasharray: 3 2;
 }
 
-.theme-dark .cal-incomplete {
-  stroke: var(--snow);
-}
 
-.theme-light .cal-incomplete {
+:is(.calendar-svg-root, .legend) .cal-incomplete {
   stroke: var(--ink);
 }
 
@@ -753,12 +733,8 @@ select {
   stroke-width: 1.2;
 }
 
-.theme-dark .cal-provisional {
-  fill: var(--snow);
-  stroke: var(--graphite-950);
-}
 
-.theme-light .cal-provisional {
+:is(.calendar-svg-root, .legend) .cal-provisional {
   fill: var(--ink);
   stroke: var(--paper-raised);
 }
@@ -769,11 +745,8 @@ select {
   stroke-linejoin: miter;
 }
 
-.theme-dark .cal-switch {
-  stroke: var(--snow);
-}
 
-.theme-light .cal-switch {
+:is(.calendar-svg-root, .legend) .cal-switch {
   stroke: var(--ink);
 }
 
@@ -782,11 +755,8 @@ select {
   stroke-width: 1;
 }
 
-.theme-dark .cal-bracket {
-  stroke: var(--graphite-600);
-}
 
-.theme-light .cal-bracket {
+:is(.calendar-svg-root, .legend) .cal-bracket {
   stroke: var(--rule-strong);
 }
 
@@ -794,11 +764,8 @@ select {
   font-size: 11px;
 }
 
-.theme-dark .cal-note {
-  fill: var(--fog-200);
-}
 
-.theme-light .cal-note {
+:is(.calendar-svg-root, .legend) .cal-note {
   fill: var(--ink-soft);
 }
 
@@ -806,11 +773,8 @@ select {
   font-weight: 650;
 }
 
-.theme-dark .cal-note--strong {
-  fill: var(--snow);
-}
 
-.theme-light .cal-note--strong {
+:is(.calendar-svg-root, .legend) .cal-note--strong {
   fill: var(--ink);
 }
 
@@ -859,11 +823,8 @@ select {
   stroke-width: 1.5;
 }
 
-.theme-dark .cal-gridcell:hover .cal-hover {
-  stroke: var(--snow);
-}
 
-.theme-light .cal-gridcell:hover .cal-hover {
+:is(.calendar-svg-root, .legend) .cal-gridcell:hover .cal-hover {
   stroke: var(--ink);
 }
 
@@ -882,13 +843,7 @@ select {
   font-size: 12px;
 }
 
-.theme-dark .legend {
-  color: var(--fog-200);
-}
 
-.theme-light .legend {
-  color: var(--ink-soft);
-}
 
 .legend__ramp {
   display: grid;

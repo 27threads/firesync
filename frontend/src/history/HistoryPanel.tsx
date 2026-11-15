@@ -132,7 +132,6 @@ export function HistoryPanel({
                 <div className="calendar-scroll">
                   <CalendarSvg
                     months={data.months}
-                    theme="light"
                     geometry={FULL_GEOMETRY}
                     interactive
                     label={`Fire calendar, monthly detections, ${periodLabel}`}
@@ -145,7 +144,7 @@ export function HistoryPanel({
                     onHover={(cell, anchor) => setHover(cell && anchor ? { cell, anchor } : null)}
                   />
                 </div>
-                <Legend extent={model.positiveExtent} theme="light" className="calendar-legend" />
+                <Legend extent={model.positiveExtent} className="calendar-legend" />
               </div>
               <MonthPanel month={selectedMonth} months={data.months} />
             </div>

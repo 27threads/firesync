@@ -98,7 +98,6 @@ export function HeroCalendar({ months, areaLabel, isDemo, onOpenExample }: HeroC
         <CalendarSvg
           ref={svgRef}
           months={months}
-          theme="light"
           geometry={HERO_GEOMETRY}
           interactive={false}
           label={`Preview of the fire history, ${period}: one row per year, one column per month. Months before February 2012 are estimated from MODIS; later months are observed by VIIRS.`}
@@ -145,7 +144,7 @@ export function HeroCalendar({ months, areaLabel, isDemo, onOpenExample }: HeroC
       </div>
 
       <div className="hero-cal__foot">
-        <Legend extent={model.positiveExtent} theme="light" />
+        <Legend extent={model.positiveExtent} />
         <button type="button" className="hero-cal__explore" onClick={() => onOpenExample(null)}>
           Explore the example
         </button>
