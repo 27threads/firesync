@@ -64,7 +64,8 @@ test.describe('Responsividade', () => {
       page.getByRole('button', { name: 'Pause the globe' }),
       page.getByRole('button', { name: /^Chapter 1/ }),
       page.getByRole('button', { name: /^Question 1/ }),
-      page.getByRole('button', { name: 'Zoom in' }),
+      // O hero também tem um mapa com zoom: mede o do explorador, que é o que foi rolado até a tela.
+      page.locator('.map-stage').getByRole('button', { name: 'Zoom in' }),
     ];
     for (const botao of botoes) {
       await botao.scrollIntoViewIfNeeded();
