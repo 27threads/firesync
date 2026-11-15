@@ -66,7 +66,8 @@ NASA FIRMS shows where fire is detected right now. People who respond to fires a
 
 ### Benefits
 
-- One question answered in seconds for fire brigades, civil defense, land managers and researchers: is this normal here, for this time of year?
+- One question answered in seconds for fire brigades, civil defense, land managers and researchers: is this normal here, for this time of year, and where should brigades be positioned for the next 14 days?
+- In the Amazon (2021–2024), our model warned of 51 in every 100 significant fire outbreaks, usually 10 days ahead (49% still arrive without warning at the 50% threshold). Brigades cut burned area by 12% in the Cerrado. In a year like 2024 (June–August), that could mean about 290,000 hectares and 3.8 million tonnes of CO₂ less in the Amazon. A hypothesis to test in a pilot.
 - 24 years of NASA data from two sensors read as one series, with the uncertainty shown instead of hidden.
 - Transparent: versioned alert rule, measured (not promised) uncertainty, and an audit package for every query.
 - Open source, no login, works on desktop and mobile, interface in English.
@@ -76,8 +77,9 @@ NASA FIRMS shows where fire is detected right now. People who respond to fires a
 - **Data pipeline:** Python (pandas, PyArrow, GeoPandas, pyogrio, Shapely, h3, psycopg, scikit-learn).
 - **Database:** PostgreSQL 16 with PostGIS 3.4, Uber H3 grid.
 - **API:** Python, FastAPI and Uvicorn, hexagonal architecture.
-- **Front end:** TypeScript, React, Vite, Leaflet with Leaflet-Geoman, D3 (d3-scale, d3-scale-chromatic), GSAP, Archivo typeface.
+- **Front end:** TypeScript, React, Vite, Three.js, Leaflet with Leaflet-Geoman, D3 (d3-scale, d3-scale-chromatic), GSAP, Archivo typeface.
 - **Tests and delivery:** pytest, Vitest, Testing Library, Playwright user journeys, GitHub Actions, Docker Compose, Cloudflare Workers and Cloudflare Tunnel.
+- **AI disclosure:** The harmonization method, alert rule, risk model design and pass/fail criteria are the team's; AI coding assistants (Claude Code, OpenAI Codex, Antigravity, Lovable) were used to implement and test code and documents, documented file by file in the [README "Uso de IA" table](https://github.com/27threads/firesync#uso-de-ia).
 
 ## NASA Data
 
@@ -94,8 +96,8 @@ NASA FIRMS shows where fire is detected right now. People who respond to fires a
 
 ### Space agency partner data
 
-- **INPE** (Instituto Nacional de Pesquisas Espaciais, Brazil), Programa Queimadas: monthly fire series for Brazil's biomes, used as the independent reference to check the harmonized series (2003–2025). https://data.inpe.br/queimadas/
-- **INPE**, Fire Risk index (Risco de Fogo), version 2.2, daily NetCDF files, 2021–2024: external benchmark for the 14-day risk model. Not used in the product.
+- **Brazilian Space Agency (AEB) / INPE** (Instituto Nacional de Pesquisas Espaciais, Brazil), Programa Queimadas: monthly fire series for Brazil's biomes, used as the independent reference to check the harmonized series (2003–2025). https://data.inpe.br/queimadas/
+- **Brazilian Space Agency (AEB) / INPE**, Fire Risk index (Risco de Fogo), version 2.2, daily NetCDF files, 2021–2024: external benchmark for the 14-day risk model. Not used in the product.
 
 ### Other data
 
@@ -108,6 +110,8 @@ NASA FIRMS shows where fire is detected right now. People who respond to fires a
 ### Scientific references
 
 - Nuñez, J. R., Anderton, C. R., Renslow, R. S. (2018). Optimizing colormaps with consideration for color vision deficiency to enable accurate interpretation of scientific data. PLOS ONE 13(7): e0199239. (cividis color scale)
+- IPAM (Instituto de Pesquisa Ambiental da Amazônia) (2024). CO₂ emissions from fires in the Amazon grow by 60% (June–August 2024 burned area and emissions reference). https://ipam.org.br/co2-emissions-from-fires-in-the-amazon-grow-by-60/
+- Sano, E. E. et al. / Oliveira et al. (Embrapa / Aliança da Terra). Implementation of fire policies in Brazil (reference for 12% burned-area reduction by brigades in the Cerrado). https://www.alice.cnptia.embrapa.br/alice/bitstream/doc/1136281/1/Sano-implementation-of-fire-policies-in-Brazil.pdf · https://www.aliancadaterra.org/_files/ugd/18a265_69d4f963acd24c3ab3f32f3a4b711f7e.pdf
 - NASA FIRMS: https://firms.modaps.eosdis.nasa.gov/
 - NASA GIBS: https://www.earthdata.nasa.gov/gibs
 - NASA POWER: https://power.larc.nasa.gov/
