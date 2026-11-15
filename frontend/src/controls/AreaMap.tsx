@@ -138,7 +138,7 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
   const currentBboxRef = useRef<[number, number, number, number]>(DEFAULT_MAP_BBOX);
   const currentZoomRef = useRef<number>(4);
   const drawModeRef = useRef<DrawMode>(null);
-  const basemapRef = useRef<BasemapId>('carto-dark');
+  const basemapRef = useRef<BasemapId>('nasa-gibs');
   const showHotSpotsRef = useRef<boolean>(true);
   const hotSpotsHoursRef = useRef<RecentHours>(24);
   const detectionsAbortRef = useRef<AbortController | null>(null);
@@ -149,7 +149,7 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
   const dragStartRef = useRef<{ clientX: number; clientY: number } | null>(null);
   const lastDrawnPolygonRef = useRef<GeoJsonPolygon | null>(null);
 
-  const [basemap, setBasemap] = useState<BasemapId>('carto-dark');
+  const [basemap, setBasemap] = useState<BasemapId>('nasa-gibs');
   const [drawMode, setDrawMode] = useState<DrawMode>(null);
   const [polygonPoints, setPolygonPoints] = useState<[number, number][]>([]);
   const [dragBox, setDragBox] = useState<DragBox | null>(null);
@@ -635,19 +635,19 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
         <div className="area-map__layers" role="group" aria-label="Base map layer">
           <button
             type="button"
-            className={`map-btn${basemap === 'carto-dark' ? ' map-btn--active' : ''}`}
-            aria-pressed={basemap === 'carto-dark'}
-            onClick={() => switchBasemap('carto-dark')}
-          >
-            Dark map (CARTO)
-          </button>
-          <button
-            type="button"
             className={`map-btn${basemap === 'nasa-gibs' ? ' map-btn--active' : ''}`}
             aria-pressed={basemap === 'nasa-gibs'}
             onClick={() => switchBasemap('nasa-gibs')}
           >
             NASA GIBS satellite
+          </button>
+          <button
+            type="button"
+            className={`map-btn${basemap === 'carto-dark' ? ' map-btn--active' : ''}`}
+            aria-pressed={basemap === 'carto-dark'}
+            onClick={() => switchBasemap('carto-dark')}
+          >
+            Dark map (CARTO)
           </button>
         </div>
       </div>
