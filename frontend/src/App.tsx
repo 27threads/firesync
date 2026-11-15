@@ -1,19 +1,23 @@
 import { useCallback, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { MONTH_NAMES } from './calendar/calendarModel';
+import { AssistantBubble } from './assistant/AssistantBubble';
 import { SelectionPanel } from './controls/SelectionPanel';
 import { buildExampleStory } from './discovery/exampleStory';
-import { HeroCalendar } from './hero/HeroCalendar';
 import { prefersReducedMotion } from './hero/heroIntro';
 import { HistoryPanel } from './history/HistoryPanel';
+import { IndicatorRow } from './summary/IndicatorRow';
 import { MapStage } from './map/MapStage';
 import { useExplorer } from './state/useExplorer';
 import { Summary } from './summary/Summary';
+import { Verdict } from './summary/Verdict';
 
 function monthLabel(key: string): string {
   const [y, m] = key.split('-').map(Number);
   return `${MONTH_NAMES[m - 1]} ${y}`;
 }
+
+// Off unless the build sets VITE_ENABLE_ASSISTANT=true, so the page ships the same without the assistant (RFC 0004).
+const ASSISTANT_ENABLED = import.meta.env.VITE_ENABLE_ASSISTANT === 'true';
 
 function scrollToExplore() {
   document.getElementById('explore')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
@@ -24,7 +28,6 @@ export function App() {
   const ex = useExplorer();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [storyIndex, setStoryIndex] = useState(0);
-  const heroHost = typeof document !== 'undefined' ? document.getElementById('hero-viz') : null;
 
   const shownData = ex.shown?.data ?? null;
   const story = useMemo(() => (shownData ? buildExampleStory(shownData) : null), [shownData]);
@@ -45,10 +48,13 @@ export function App() {
     [ex],
   );
 
-  const selectArea: typeof ex.selectArea = (area) => {
+  const selectArea: typeof ex.selectArea = (area, period) => {
     setSelectedKey(null);
-    ex.selectArea(area);
+    ex.selectArea(area, period);
   };
+
+  // Mesma condição do resumo: sem erro e sem área fora da cobertura.
+  const hasAnswer = ['ready', 'demo', 'api_unavailable', 'loading'].includes(ex.result.kind);
 
   let statusChip = <span className="chip chip--live">NASA FIRMS data</span>;
   if (ex.result.kind === 'loading') statusChip = <span className="chip chip--muted">Loading…</span>;
@@ -59,14 +65,8 @@ export function App() {
 
   return (
     <>
-      {heroHost &&
-        createPortal(
-          <HeroCalendar months={ex.hero.data.months} areaLabel={ex.hero.label} isDemo={ex.hero.isDemo} onOpenExample={openExample} />,
-          heroHost,
-        )}
-
-      <div className="workspace">
-        <div className="selection-bar">
+    <div className="workspace">
+      <div className="selection-bar">
           <h2 id="explore-title" className="selection-bar__title">
             Explore an area
           </h2>
@@ -89,6 +89,10 @@ export function App() {
           </p>
         )}
 
+        {ex.shown && hasAnswer && <Verdict window={ex.shown.data.recent.last_7_days} areaLabel={areaLabel} />}
+
+        {ex.shown && <IndicatorRow indicators={ex.shown.data.indicators} isDemo={ex.shown.isDemo} />}
+
         <div className="ws-top">
           <div className="ws-map">
             <SelectionPanel
@@ -101,7 +105,11 @@ export function App() {
               onSetPeriod={ex.setPeriod}
               onShowExample={() => openExample(null)}
             />
-            <MapStage shape={ex.selection.shape} onSelectPolygon={(geometry) => selectArea({ type: 'geojson', geometry })} />
+            <MapStage
+              shape={ex.selection.shape}
+              startOnArrival={ex.selection.isExample}
+              onSelectPolygon={(geometry) => selectArea({ type: 'geojson', geometry })}
+            />
           </div>
           <Summary
             shown={ex.shown}
@@ -128,6 +136,15 @@ export function App() {
           request={ex.request}
         />
       </div>
+
+      {ASSISTANT_ENABLED && (
+        <AssistantBubble
+          onShowCalendar={(action) => {
+            selectArea(action.area, action.start && action.end ? { start: action.start, end: action.end } : undefined);
+            scrollToExplore();
+          }}
+        />
+      )}
     </>
   );
 }
