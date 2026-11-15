@@ -185,7 +185,28 @@ def pistas_clima(clima, semanas):
         if var in clima:
             prontas[CLIMA[var]] = bt.somas_moveis(clima[var], 7) / 7
     dias = [(t - bt.INICIO).days for t in semanas]
-    return {nome: s[:, dias].T.copy() for nome, s in prontas.items()}
+    p = {nome: s[:, dias].T.copy() for nome, s in prontas.items()}
+    for nome in ("chuva30", "chuva90", "tmax7", "umid7"):   # o valor em relação ao normal da região e da época
+        if nome in p:
+            p[f"{nome}_anom"] = anomalia(p[nome])
+    return p
+
+
+def anomalia(x):
+    """Semana x unidade -> o valor menos a média das mesmas semanas dos anos ANTERIORES (NaN no primeiro ano).
+
+    Um ano atrás são round(365,25 / 7) = 52 semanas, dois anos 104, três 157 (o ano não tem semanas inteiras).
+    Só olha para trás: o valor de uma semana nunca depende de semanas depois dela.
+    """
+    soma, n = np.zeros(x.shape, np.float64), np.zeros(x.shape, np.int32)
+    for k in range(1, len(x) // 52 + 1):
+        d = round(k * 365.25 / 7)
+        if d >= len(x):
+            break
+        soma[d:] += np.nan_to_num(x[:-d])
+        n[d:] += ~np.isnan(x[:-d])
+    media = np.where(n > 0, soma / np.maximum(n, 1), np.nan)
+    return (x - media).astype(np.float32)
 
 
 # ---------------------------------------------------------------- modelo e medidas
