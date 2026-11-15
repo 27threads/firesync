@@ -31,7 +31,6 @@ PASTA = Path(__file__).resolve().parent.parent  # data-pipeline/
 INICIO, FIM = date(2012, 2, 1), date(2024, 12, 31)  # S-NPP no agregados_diarios; 2025 fica fora (deriva do Aqua)
 PRIMEIRO_DOMINGO, ULTIMO_DOMINGO = date(2013, 1, 6), date(2024, 12, 15)  # gabarito do último vai até 2024-12-29
 JANELA_GABARITO = 14
-PISO_MEDIANA_ZERO = 10  # Crítico onde o normal é zero: mesmo piso do gabarito (pergunta 3 do RFC, frente B)
 
 # grade para a frente B escolher a v1 (docs/validacao-alerta.md)
 RAZOES = (1.5, 2.0, 2.5, 3.0)
@@ -128,6 +127,14 @@ def nivel(a, razao, tendencia, atencao, piso, piso_continuo=False):
     return np.where(critico, 2, np.where(a["s7"] > a[f"p{atencao}"], 1, 0))
 
 
+def nivel_da_regra(a, regra):
+    """Nível pela regra do alert_rules.json, com o piso contínuo de min_detections: a mesma regra de nível do
+    `recent` da API. O normal difere: aqui usa os outros anos, inclusive os posteriores (limite declarado)."""
+    crit = regra["levels"]["critical"]
+    return nivel(a, crit["min_ratio_to_median"], crit["requires_rising_trend"],
+                 regra["levels"]["attention"]["above_percentile"], crit["min_detections"], piso_continuo=True)
+
+
 def gabarito(a, pct, minimo):
     return (a["s14"] > a[f"g{pct}"]) & (a["s14"] >= minimo)
 
@@ -167,7 +174,7 @@ def regras(regra):
     atual = (crit["min_ratio_to_median"], crit["requires_rising_trend"], regra["levels"]["attention"]["above_percentile"])
     for r, t, at, pc in itertools.product(RAZOES, TENDENCIAS, ATENCOES, PISOS_CONTINUOS):
         yield {"regra": f"razao{r}_tend{int(t)}_atencao_p{at}" + ("_piso_continuo" if pc else ""), "razao": r,
-               "tendencia": t, "atencao": at, "piso_continuo": pc, "regra_atual": (r, t, at, pc) == (*atual, False),
+               "tendencia": t, "atencao": at, "piso_continuo": pc, "regra_atual": (r, t, at, pc) == (*atual, True),
                "variante_da_atual": (r, t, at) == atual}
 
 
@@ -175,12 +182,13 @@ def tabela(semanas, a, regra, colunas=None):
     """Uma linha por regra (e por coluna/unidade, se `colunas` vier), mais a ingênua no P90 como regra."""
     anos = np.array([t.year for t in semanas])[:, None] * np.ones((1, a["s7"].shape[1]), int)
     grupos = {"todas": slice(None)} if colunas is None else {c: [j] for j, c in enumerate(colunas)}
+    piso = regra["levels"]["critical"]["min_detections"]  # o mesmo piso da API e do eventos.csv
     linhas = []
     for nome, sel in grupos.items():
         sub = {k: v[:, sel] for k, v in a.items()}
         gab = gabarito(sub, *GABARITO)
         for r in regras(regra):
-            niv = nivel(sub, r["razao"], r["tendencia"], r["atencao"], PISO_MEDIANA_ZERO, r["piso_continuo"])
+            niv = nivel(sub, r["razao"], r["tendencia"], r["atencao"], piso, r["piso_continuo"])
             linhas.append({"unidade": nome, **r, "p_gabarito": GABARITO[0], "minimo": GABARITO[1],
                            **medidas(niv, gab, sub["score"], anos[:, sel])})
             if r["variante_da_atual"] and colunas is None:  # sensibilidade nas duas versões do piso
@@ -203,7 +211,11 @@ def ler_eventos(caminho):
 
 
 def eventos(ev, unidades, semanas, a, niv):
-    """Nível semana a semana em cada evento (bioma inteiro) e a antecedência do primeiro alerta antes do início."""
+    """Nível semana a semana em cada evento (bioma inteiro) e a antecedência do primeiro alerta antes do início.
+
+    antecedencia_no_limite: o alerta já estava ligado na 1ª semana da janela; a antecedência real pode ser maior.
+    alerta_continuo: o nível ficou em Atenção ou Crítico de o primeiro alerta até o último domingo antes do início.
+    """
     linhas = []
     for e in ev.itertuples():
         if e.regiao not in list(unidades):
@@ -211,11 +223,15 @@ def eventos(ev, unidades, semanas, a, niv):
         j = list(unidades).index(e.regiao)
         ini, fim = e.inicio.date(), e.fim.date()
         sel = [(w, t) for w, t in enumerate(semanas) if ini - timedelta(weeks=SEMANAS_ANTES_DO_EVENTO) <= t <= fim]
-        alertas = [t for w, t in sel if t < ini and niv[w, j] >= 1]
+        antes = [(t, niv[w, j] >= 1) for w, t in sel if t < ini]
+        alertas = [t for t, ligado in antes if ligado]
         dias = (ini - min(alertas)).days if alertas else None  # vazio = nenhum alerta nas semanas antes
+        no_limite = bool(antes) and antes[0][1]
+        continuo = bool(alertas) and all(ligado for t, ligado in antes if t >= min(alertas))
         linhas += [{"evento": e.nome, "regiao": e.regiao, "semana": t, "nivel": int(niv[w, j]),
                     "detections": float(a["s7"][w, j]), "typical_median": float(a["med7"][w, j]),
-                    "antecedencia_dias": dias, "antecedencia_semanas": None if dias is None else dias // 7}
+                    "antecedencia_dias": dias, "antecedencia_semanas": None if dias is None else dias // 7,
+                    "antecedencia_no_limite": no_limite, "alerta_continuo": continuo}
                    for w, t in sel]
     return pd.DataFrame(linhas)
 
@@ -286,9 +302,7 @@ def main():
     semanas, ab = avaliar(mb, regra)
     tabela(semanas, ab, regra, colunas=biomas).to_csv(args.saida / "por_bioma.csv", index=False)
     if args.eventos.exists():
-        crit, at = regra["levels"]["critical"], regra["levels"]["attention"]["above_percentile"]
-        niv = nivel(ab, crit["min_ratio_to_median"], crit["requires_rising_trend"], at, PISO_MEDIANA_ZERO)
-        eventos(ler_eventos(args.eventos), biomas, semanas, ab, niv).to_csv(args.saida / "eventos.csv", index=False)
+        eventos(ler_eventos(args.eventos), biomas, semanas, ab, nivel_da_regra(ab, regra)).to_csv(args.saida / "eventos.csv", index=False)
 
     texto = relatorio(bt)
     (args.saida / "relatorio.txt").write_text(texto + "\n", encoding="utf-8")
