@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { ApiClientError, askAssistant, fetchAuditPackage } from '../api/client';
-import type { AssistantAction, AssistantMessage, AssistantResponse } from '../api/types';
+import type { AssistantAction, AssistantMessage, AssistantResponse, AssistantSource } from '../api/types';
 import { downloadBlob } from '../export/ExportBar';
 
 export const SUGGESTED_QUESTIONS = [
@@ -10,6 +10,15 @@ export const SUGGESTED_QUESTIONS = [
   'Where is it burning right now?',
   'Give me a fire report for last year in the Amazon.',
 ];
+
+const MAX_ASSISTANT_CHARS = 4000; // same limit as the API for earlier answers sent back as history
+
+export function describeSource(source: AssistantSource): string {
+  const what = source.endpoint.includes('detections') ? `fire map, last ${source.hours ?? 24} h` : source.endpoint.includes('regions') ? 'region list' : 'calendar';
+  const where = source.region ? ` · ${source.region}` : '';
+  const when = source.start && source.end ? ` · ${source.start} to ${source.end}` : '';
+  return `NASA FIRMS via firesync ${what}${where}${when} · data version ${source.data_version}`;
+}
 
 interface Turn {
   message: AssistantMessage;
@@ -35,16 +44,39 @@ export function AssistantBubble({ onShowCalendar }: Props) {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const bubbleRef = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
+    else if (wasOpen.current) bubbleRef.current?.focus(); // back to the button that opened the panel
+    wasOpen.current = open;
   }, [open]);
+
+  // Keeps Tab inside the open panel, so keyboard users do not land on the map behind it.
+  function trapFocus(event: KeyboardEvent) {
+    if (event.key !== 'Tab' || !panelRef.current) return;
+    const focusable = panelRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), textarea');
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   async function send(text: string) {
     const question = text.trim();
     if (!question || busy) return;
     const history: AssistantMessage[] = turns.flatMap((turn) =>
-      turn.reply?.answer ? [turn.message, { role: 'assistant' as const, content: turn.reply.answer }] : [turn.message],
+      turn.reply?.answer
+        ? [turn.message, { role: 'assistant' as const, content: turn.reply.answer.slice(0, MAX_ASSISTANT_CHARS) }]
+        : [turn.message],
     );
     const message: AssistantMessage = { role: 'user', content: question.slice(0, 1000) };
     setTurns((current) => [...current, { message }]);
@@ -72,7 +104,7 @@ export function AssistantBubble({ onShowCalendar }: Props) {
 
   if (!open) {
     return (
-      <button type="button" className="assistant-bubble" aria-label="Ask about fire data" onClick={() => setOpen(true)}>
+      <button ref={bubbleRef} type="button" className="assistant-bubble" aria-label="Ask about fire data" onClick={() => setOpen(true)}>
         ?
       </button>
     );
@@ -80,11 +112,14 @@ export function AssistantBubble({ onShowCalendar }: Props) {
 
   return (
     <section
+      ref={panelRef}
       className="assistant-panel"
       role="dialog"
+      aria-modal="true"
       aria-label="Fire data assistant"
       onKeyDown={(event) => {
         if (event.key === 'Escape') setOpen(false);
+        trapFocus(event);
       }}
     >
       <header className="assistant-panel__head">
@@ -111,6 +146,13 @@ export function AssistantBubble({ onShowCalendar }: Props) {
             {turn.reply && (
               <div className="assistant-msg">
                 <p>{turn.reply.answer}</p>
+                {turn.reply.sources.length > 0 && (
+                  <ul className="assistant-msg__sources" aria-label="Sources">
+                    {turn.reply.sources.map((source) => (
+                      <li key={describeSource(source)}>{describeSource(source)}</li>
+                    ))}
+                  </ul>
+                )}
                 {turn.reply.notes.map((note) => (
                   <p key={note} className="assistant-msg__note">
                     {note}

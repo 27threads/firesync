@@ -5,6 +5,7 @@ Any provider that speaks this format fits in ASSISTANT_PROVIDERS, so an exhauste
 import json
 import logging
 import urllib.request
+from time import monotonic as system_monotonic
 
 from backend.ports.llm import LlmUnavailable
 
@@ -15,11 +16,11 @@ USER_AGENT = 'firesync-assistant/1.0'
 
 
 class ProviderChain:
-    def __init__(self, providers, timeout, opener=urllib.request.urlopen):
-        self.providers, self.timeout, self.opener = providers, timeout, opener
+    def __init__(self, providers, timeout, opener=urllib.request.urlopen, monotonic=system_monotonic):
+        self.providers, self.timeout, self.opener, self.monotonic = providers, timeout, opener, monotonic
 
     @classmethod
-    def from_env(cls, value, timeout, opener=urllib.request.urlopen):
+    def from_env(cls, value, timeout, opener=urllib.request.urlopen, monotonic=system_monotonic):
         """`base_url|key|model[|reasoning_effort]` entries separated by commas, in fallback order.
 
         Without the fourth field the parameter is not sent (models that do not reason reject it). Empty: assistant off.
@@ -28,10 +29,13 @@ class ProviderChain:
         if any(len(provider) not in (3, 4) or not all(provider) for provider in providers):
             raise ValueError('ASSISTANT_PROVIDERS entries must be base_url|key|model[|reasoning_effort], '
                              'separated by commas.')
-        return cls([(*provider, None)[:4] for provider in providers], timeout, opener) if providers else None
+        return cls([(*provider, None)[:4] for provider in providers], timeout, opener, monotonic) if providers else None
 
-    def complete(self, messages, tools):
+    def complete(self, messages, tools, deadline):
         for base_url, key, model, effort in self.providers:
+            remaining = deadline - self.monotonic()
+            if remaining <= 0:
+                break
             payload = {'model': model, 'messages': messages, 'tools': tools, 'max_tokens': MAX_TOKENS}
             if effort:
                 payload['reasoning_effort'] = effort
@@ -42,12 +46,13 @@ class ProviderChain:
                                                       # Cloudflare in front of some providers blocks Python-urllib (error 1010).
                                                       'User-Agent': USER_AGENT})
             try:
-                # shortcut: the timeout is per provider, so a slow chain can take a multiple of it.
-                with self.opener(request, timeout=self.timeout) as response:
+                # Each call gets its own timeout, cut to what is left of the question's budget.
+                with self.opener(request, timeout=min(self.timeout, remaining)) as response:
                     message = json.load(response)['choices'][0]['message']
                 if not message.get('content') and not message.get('tool_calls'):
                     raise ValueError('empty reply (the model spent max_tokens reasoning)')
                 return message
             except (OSError, ValueError, KeyError, IndexError, TypeError) as error:  # quota, 5xx, timeout, bad body
-                logger.warning('Assistant provider failed, trying the next one: %s %s', base_url, error)
+                logger.warning('Assistant provider failed, trying the next one: %s %s: %s',
+                               base_url, type(error).__name__, error)
         raise LlmUnavailable('Every assistant provider failed.')

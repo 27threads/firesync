@@ -3,7 +3,7 @@ import json
 
 import h3
 
-from backend.application.api import calculate_calendar, parse_request
+from backend.application.api import calculate_calendar, calendar_cache_key, parse_request
 from backend.domain.calculations.map_features import map_result
 from backend.domain.models.error import CalendarError
 from backend.domain.models.map_query import MapQuery
@@ -63,13 +63,23 @@ def calendar_summary(body):
     return summary
 
 
-class Toolbox:
-    """Runs tools inside one read transaction; returns (result for the model, actions, notes)."""
+def area_name(body):
+    biomes = body['area'].get('biomes') or []
+    return biomes[0]['name'] if len(biomes) == 1 else None
 
-    def __init__(self, reader, now, rules, risk_rules):
-        self.reader, self.now, self.rules, self.risk_rules = reader, now, rules, risk_rules
+
+class Toolbox:
+    """Runs each tool in its own short read transaction, so no database connection waits on the language model.
+
+    Collects what the answer may show: actions, notes, sources and the tool results used to check its numbers.
+    """
+
+    def __init__(self, repository, meta, now, rules, risk_rules, cache=None):
+        self.repository, self.meta, self.now = repository, meta, now
+        self.rules, self.risk_rules, self.cache = rules, risk_rules, cache
         self.handlers = {'list_regions': self.list_regions, 'get_calendar': self.get_calendar,
                          'get_recent': self.get_recent, 'get_fire_map': self.get_fire_map}
+        self.actions, self.notes, self.sources, self.results = [], [], [], []
 
     def run(self, name, arguments):
         handler = self.handlers.get(name)
@@ -79,43 +89,63 @@ class Toolbox:
             parsed = json.loads(arguments or '{}')
             if not isinstance(parsed, dict):
                 raise TypeError
-            return handler(**parsed)
+            result, actions, notes, source = handler(**parsed)
         except CalendarError as error:  # a ValueError too, so it must come first
             return failure(error.code, str(error))
         except (TypeError, ValueError):
             return failure('invalid_arguments', 'Arguments do not match the tool parameters.')
+        for items, new in ((self.actions, actions), (self.notes, notes), (self.sources, [source])):
+            items += [item for item in new if item not in items]
+        self.results.append(result)
+        return result
 
     def context(self):
         return (f'Today is {self.now.date().isoformat()} (UTC). Data covers 2003-01 to '
-                f"{self.reader.meta()['last_month']}; resolve relative dates like 'last year' from today.")
+                f"{self.meta['last_month']}; resolve relative dates like 'last year' from today.")
+
+    def source(self, endpoint, **details):
+        return {'endpoint': endpoint, **{key: value for key, value in details.items() if value is not None},
+                'data_version': self.meta['data_version'], 'updated_at': self.meta['updated_at']}
 
     def list_regions(self):
-        return [pick(region, ('region_id', 'name')) for region in self.reader.regions()], [], []
+        with self.repository.read() as reader:
+            regions = [pick(region, ('region_id', 'name')) for region in reader.regions()]
+        return regions, [], [], self.source('GET /api/v1/regions')
 
     def calendar(self, region_id, start=None, end=None):
         request = {'area': {'type': 'region', 'region_id': region_id},
                    **{key: value for key, value in (('start', start), ('end', end)) if value is not None}}
         area, first, last = parse_request(request)
-        _, body = calculate_calendar(self.reader, area, first, last, self.now.date(), self.rules)
-        return request, body
+        key = calendar_cache_key(request, self.now.date(), self.meta)
+        body = self.cache.get(key) if self.cache else None
+        if body is None:
+            with self.repository.read() as reader:
+                _, body = calculate_calendar(reader, area, first, last, self.now.date(), self.rules)
+            if self.cache:
+                self.cache.put(key, body)
+        months = body['months']
+        source = self.source('POST /api/v1/calendar', area=request['area'], region=area_name(body),
+                             start=months[0]['month'] if months else None, end=months[-1]['month'] if months else None)
+        return request, body, source
 
     def get_calendar(self, region_id, start=None, end=None):
-        request, body = self.calendar(region_id, start, end)
+        request, body, source = self.calendar(region_id, start, end)
         return calendar_summary(body), [{'type': 'show_calendar', **request},
-                                        {'type': 'download_export', **request}], []
+                                        {'type': 'download_export', **request}], [], source
 
     def get_recent(self, region_id):
-        request, body = self.calendar(region_id)
+        request, body, source = self.calendar(region_id)
         result = {'area': body['area'], 'coverage': body['coverage'], 'recent': body.get('recent')}
-        return result, [{'type': 'show_calendar', **request}], []
+        return result, [{'type': 'show_calendar', **request}], [], source
 
     def get_fire_map(self, hours=24):
-        boxes = [region['bbox'] for region in self.reader.regions()]
-        bbox = ','.join(str(value) for value in (min(b[0] for b in boxes), min(b[1] for b in boxes),
-                                                 max(b[2] for b in boxes), max(b[3] for b in boxes)))
-        query = MapQuery.parse(bbox, str(hours), MAP_ZOOM, 'hexagons')
-        body = map_result(query, self.reader.map_rows(query, self.now), self.reader.meta()['updated_at'],
-                          self.rules, self.risk_rules)
+        with self.repository.read() as reader:
+            boxes = [region['bbox'] for region in reader.regions()]
+            bbox = ','.join(str(value) for value in (min(b[0] for b in boxes), min(b[1] for b in boxes),
+                                                     max(b[2] for b in boxes), max(b[3] for b in boxes)))
+            query = MapQuery.parse(bbox, str(hours), MAP_ZOOM, 'hexagons')
+            rows = reader.map_rows(query, self.now)
+        body = map_result(query, rows, self.meta['updated_at'], self.rules, self.risk_rules)
         hexagons = sorted(body['features'], key=lambda feature: feature['properties']['detections'], reverse=True)
         alerts = body.get('alerts') or {}
         risk = alerts.get('risk')
@@ -123,7 +153,7 @@ class Toolbox:
                   'top_hexagons': [hexagon_summary(feature['properties']) for feature in hexagons[:TOP_HEXAGONS]],
                   'look_first': [look_first_summary(cell) for cell in alerts.get('priority', [])[:TOP_HEXAGONS]],
                   'risk_tiers': risk['tiers'] if risk else None}
-        return result, [], [RISK_NOTE] if risk else []
+        return result, [], [RISK_NOTE] if risk else [], self.source('GET /api/v1/detections/recent', hours=query.hours)
 
 
 def place(lat, lon):
@@ -143,4 +173,4 @@ def hexagon_summary(properties):
 
 
 def failure(code, message):
-    return {'error': {'code': code, 'message': message}}, [], []
+    return {'error': {'code': code, 'message': message}}

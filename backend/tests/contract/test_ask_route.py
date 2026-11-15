@@ -1,4 +1,6 @@
 """POST /api/v1/ask (RFC 0004): off without providers, validated input, cached first questions."""
+from datetime import datetime, UTC
+
 from fastapi.testclient import TestClient
 
 from tests.fakes.api import NOW, FakeApiRepository
@@ -10,8 +12,8 @@ QUESTION = {'messages': [{'role': 'user', 'content': 'Where is it burning now?'}
 
 def client_with(llm, **options):
     from backend.adapters.inbound.http.app import create_app
-    return TestClient(create_app(repository=FakeApiRepository(), clock=lambda: NOW, limits=options.pop('limits', LIMITS),
-                                 llm=llm, **options))
+    return TestClient(create_app(repository=FakeApiRepository(), clock=options.pop('clock', lambda: NOW),
+                                 limits=options.pop('limits', LIMITS), llm=llm, **options))
 
 
 def test_without_providers_the_route_answers_unavailable_and_the_rest_keeps_working(monkeypatch):
@@ -77,3 +79,37 @@ def test_oversized_body_keeps_its_own_error():
     with client_with(ScriptedLlm()) as client:
         response = client.post('/api/v1/ask', content=b'x' * 1_000_001, headers={'Content-Type': 'application/json'})
     assert response.status_code == 413 and response.json()['error']['code'] == 'area_too_large'
+
+
+def test_bad_assistant_setting_turns_it_off_but_the_api_still_starts(monkeypatch):
+    monkeypatch.setenv('ASSISTANT_PROVIDERS', 'https://a/v1|key-without-model')
+    with client_with(None) as client:
+        assert client.get('/api/v1/health').status_code == 200
+        assert client.post('/api/v1/calendar', json={'area': {'type': 'region', 'region_id': 1}}).status_code == 200
+        assert client.post('/api/v1/ask', json=QUESTION).json()['error']['code'] == 'assistant_unavailable'
+
+
+def test_cached_answer_does_not_cross_midnight():
+    today = [NOW]
+    llm = ScriptedLlm({'content': 'Answer for the 14th.'}, {'content': 'Answer for the 15th.'})
+    with client_with(llm, clock=lambda: today[0]) as client:
+        assert client.post('/api/v1/ask', json=QUESTION).json()['answer'] == 'Answer for the 14th.'
+        today[0] = datetime(2026, 11, 15, 0, 5, tzinfo=UTC)
+        assert client.post('/api/v1/ask', json=QUESTION).json()['answer'] == 'Answer for the 15th.'
+
+
+def test_answer_with_untraced_figures_is_flagged_and_not_cached():
+    llm = ScriptedLlm({'content': 'There were 8,106 hotspots.'}, {'content': 'No figures this time.'})
+    with client_with(llm) as client:
+        first = client.post('/api/v1/ask', json=QUESTION).json()
+        second = client.post('/api/v1/ask', json=QUESTION).json()
+    assert first['verified'] is False and '8,106' in first['notes'][0]
+    assert second['answer'] == 'No figures this time.' and second['verified'] is True
+
+
+def test_follow_up_after_a_long_answer_is_accepted():
+    llm = ScriptedLlm({'content': 'ok'})
+    conversation = {'messages': [*QUESTION['messages'], {'role': 'assistant', 'content': 'report line. ' * 200},
+                                 {'role': 'user', 'content': 'And 2023?'}]}
+    with client_with(llm) as client:
+        assert client.post('/api/v1/ask', json=conversation).status_code == 200

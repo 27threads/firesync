@@ -17,7 +17,7 @@ from backend.adapters.inbound.http.limits import RateLimiter
 from backend.adapters.inbound.http.zip_export import audit_zip
 from backend.adapters.outbound.config_file.rules import load_risk_rules, load_rules
 from backend.adapters.outbound.llm.openai import ProviderChain
-from backend.application.api import calculate_calendar, parse_request
+from backend.application.api import calculate_calendar, calendar_cache_key, parse_request
 from backend.application.assistant import AskService, validate_messages
 from backend.application.assistant_tools import Toolbox
 from backend.application.audit import audit_document
@@ -32,6 +32,18 @@ MAX_BODY_BYTES = 1_000_000
 ERROR_STATUS = {'invalid_geometry': 400, 'invalid_period': 400, 'invalid_bbox': 400,
                 'invalid_hours': 400, 'invalid_mode': 400, 'region_not_found': 404, 'area_too_large': 413,
                 'invalid_request': 400, 'assistant_unavailable': 503}
+
+
+def assistant_from_env(llm, clock):
+    """A bad assistant setting turns the assistant off; it must never stop the rest of the API from starting."""
+    try:
+        llm = llm or ProviderChain.from_env(os.environ.get('ASSISTANT_PROVIDERS', ''),
+                                            float(os.environ.get('ASSISTANT_TIMEOUT_S', 20)))
+        return llm, AskService(llm, int(os.environ.get('ASSISTANT_DAILY_LIMIT', 500)), clock,
+                               float(os.environ.get('ASSISTANT_BUDGET_S', 60)))
+    except ValueError as error:
+        logger.error('Assistant disabled, invalid configuration: %s', error)
+        return None, None
 
 
 def error_response(code, message, status, headers=None):
@@ -53,9 +65,7 @@ def create_app(repository: ApiRepository | None = None, clock=None, monotonic=No
     limiter = RateLimiter(configured_limits, rate_window if rate_window is not None else int(os.environ.get('RATE_LIMIT_WINDOW', 60)), monotonic)
     cache = ResponseCache(int(os.environ.get('RESPONSE_CACHE_SIZE', 128)))
     # Without ASSISTANT_PROVIDERS the assistant is off and /ask answers 503; nothing else depends on it.
-    llm = llm or ProviderChain.from_env(os.environ.get('ASSISTANT_PROVIDERS', ''),
-                                        int(os.environ.get('ASSISTANT_TIMEOUT_S', 20)))
-    assistant = AskService(llm, int(os.environ.get('ASSISTANT_DAILY_LIMIT', 500)), clock)
+    llm, assistant = assistant_from_env(llm, clock)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -149,7 +159,7 @@ def create_app(repository: ApiRepository | None = None, clock=None, monotonic=No
         key = json.dumps(payload, sort_keys=True, allow_nan=False) + now.date().isoformat()
         with repository.read() as reader:
             meta = reader.meta()
-            cache_key = ('calendar', key, meta['updated_at'], meta['data_version'])
+            cache_key = calendar_cache_key(payload, now.date(), meta)
             body = cache.get(cache_key)
             if body is None:
                 _, body = calculate_calendar(reader, area, start, end, now.date(), rules)
@@ -197,16 +207,18 @@ def create_app(repository: ApiRepository | None = None, clock=None, monotonic=No
         messages = validate_messages(payload)
         if llm is None:
             raise CalendarError('assistant_unavailable', 'Assistant unavailable, use the map.')
-        with repository.read() as reader:
+        now = clock()
+        with repository.read() as reader:  # short: the tools open their own reads, none waits on the model
             meta = reader.meta()
-            # First questions (the suggested ones) repeat a lot: cache them until the data changes.
-            key = ('ask', messages[0]['content'], meta['updated_at'], meta['data_version']) if len(messages) == 1 else None
-            body = cache.get(key) if key else None
-            if body is None:
-                body = assistant.ask(messages, Toolbox(reader, clock(), rules, risk_rules))
-                body['meta'] = {'updated_at': meta['updated_at'], 'data_version': meta['data_version']}
-                if key:
-                    cache.put(key, body)
+        # First questions (the suggested ones) repeat a lot: cache them until the data or the day changes.
+        key = (('ask', messages[0]['content'], now.date().isoformat(), meta['updated_at'], meta['data_version'])
+               if len(messages) == 1 else None)
+        body = cache.get(key) if key else None
+        if body is None:
+            body = assistant.ask(messages, Toolbox(repository, meta, now, rules, risk_rules, cache))
+            body['meta'] = {'updated_at': meta['updated_at'], 'data_version': meta['data_version']}
+            if key and body['verified']:  # an answer with untraced figures is never served to the next person
+                cache.put(key, body)
         return JSONResponse(body, headers={'Cache-Control': 'no-store'})
 
     @app.post('/api/v1/ask')

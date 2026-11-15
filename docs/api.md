@@ -422,7 +422,7 @@ Pedido:
 { "messages": [ { "role": "user", "content": "What was the worst month in the Pantanal in 2020?" } ] }
 ```
 
-- De 1 a 10 mensagens. Cada uma só com `role` (`user` ou `assistant`) e `content` (texto de 1 a 1.000 caracteres). A última é do usuário. Qualquer outro campo, papel ou bloco é `invalid_request`.
+- De 1 a 10 mensagens. Cada uma só com `role` (`user` ou `assistant`) e `content` (texto: até 1.000 caracteres do usuário e 4.000 do assistente, porque respostas anteriores voltam como histórico). A última é do usuário. Qualquer outro campo, papel ou bloco é `invalid_request`.
 - O servidor manda ao modelo só as últimas 6 mensagens.
 
 Resposta:
@@ -431,10 +431,13 @@ Resposta:
 | --- | --- |
 | `answer` | Texto no idioma da pergunta |
 | `actions[]` | Saem das ferramentas que rodaram. `show_calendar` (`area`, `start` e `end` opcionais) aplica a busca na tela; `download_export` (mesmos campos) baixa o ZIP de `POST /export` |
-| `notes[]` | Avisos fixos em inglês. Hoje só o do risco: frequência do passado, não previsão |
+| `notes[]` | Avisos fixos em inglês: o do risco (frequência do passado, não previsão) e o de números não rastreados |
+| `sources[]` | Uma por ferramenta que rodou: `endpoint` (rota equivalente), `area`, `region`, `start`, `end` ou `hours`, `data_version` e `updated_at`. Montadas pelo servidor, nunca pelo modelo |
+| `verified` | `true` quando todo número do `answer` aparece nos resultados das ferramentas (lido em formato inglês ou português, com arredondamento; anos e inteiros até 31 não entram). `false` vem com a nota dizendo quais números não foram achados |
 | `meta` | `updated_at` e `data_version` dos dados usados |
 
-- Pedido com uma mensagem só fica no cache até mudar `updated_at` ou `data_version`: as perguntas sugeridas repetidas não chamam o provedor.
+- Pedido com uma mensagem só fica no cache até mudar o dia (UTC), `updated_at` ou `data_version`, e só quando `verified` é `true`: as perguntas sugeridas repetidas não chamam o provedor, e uma resposta com número não rastreado não passa para o próximo.
+- As ferramentas abrem uma leitura curta no banco cada uma; nenhuma conexão fica presa enquanto o modelo responde. O cálculo do calendário divide o cache com `POST /calendar`.
 - Limite próprio por IP (`RATE_LIMIT_ASK`) e teto diário global (`ASSISTANT_DAILY_LIMIT`). Variáveis em [backend/README.md](../backend/README.md).
 
 ## `GET /regions`

@@ -287,8 +287,20 @@ export interface AssistantAction {
   end?: string;
 }
 
+/** Where the answer's figures came from: the API route and request each tool ran, with the data version. */
+export interface AssistantSource {
+  endpoint: string;
+  region?: string;
+  start?: string;
+  end?: string;
+  hours?: number;
+  data_version: string;
+}
+
 export interface AssistantResponse {
   answer: string;
   actions: AssistantAction[];
   notes: string[];
+  sources: AssistantSource[];
+  verified: boolean;
 }

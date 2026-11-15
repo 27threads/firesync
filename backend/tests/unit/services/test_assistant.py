@@ -1,6 +1,7 @@
 """Assistant (RFC 0004): the model only picks tools; every number comes from the API use cases."""
 import io
 import json
+from contextlib import contextmanager
 import urllib.error
 from datetime import date, datetime, UTC
 
@@ -10,7 +11,7 @@ import pytest
 from backend.adapters.outbound.config_file.rules import load_risk_rules, load_rules
 from backend.adapters.outbound.llm.openai import ProviderChain
 from backend.application.api import calculate_calendar
-from backend.application.assistant import AskService, validate_messages
+from backend.application.assistant import AskService, UNVERIFIED_NOTE, unverified_numbers, validate_messages
 from backend.application.assistant_tools import RISK_NOTE, Toolbox
 from backend.domain.models.area import Area
 from backend.domain.models.error import CalendarError
@@ -25,23 +26,45 @@ def call(name, **arguments):
         {'id': 'call-' + name, 'type': 'function', 'function': {'name': name, 'arguments': json.dumps(arguments)}}]}
 
 
+class TrackedRepository(FakeApiRepository):
+    """Counts open reads, to prove no database transaction stays open while the model thinks."""
+
+    def __init__(self):
+        super().__init__()
+        self.open_reads = 0
+
+    @contextmanager
+    def read(self):
+        self.open_reads += 1
+        try:
+            with super().read() as reader:
+                yield reader
+        finally:
+            self.open_reads -= 1
+
+
 class ScriptedLlm:
-    def __init__(self, *replies):
+    def __init__(self, *replies, repository=None):
         self.replies = list(replies)
         self.conversations = []
+        self.repository = repository
 
-    def complete(self, messages, tools):
+    def complete(self, messages, tools, deadline):
+        assert self.repository is None or self.repository.open_reads == 0
         self.conversations.append([dict(message) for message in messages])
         if not self.replies:
             raise LlmUnavailable('script ended')
         return self.replies.pop(0)
 
 
-def ask(llm, repository=None, messages=QUESTION, service=None):
-    repository = repository or FakeApiRepository()
-    service = service or AskService(llm, daily_limit=10, clock=lambda: NOW)
-    with repository.read() as reader:
-        return service.ask(messages, Toolbox(reader, NOW, load_rules(), load_risk_rules()))
+def service_for(llm, **options):
+    return AskService(llm, options.pop('daily_limit', 10), options.pop('clock', lambda: NOW), 60, **options)
+
+
+def ask(llm, repository=None, messages=QUESTION, service=None, cache=None):
+    repository = repository or llm.repository or FakeApiRepository()
+    toolbox = Toolbox(repository, repository.meta(), NOW, load_rules(), load_risk_rules(), cache)
+    return (service or service_for(llm)).ask(messages, toolbox)
 
 
 def tool_results(llm):
@@ -56,6 +79,7 @@ def tool_results(llm):
     {'messages': [{'role': 'user', 'content': [{'type': 'text', 'text': 'hi'}]}]},
     {'messages': [{'role': 'user', 'content': '  '}]},
     {'messages': [{'role': 'user', 'content': 'x' * 1001}]},
+    {'messages': [{'role': 'assistant', 'content': 'x' * 4001}, {'role': 'user', 'content': 'and?'}]},
     {'messages': [{'role': 'user', 'content': 'hi'}] * 11},
     {'messages': [{'role': 'user', 'content': 'hi'}, {'role': 'assistant', 'content': 'hello'}]},
 ])
@@ -66,14 +90,15 @@ def test_only_plain_user_and_assistant_text_is_accepted(payload):
 
 
 def test_valid_conversation_passes_unchanged():
-    messages = [{'role': 'user', 'content': 'hi'}, {'role': 'assistant', 'content': 'hello'},
+    messages = [{'role': 'user', 'content': 'hi'}, {'role': 'assistant', 'content': 'a long report ' * 100},
                 {'role': 'user', 'content': 'Pantanal 2020?'}]
     assert validate_messages({'messages': messages}) == messages
 
 
 def test_calendar_answer_uses_the_same_numbers_as_the_calendar_route():
+    repository = TrackedRepository()
     llm = ScriptedLlm(call('get_calendar', region_id=1, start='2026-01', end='2026-11'),
-                      {'content': 'November 2026 had the most hotspots.'})
+                      {'content': 'November 2026 had the most hotspots.'}, repository=repository)
     result = ask(llm)
     repository = FakeApiRepository()
     with repository.read() as reader:
@@ -87,7 +112,10 @@ def test_calendar_answer_uses_the_same_numbers_as_the_calendar_route():
     assert result['actions'] == [
         {'type': 'show_calendar', 'area': area, 'start': '2026-01', 'end': '2026-11'},
         {'type': 'download_export', 'area': area, 'start': '2026-01', 'end': '2026-11'}]
-    assert result['notes'] == []
+    assert result['notes'] == [] and result['verified']
+    assert result['sources'] == [{'endpoint': 'POST /api/v1/calendar', 'area': area, 'region': 'Test', 'start': '2026-01',
+                                  'end': '2026-11', 'data_version': '2026-11-14T14:00:00Z',
+                                  'updated_at': '2026-11-14T15:00:00Z'}]
 
 
 def test_long_period_sends_years_and_top_months_instead_of_every_month():
@@ -172,10 +200,25 @@ def test_endless_tool_calls_stop_after_the_round_limit():
     assert error.value.code == 'assistant_unavailable' and len(llm.conversations) == 5
 
 
+def test_time_budget_stops_the_question_between_rounds():
+    now = [0.0]
+
+    class SlowLlm(ScriptedLlm):
+        def complete(self, messages, tools, deadline):
+            now[0] += 40  # each round takes 40 s; the budget is 60 s
+            assert deadline == 60
+            return super().complete(messages, tools, deadline)
+
+    llm = SlowLlm(*[call('list_regions')] * 5)
+    with pytest.raises(CalendarError) as error:
+        ask(llm, service=service_for(llm, monotonic=lambda: now[0]))
+    assert error.value.code == 'assistant_unavailable' and len(llm.conversations) == 2
+
+
 def test_daily_limit_blocks_before_calling_a_provider_and_resets_next_day():
     today = [NOW]
     llm = ScriptedLlm({'content': 'a'}, {'content': 'b'})
-    service = AskService(llm, daily_limit=1, clock=lambda: today[0])
+    service = service_for(llm, daily_limit=1, clock=lambda: today[0])
     assert ask(llm, service=service)['answer'] == 'a'
     with pytest.raises(CalendarError) as error:
         ask(llm, service=service)
@@ -189,8 +232,10 @@ class Opener:
         self.outcomes = list(outcomes)
         self.urls = []
         self.bodies = []
+        self.timeouts = []
 
     def __call__(self, request, timeout):
+        self.timeouts.append(timeout)
         assert request.get_header('User-agent') == 'firesync-assistant/1.0'  # Python-urllib is blocked by Cloudflare
         self.urls.append(request.full_url)
         self.bodies.append(json.loads(request.data))
@@ -200,6 +245,9 @@ class Opener:
         return io.BytesIO(json.dumps({'choices': [{'message': outcome}]}).encode())
 
 
+FAR = float('inf')
+
+
 def quota_error(url):
     return urllib.error.HTTPError(url, 429, 'insufficient_quota', {}, None)
 
@@ -207,7 +255,7 @@ def quota_error(url):
 def test_provider_chain_falls_back_to_the_next_provider():
     opener = Opener(quota_error('https://a/v1/chat/completions'), TimeoutError(), {'content': 'from c'})
     chain = ProviderChain.from_env('https://a/v1|ka|m1, https://b/v1/|kb|m2,https://c/v1|kc|m3', 5, opener)
-    assert chain.complete(QUESTION, [])['content'] == 'from c'
+    assert chain.complete(QUESTION, [], FAR)['content'] == 'from c'
     assert opener.urls == ['https://a/v1/chat/completions', 'https://b/v1/chat/completions',
                            'https://c/v1/chat/completions']
 
@@ -215,7 +263,7 @@ def test_provider_chain_falls_back_to_the_next_provider():
 def test_provider_chain_raises_when_every_provider_fails():
     chain = ProviderChain.from_env('https://a/v1|ka|m1', 5, Opener(quota_error('https://a')))
     with pytest.raises(LlmUnavailable):
-        chain.complete(QUESTION, [])
+        chain.complete(QUESTION, [], FAR)
 
 
 def test_provider_chain_config():
@@ -226,15 +274,15 @@ def test_provider_chain_config():
 
 def test_reasoning_effort_is_sent_only_when_configured():
     opener = Opener({'content': 'a'}, {'content': 'b'})
-    ProviderChain.from_env('https://a/v1|ka|m1|none', 5, opener).complete(QUESTION, [])
-    ProviderChain.from_env('https://b/v1|kb|m2', 5, opener).complete(QUESTION, [])
+    ProviderChain.from_env('https://a/v1|ka|m1|none', 5, opener).complete(QUESTION, [], FAR)
+    ProviderChain.from_env('https://b/v1|kb|m2', 5, opener).complete(QUESTION, [], FAR)
     assert opener.bodies[0]['reasoning_effort'] == 'none' and 'reasoning_effort' not in opener.bodies[1]
 
 
 def test_empty_reply_falls_to_the_next_provider():
     opener = Opener({'content': ''}, {'content': None, 'tool_calls': [{'id': 'x'}]})
     chain = ProviderChain.from_env('https://a/v1|ka|m1,https://b/v1|kb|m2', 5, opener)
-    assert chain.complete(QUESTION, [])['tool_calls'] == [{'id': 'x'}]
+    assert chain.complete(QUESTION, [], FAR)['tool_calls'] == [{'id': 'x'}]
     assert len(opener.urls) == 2
 
 
@@ -247,3 +295,54 @@ def test_one_year_period_sends_no_rank():
 def test_place_writes_hemispheres():
     from backend.application.assistant_tools import place
     assert place(1.584, -55.88) == '1.58°N, 55.88°W' and place(-2.3, 10) == '2.30°S, 10.00°E'
+
+
+def test_provider_calls_are_cut_to_the_remaining_budget():
+    now = [0.0]
+    opener = Opener(TimeoutError(), {'content': 'b'})
+    chain = ProviderChain.from_env('https://a/v1|ka|m1,https://b/v1|kb|m2', 20, opener, monotonic=lambda: now[0])
+    now[0] = 50
+    assert chain.complete(QUESTION, [], 60)['content'] == 'b'
+    assert opener.timeouts == [10, 10]
+    now[0] = 61
+    with pytest.raises(LlmUnavailable):
+        chain.complete(QUESTION, [], 60)
+    assert len(opener.urls) == 2  # an expired budget calls nobody
+
+
+@pytest.mark.parametrize('answer', [
+    'September 2020 had 64,824 hotspots, 13.3% above the median of 429,962.5.',
+    'Setembro de 2020 teve 64.824 focos, 13,3% acima da mediana de 429.962,5.',
+    'About 651,299, risk 0.97 at 1.58°N, 55.88°W, 82% of the time.',
+    'In the last 7 days of 2026, 3 cells in the top 10.',
+    'The biome covers 1,995,000 km² (1.995.000 km²).',
+])
+def test_figures_found_in_the_tool_results_are_verified(answer):
+    results = [{'detections': 64824.0, 'anomaly_pct': 0.1326, 'median': 429962.5, 'reference': 651299.4,
+                'risk_prob': 0.973, 'center': '1.58°N, 55.88°W', 'share': 0.82, 'area_km2': 1995000.3}]
+    assert unverified_numbers(answer, results) == []
+
+
+def test_invented_or_computed_figures_are_flagged():
+    results = [{'detections': [61653, 115444, 104633], 'year_total': 388215}]
+    answer = 'Aug, Sep and Oct add up to more than 85% of the 388,215 detections (281,730 in total).'
+    assert unverified_numbers(answer, results) == ['85', '281,730']
+
+
+def test_unverified_answer_says_so_and_cites_its_sources():
+    llm = ScriptedLlm(call('get_recent', region_id=1), {'content': 'There were 8,106 hotspots last week.'})
+    result = ask(llm)
+    assert not result['verified'] and result['notes'] == [UNVERIFIED_NOTE.format('8,106')]
+    assert [source['endpoint'] for source in result['sources']] == ['POST /api/v1/calendar']
+
+
+def test_tools_share_the_calendar_cache():
+    from backend.adapters.inbound.http.cache import ResponseCache
+    cache = ResponseCache()
+    repository = TrackedRepository()
+    calls = []
+    original = repository.history
+    repository.history = lambda area: calls.append(area) or original(area)
+    for _ in range(2):
+        ask(ScriptedLlm(call('get_recent', region_id=1), {'content': 'ok'}, repository=repository), cache=cache)
+    assert len(calls) == 1

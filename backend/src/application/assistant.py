@@ -1,13 +1,16 @@
 """Virtual assistant (RFC 0004): the model picks tools and writes the text; numbers come from the tools."""
 import json
+import re
 from threading import Lock
+from time import monotonic as system_monotonic
 
 from backend.application.assistant_tools import TOOL_SPECS
 from backend.domain.models.error import CalendarError
 from backend.ports.llm import LlmClient, LlmUnavailable
 
 MAX_MESSAGES = 10
-MAX_MESSAGE_CHARS = 1000
+MAX_USER_CHARS = 1000
+MAX_ASSISTANT_CHARS = 4000  # earlier answers come back as history, and reports run past 1000 characters
 HISTORY_SENT = 6
 MAX_TOOL_ROUNDS = 4
 SYSTEM_PROMPT = (
@@ -21,6 +24,9 @@ SYSTEM_PROMPT = (
     'A month with missing satellite days is not a month with zero hotspots. '
     'Regions are biomes only: for a state, a city or a place outside Brazil, say so and suggest drawing the area '
     'on the map. Use list_regions to find a region_id.')
+UNVERIFIED_NOTE = 'Some figures could not be traced to the data ({}). Check them on the calendar.'
+NUMBER = re.compile(r'\d+(?:[.,]\d+)*')
+RELATIVE_TOLERANCE = 0.001  # '~651,299' style roundings of large counts
 
 
 def invalid(message):
@@ -32,19 +38,70 @@ def validate_messages(payload):
     messages = payload.get('messages') if isinstance(payload, dict) else None
     if not isinstance(messages, list) or not 1 <= len(messages) <= MAX_MESSAGES:
         raise invalid(f'Send 1 to {MAX_MESSAGES} messages.')
+    limits = {'user': MAX_USER_CHARS, 'assistant': MAX_ASSISTANT_CHARS}
     for message in messages:
         if (not isinstance(message, dict) or set(message) != {'role', 'content'}
-                or message['role'] not in ('user', 'assistant') or not isinstance(message['content'], str)
-                or not message['content'].strip() or len(message['content']) > MAX_MESSAGE_CHARS):
-            raise invalid(f'Each message needs a user or assistant role and 1 to {MAX_MESSAGE_CHARS} characters of text.')
+                or message.get('role') not in limits or not isinstance(message['content'], str)
+                or not message['content'].strip() or len(message['content']) > limits[message['role']]):
+            raise invalid(f'Each message needs a user or assistant role and text: up to {MAX_USER_CHARS} '
+                          f'characters for the user and {MAX_ASSISTANT_CHARS} for the assistant.')
     if messages[-1]['role'] != 'user':
         raise invalid('The last message must come from the user.')
     return messages
 
 
+def readings(token):
+    """Both ways to read '64,824' or '13,3': English and Portuguese separators, with the decimals shown."""
+    values = set()
+    for thousands, decimal in ((',', '.'), ('.', ',')):
+        plain = token.replace(thousands, '')
+        if plain.count(decimal) > 1:
+            continue
+        whole, _, fraction = plain.partition(decimal)
+        values.add((float(whole + '.' + (fraction or '0')), len(fraction)))
+    return values
+
+
+def data_values(value, found):
+    if isinstance(value, bool):
+        return found
+    if isinstance(value, (int, float)):
+        found.add(abs(float(value)))
+    elif isinstance(value, str):
+        found.update(float(number) for number in NUMBER.findall(value.replace(',', '')) if number.count('.') <= 1)
+    elif isinstance(value, dict):
+        for item in value.values():
+            data_values(item, found)
+    elif isinstance(value, list):
+        for item in value:
+            data_values(item, found)
+    return found
+
+
+def traced(number, decimals, values):
+    rounding = 0.5 * 10 ** -decimals + 1e-9
+    return any(abs(number - value) <= max(rounding, RELATIVE_TOLERANCE * value)
+               or abs(number - value * 100) <= max(rounding, RELATIVE_TOLERANCE * value * 100)  # 0.133 -> 13.3%
+               for value in values)
+
+
+def unverified_numbers(answer, results):
+    """Figures in the answer that appear in no tool result. Years and small integers (days, ranks) are skipped."""
+    values = data_values(results, set())
+    missing = []
+    for token in NUMBER.findall(answer):
+        options = readings(token)
+        if any(decimals == 0 and (number <= 31 or 1900 <= number <= 2100) for number, decimals in options):
+            continue
+        if not any(traced(number, decimals, values) for number, decimals in options) and token not in missing:
+            missing.append(token)
+    return missing
+
+
 class AskService:
-    def __init__(self, llm: LlmClient, daily_limit, clock):
+    def __init__(self, llm: LlmClient, daily_limit, clock, budget_s, monotonic=system_monotonic):
         self.llm, self.daily_limit, self.clock = llm, daily_limit, clock
+        self.budget_s, self.monotonic = budget_s, monotonic
         self.day, self.used = None, 0
         self.lock = Lock()
 
@@ -58,27 +115,36 @@ class AskService:
                 raise CalendarError('assistant_unavailable', 'Daily limit reached, use the map.')
             self.used += 1
 
-    def complete(self, conversation):
+    def complete(self, conversation, deadline):
         try:
-            return self.llm.complete(conversation, TOOL_SPECS)
+            if self.monotonic() >= deadline:
+                raise LlmUnavailable('time budget spent')
+            return self.llm.complete(conversation, TOOL_SPECS, deadline)
         except LlmUnavailable:
             raise CalendarError('assistant_unavailable', 'Assistant unavailable, use the map.') from None
 
     def ask(self, messages, toolbox):
         self.spend_daily_request()
+        # One budget for the whole question, below the ~100 s a Cloudflare Tunnel waits for a response.
+        deadline = self.monotonic() + self.budget_s
         conversation = [{'role': 'system', 'content': SYSTEM_PROMPT + ' ' + toolbox.context()}, *messages[-HISTORY_SENT:]]
-        actions, notes = [], []
         for _ in range(MAX_TOOL_ROUNDS + 1):
-            reply = self.complete(conversation)
+            reply = self.complete(conversation, deadline)
             calls = reply.get('tool_calls') or []
             if not calls:
-                return {'answer': reply.get('content') or '', 'actions': actions, 'notes': notes}
+                return answer(reply.get('content') or '', toolbox)
             conversation.append({'role': 'assistant', 'content': reply.get('content'), 'tool_calls': calls})
             for tool_call in calls:
                 function = tool_call.get('function') or {}
-                result, new_actions, new_notes = toolbox.run(function.get('name'), function.get('arguments'))
-                actions += [action for action in new_actions if action not in actions]
-                notes += [note for note in new_notes if note not in notes]
+                result = toolbox.run(function.get('name'), function.get('arguments'))
                 conversation.append({'role': 'tool', 'tool_call_id': tool_call.get('id'),
                                      'content': json.dumps(result, default=str)})
         raise CalendarError('assistant_unavailable', 'Assistant unavailable, use the map.')
+
+
+def answer(text, toolbox):
+    """Sources and actions come from the tools that ran; figures missing from their results get flagged."""
+    missing = unverified_numbers(text, toolbox.results)
+    notes = toolbox.notes + ([UNVERIFIED_NOTE.format(', '.join(missing))] if missing else [])
+    return {'answer': text, 'actions': toolbox.actions, 'notes': notes, 'sources': toolbox.sources,
+            'verified': not missing}
