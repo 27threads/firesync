@@ -37,7 +37,8 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 21 | [Simulação e auditoria pelos logs](docs/simulacao.md) | Como rodar o sistema de ponta a ponta num banco descartável e auditar pelos logs se ele entrega o que os critérios cobram | Antes de rodar a simulação ou investigar um problema |
 | 22 | [Restrições para o mundo](docs/escala-mundial.md) | O que muda quando a cobertura passar do Brasil para o mundo, com a saída proposta para cada ponto | Antes de mexer em cobertura, seleção de área ou camada de focos |
 | 23 | [Deploy](docs/deploy.md) | Front no Cloudflare, banco/API/job NRT na VPS pelo Cloudflare Tunnel, variáveis e segurança da VPS | Antes de publicar ou mexer em `infra/` |
-| 24 | [RFC 0004: assistente virtual](docs/rfcs/0004-assistente-virtual.md) | Chat no site que responde perguntas com tool-use sobre os casos de uso da API: ferramentas, contrato `/ask`, front, riscos e plano | Antes de mexer no assistente |
+| 24 | [Página do projeto](docs/pagina-projeto.md) | Texto em inglês de cada campo da página do projeto no Space Apps (C9) | Antes de preencher ou mudar a página da submissão |
+| 25 | [RFC 0004: assistente virtual](docs/rfcs/0004-assistente-virtual.md) | Chat no site que responde perguntas com tool-use sobre os casos de uso da API: ferramentas, contrato `/ask`, front, riscos e plano | Antes de mexer no assistente |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
@@ -116,7 +117,8 @@ Detalhes de cada etapa: [importacao-regioes.md](docs/importacao-regioes.md).
 - [x] API HTTP C1–C6 (validação com dados sintéticos; conferência da carga real pelo Eduardo em [validacao-api-eduardo.md](docs/validacao-api-eduardo.md))
 - [x] Frontend (D1–D7 prontos e conferidos com a carga real no site no ar em 15/11; aviso antecipado D10 no ar, conferido com a API real em 15/11; a demo D8 segue pendente)
 - [ ] Deploy público
-- [ ] Demo e página do projeto
+- [x] Texto da página do projeto ([pagina-projeto.md](docs/pagina-projeto.md); falta o link da demo)
+- [ ] Demo (D8)
 
 ## Uso de IA
 
@@ -156,7 +158,9 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | Aviso antecipado no mapa (D10: `frontend/src/map/alertsModel.ts`, `EarlyWarning.tsx`, tooltip em `src/controls/recentDetectionsModel.ts`, tipos, estilos e jornadas J10 e J11) | Claude Code (Claude Opus 5.5) | Escrito em TDD a partir do contrato dos PRs #86 e #97 e do texto do PR #103, com todos os campos novos opcionais; a correção do foco do mapa veio de uma jornada que falhava. A equipe revisa no PR |
 | Resultados da frente B na tela de Método (`frontend/index.html`, `frontend/public/img/`, `src/index-html.test.ts`) | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Textos em inglês escritos a partir de `docs/decisoes-harmonizacao.md` e do RFC 0003, com os números copiados dos documentos, e testes antes do texto. A equipe revisa no PR |
 | Ajustes da abertura em `lovable/` (`src/lib/opening-copy.ts`, `MapOpening.tsx`, `OrbitalScene.tsx`, `styles.css`, `src/assets/satellites/CREDITS.md`, teste `src/test/opening-copy.test.ts`) | Claude Code (Claude Opus 5.5) | Revisão da abertura pelos critérios do `docs/premiacao.md` e troca dos textos e dos rótulos dos satélites (Aqua; S-NPP → NOAA-20) conforme as regras do README, com o teste antes do código. O resto de `lovable/` foi gerado no Lovable pela equipe. A equipe revisa no PR |
+| `docs/pagina-projeto.md` (C9) | Claude Code (Claude Opus 5.5) | Texto em inglês da página do projeto, escrito a partir dos docs do repo, da tela de Método e desta tabela, com os números copiados dos documentos. A equipe revisa no PR |
 | Assets de `lovable/` no git (`src/assets/`: texturas da Terra, `aqua.glb`, `suomi-npp.glb`, `country-boundaries.geojson`; imports em `OrbitalScene.tsx`, `AreaMap.tsx`, `routes/index.tsx`) | Claude Code (Claude Opus 5.5) | Troca dos ponteiros `*.asset.json` (só funcionavam na hospedagem do Lovable) por arquivos das fontes públicas: modelos da NASA com o Draco decodificado, textura gerada da camada GIBS do mapa e GeoJSON sem alteração. O Terra rotulado como Aqua virou o modelo do Aqua. Conferido no navegador local. A equipe revisa no PR |
+| `RISK_MAX_AGE_DAYS` na tabela de variáveis do `backend/README.md` e status de RNF03, RNF09 e B9 (`docs/requisitos.md`, `docs/tarefas.md`, `docs/deploy.md`, `infra/.env.example`) | Claude Code (Claude Opus 5.5) | Texto escrito a partir dos logs do `job-nrt` e do `job-risco` e do `docker stats` da VPS em 15/11, colados pela equipe. A equipe revisa no PR |
 
 ## Dados e créditos
 
