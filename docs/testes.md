@@ -59,8 +59,8 @@ Cada jornada roda no desktop e no celular. Os seletores usam papéis e textos ac
 
 | Parte | Medida | Mínimo | Onde fica o mínimo |
 | --- | --- | --- | --- |
-| `data-pipeline/` | Linhas e ramos, juntando unidade e integração | **71%**, o medido na esteira do PR do modelo A (`modelo_a.py` 90%). Os logs estruturados (`logs.py` 97%) entraram depois sem baixar a cobertura | `data-pipeline/.coveragerc` |
-| `backend/src/` | Linhas e ramos | **97,0%**, após as rotas HTTP e os testes com PostGIS sintético | `.github/workflows/ci.yml` |
+| `data-pipeline/` | Linhas e ramos, juntando unidade e integração | **75%**, o medido na esteira do PR #77 (backtest do alerta com o teste das fórmulas) | `data-pipeline/.coveragerc` |
+| `backend/src/` | Linhas e ramos | **97,1%**, após as rotas HTTP e os testes com PostGIS sintético | `.github/workflows/ci.yml` |
 
 O `eda.py` (análise exploratória) fica fora da cobertura. Download, `stage`, `clean` e `cadastrar` dependem do FIRMS e do IBGE, e são as próximas partes a ganhar teste.
 
@@ -76,7 +76,7 @@ Arquivo: `.github/workflows/ci.yml`. Roda em todo PR e em todo push na `main`.
 | **Código morto** | `ruff check .` (imports, variáveis e redefinições sem uso) e `vulture` (funções, classes e variáveis nunca usadas), fora dos testes |
 | **Pipeline · unidade** | `test_pipeline.py` |
 | **Pipeline · integração com PostGIS** | Migrations aplicadas duas vezes (precisam rodar de novo sem erro), `test_banco.py`, job NRT com o FIRMS simulado e o relatório de cobertura, que aparece no resumo do job |
-| **API · contrato e especificação TDD** | Contrato do `api-exemplo.json` e do `alert_rules.json`, mais a especificação do domínio. As especificações já implementadas não usam `xfail`. Com código em `backend/src/`, também a cobertura mínima de 97,0% com PostGIS |
+| **API · contrato e especificação TDD** | Contrato do `api-exemplo.json` e do `alert_rules.json`, mais a especificação do domínio. As especificações já implementadas não usam `xfail`. Com código em `backend/src/`, também a cobertura mínima de 97,1% com PostGIS |
 | **Front · unidade e jornadas** | As jornadas compilam. Com o front criado (`frontend/package.json`), roda os testes de unidade (Vitest), o build (com `tsc`, que barra variável e parâmetro sem uso), sobe o site e roda as jornadas no Chromium |
 
 ## Como rodar no seu computador
@@ -98,7 +98,7 @@ cd data-pipeline && TEST_DATABASE_URL=postgresql://postgres:teste@localhost:5434
 ```bash
 # API: unidade e contrato; integração exige um PostGIS descartável
 pip install -r backend/requirements-dev.txt
-TEST_DATABASE_URL=postgresql://usuario@localhost/banco_descartavel python -m pytest backend/tests -rxX --cov=backend/src --cov-branch --cov-fail-under=97.0
+TEST_DATABASE_URL=postgresql://usuario@localhost/banco_descartavel python -m pytest backend/tests -rxX --cov=backend/src --cov-branch --cov-fail-under=97.1
 ```
 
 ```bash

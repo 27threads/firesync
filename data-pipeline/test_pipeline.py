@@ -111,6 +111,13 @@ assert mask_key("https://x/api/area/csv/abc123/MODIS_SP/1,2,3,4/5/2026-01-01") =
 from job_nrt import meses_da_janela  # noqa: E402
 assert meses_da_janela(date(2026, 11, 14)) == (date(2026, 11, 1), date(2026, 12, 1))
 assert meses_da_janela(date(2026, 12, 1)) == (date(2026, 11, 1), date(2027, 1, 1))   # janela cruza o mês
+# job NRT (auditoria, achado 1): a janela vai do último dia NRT gravado até hoje, para um job parado não deixar buraco
+from job_nrt import dias_da_janela  # noqa: E402
+assert dias_da_janela(date(2026, 11, 14), date(2026, 11, 14)) == 2   # rodou há 3 h: as 48 h de sempre
+assert dias_da_janela(date(2026, 11, 14), date(2026, 11, 11)) == 4   # parado 3 dias: busca do dia 11 ao 14
+assert dias_da_janela(date(2026, 11, 14), date(2026, 11, 1)) == 5    # teto da API de área do FIRMS
+assert dias_da_janela(date(2026, 11, 14), None) == 5                 # banco sem NRT: o máximo
+assert meses_da_janela(date(2026, 12, 2), 4) == (date(2026, 11, 1), date(2027, 1, 1))  # 4 dias cruzam o mês
 # INPE (A2): histórico mensal por estado × bioma -> bioma × ano × mês (soma os estados; mês vazio sai)
 from pipeline import inpe_mensal  # noqa: E402
 js = {"meta": {"data_limite": "2020-02-13", "faixas_de_satelite": [

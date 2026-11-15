@@ -24,6 +24,8 @@ from backend.domain.models.map_query import MapQuery
 from backend.ports.api import ApiRepository
 
 logger = logging.getLogger('uvicorn.error.firesync')
+# A drawn polygon is a few KB; this stops huge bodies before they reach memory or Shapely.
+MAX_BODY_BYTES = 1_000_000
 ERROR_STATUS = {'invalid_geometry': 400, 'invalid_period': 400, 'invalid_bbox': 400,
                 'invalid_hours': 400, 'invalid_mode': 400, 'region_not_found': 404, 'area_too_large': 413}
 
@@ -115,8 +117,15 @@ def create_app(repository: ApiRepository | None = None, clock=None, monotonic=No
     async def read_body(request):
         def reject_nonfinite(_value):
             raise ValueError('Nonfinite numbers are not valid JSON.')
+        if int(request.headers.get('content-length') or 0) > MAX_BODY_BYTES:
+            raise CalendarError('area_too_large', 'The request body is too large.')
+        body = bytearray()
+        async for chunk in request.stream():  # also caps bodies sent without Content-Length
+            body += chunk
+            if len(body) > MAX_BODY_BYTES:
+                raise CalendarError('area_too_large', 'The request body is too large.')
         try:
-            return json.loads(await request.body(), parse_constant=reject_nonfinite)
+            return json.loads(bytes(body), parse_constant=reject_nonfinite)
         except (ValueError, UnicodeError):
             raise CalendarError('invalid_geometry', 'A valid JSON request is required.') from None
 

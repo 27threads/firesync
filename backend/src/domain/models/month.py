@@ -4,6 +4,18 @@ import re
 
 from .error import CalendarError
 
+# The one source of the satellite that counts on each day (agregar.py in data-pipeline keeps a copy, checked by a
+# test). Before the first switch: Aqua. S-NPP stopped on 2026-11-02, so November 2026 is already NOAA-20.
+SATELLITE_SWITCHES = ((date(2012, 2, 1), "SNPP"), (date(2026, 11, 1), "N20"))
+
+
+def satellite_on(day):
+    current = "Aqua"
+    for start, satellite in SATELLITE_SWITCHES:
+        if day >= start:
+            current = satellite
+    return current
+
 
 @dataclass(frozen=True, order=True, slots=True)
 class Month:
@@ -28,9 +40,7 @@ class Month:
 
     @property
     def satellite(self):
-        if self < Month(2012, 2):
-            return "Aqua"
-        return "SNPP" if self < Month(2026, 11) else "N20"
+        return satellite_on(self.start)
 
     @property
     def source(self):

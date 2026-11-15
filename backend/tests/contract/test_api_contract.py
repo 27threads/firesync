@@ -75,6 +75,19 @@ def test_request_errors(client, payload, code, status, endpoint):
     assert response.json()['error']['message']
 
 
+@pytest.mark.parametrize('endpoint', ['calendar', 'export'])
+def test_body_too_large_is_rejected_before_parsing(client, endpoint):
+    """Audit, finding 5: a huge body must not be read into memory or parsed."""
+    from backend.adapters.inbound.http.app import MAX_BODY_BYTES
+    big = b'{"area": {"type": "geojson", "geometry": {"coordinates": [' + b'0,' * MAX_BODY_BYTES + b'0]}}}'
+    response = client.post('/api/v1/' + endpoint, content=big, headers={'Content-Type': 'application/json'})
+    assert response.status_code == 413
+    assert response.json()['error']['code'] == 'area_too_large'
+    chunked = client.post('/api/v1/' + endpoint, content=(big[i:i + 65536] for i in range(0, len(big), 65536)),
+                          headers={'Content-Type': 'application/json'})   # no Content-Length
+    assert chunked.status_code == 413
+
+
 @pytest.mark.parametrize('params,code', [('bbox=bad', 'invalid_bbox'),
     ('bbox=0,0,0,10', 'invalid_bbox'), ('bbox=nan,0,10,10', 'invalid_bbox'),
     ('bbox=-181,0,10,10', 'invalid_bbox'), ('bbox=0,0,10,91', 'invalid_bbox'),

@@ -156,15 +156,32 @@ def test_falha_no_download_nao_grava_atualizado_em(banco, monkeypatch):
     assert banco["conn"].execute("SELECT count(*) FROM focos").fetchone()[0] == 0
 
 
-def test_falha_depois_de_agregar_nao_muda_o_que_a_api_le(banco, monkeypatch):
+def test_falha_no_meio_da_agregacao_nao_muda_o_que_a_api_le(banco, monkeypatch):
     """A API nunca lê agregados novos com o atualizado_em velho (bug da issue #15, corrigido no PR #23)."""
+    conn, hoje, agregar = banco["conn"], banco["hoje"], banco["job"].agregar
+    janelas = agregar.janelas
+
+    def janelas_que_falham(de, ate):  # falha depois do DELETE, dentro da transação da agregação
+        janelas(de, ate)
+        raise RuntimeError("falha no meio da agregação")
+
+    monkeypatch.setattr(agregar, "janelas", janelas_que_falham)
+    with pytest.raises(RuntimeError):
+        banco["job"].rodada()
+    assert atualizado_em(conn) is None
+    assert soma_do_mes(conn, hoje) == 0  # a agregação e a versão vão no mesmo commit
+
+
+def test_pagina_de_dias_sem_dados_fora_do_ar_nao_trava_a_agregacao(banco, monkeypatch, capturar_logs):
+    """Auditoria, achado 4: a página missing_data do FIRMS é um JSON não documentado. Se ela quebrar, a rodada
+    segue com a tabela antiga de dias sem dados, em vez de deixar o site parado."""
     conn, hoje = banco["conn"], banco["hoje"]
 
     def sem_dados_falha():
         raise RuntimeError("missing_data fora do ar")
 
     monkeypatch.setattr(banco["p"], "sem_dados", sem_dados_falha)
-    with pytest.raises(RuntimeError):
-        banco["job"].rodada()
-    assert atualizado_em(conn) is None
-    assert soma_do_mes(conn, hoje) == 0  # a agregação e a versão vão no mesmo commit, depois do sem_dados
+    banco["job"].rodada()
+    assert atualizado_em(conn) is not None
+    assert soma_do_mes(conn, hoje) == len(PONTOS)
+    assert capturar_logs.eventos("missing_days_failed")
