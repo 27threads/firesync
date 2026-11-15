@@ -973,3 +973,9 @@ input,select { font: inherit; color: var(--foreground); background: var(--backgr
 .fs-right .fs-indicators { width: auto; }
 .fs-right .fs-panel { overflow-y: auto; flex: 1 1 auto; min-height: 0; }
 @media (max-width: 899px) { .fs-right { top: auto; bottom: 44px; max-height: 55%; flex-direction: column-reverse; } .fs-right .fs-status { display: none; } }
+.fs-gradient { height: 12px; border-radius: 3px; margin: 2px 0 0; border: 1px solid rgba(0,0,0,.15); }
+.fs-gradient-labels { display: flex; justify-content: space-between; font-size: 10px; color: #6b7280; }
+.fs-sym-title { font-size: 10px; color: #6b7280; margin-top: 4px; }
+.fs-sym { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+.fs-sym i { margin-left: 8px; } .fs-sym i:first-child { margin-left: 0; }
+.fs-ring-critical { border: 2px solid #d62728; } .fs-ring-attention { border: 2px dashed #b9831c; }

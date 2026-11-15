@@ -34,7 +34,7 @@ import {
   TIERS,
   TIER_LABEL,
   TIER_COLOR,
-  COUNT_BINS,
+  COUNT_GRADIENT,
   type Level,
   type Priority,
   type RecentData,
@@ -574,12 +574,20 @@ export default function RecentWorkspace({
             <h3>
               <Clock size={13} /> Hot spots per area, last 24 hours
             </h3>
-            {COUNT_BINS.map((b) => (
-              <p key={b.label}>
-                <i className="fs-swatch" style={{ background: b.color }} /> {b.label}
-              </p>
-            ))}
-            <small>Ring = compared with usual · dark centre = strong fire</small>
+            <div className="fs-gradient" style={{ background: COUNT_GRADIENT }} />
+            <div className="fs-gradient-labels">
+              <span>1</span>
+              <span>10</span>
+              <span>100 or more</span>
+            </div>
+            <p className="fs-sym-title">Fire strength (dark centre)</p>
+            <p className="fs-sym">
+              <i className="fs-dot fs-dot-low" /> Low <i className="fs-dot fs-dot-medium" /> Medium <i className="fs-dot fs-dot-high" /> High
+            </p>
+            <p className="fs-sym-title">Compared with usual (ring)</p>
+            <p className="fs-sym">
+              <i className="fs-ring fs-ring-critical" /> Critical <i className="fs-ring fs-ring-attention" /> Attention
+            </p>
             <small>Compared with the same time of year in past years, using data up to {data?.alerts?.data_through ?? "—"}.</small>
           </>
         ) : (

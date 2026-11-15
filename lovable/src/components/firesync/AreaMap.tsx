@@ -7,7 +7,7 @@ import { BLUE_MARBLE_TILES, MAP_WHEEL_SETTLE_MS, restoreSurfaceView, SURFACE_VIE
 import { LocateFixed, MapPin, Minus, Pentagon, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { intensityClass, countColor, TIER_COLOR, TIER_LABEL, type RiskTier, type DetectionFeature, type Level, type Intensity, type RecentData, type Viewport } from '@/lib/recent-data';
+import { intensityClass, countColor, RING_COLOR, TIER_COLOR, TIER_LABEL, type RiskTier, type DetectionFeature, type Level, type Intensity, type RecentData, type Viewport } from '@/lib/recent-data';
 
 export type AreaSelection = { type: 'geojson'; geometry: unknown; name?: string } | { type: 'circle'; latitude: number; longitude: number; radius_km: number } | { type: 'region'; region_id: number };
 export default function AreaMap({ onSelect, selection, immersive = false, active = true, resetForHandoff = false, onReady, initialCountry, recent, onViewport, onCell, focus, layer = 'risk', levels = ['critical','attention','normal'], intensities = ['high','medium','low'], basemap = 'blue', drawMode, operational = false, stateBounds, tiers = ['very_high','high','medium','lower'], quietOnly = false }: { tiers?: RiskTier[]; quietOnly?: boolean; onSelect: (area: AreaSelection | null) => void; selection: AreaSelection | null; immersive?: boolean; active?: boolean; resetForHandoff?: boolean; onReady?: () => void; initialCountry?: string; recent?: RecentData | null; onViewport?: (view: Viewport) => void; onCell?: (cell: DetectionFeature) => void; focus?: { center: [number,number]; nonce: number } | undefined; layer?: string; levels?: Level[]; intensities?: Intensity[]; basemap?: string; drawMode?: string; operational?: boolean; stateBounds?: Viewport['bbox'] }) {
@@ -85,14 +85,30 @@ export default function AreaMap({ onSelect, selection, immersive = false, active
       style: f => {
         const p=f?.properties; const severity=recent.alerts ? p?.alert_level ?? 'normal' : 'normal';
         if (layer==='risk' && p?.risk_tier) { const ink=TIER_COLOR[p.risk_tier as RiskTier]; return {color:(p.detections??0)>0?'#ffffff':ink,fillColor:ink,weight:(p.detections??0)>0?3:1,fillOpacity:0.92}; }
-        if (layer==='intensity') { const ink=countColor(p?.detections??0); const ring=severity==='critical'?'#b3201f':severity==='attention'?'#a9741b':'#ffffff'; return {color:ring,fillColor:ink,weight:severity==='normal'?1:4,fillOpacity:0.88,dashArray:severity==='attention'?'5 3':undefined}; }
+        if (layer==='intensity') { return {color:'#ffffff',fillColor:countColor(p?.detections??0),weight:1,fillOpacity:0.9}; }
         const ink=token(layer === 'risk' ? `--risk-${severity}` : '--map-selection'); return {color:ink,fillColor:ink,weight:severity==='critical'?4:severity==='attention'?3:1,fillOpacity:severity==='normal'?0.08:0.32,dashArray:severity==='attention'?'5 3':undefined};
       },
       pointToLayer: (f,c) => { const k=intensityClass(f.properties.frp ?? 0,f.properties.saturated); return L.circleMarker(c,{radius:k==='high'?8:k==='medium'?5:3,color:token(`--intensity-${k}`),weight:k==='high'?3:1,fillOpacity:0.7}); },
-      onEachFeature: (f,l) => { const p=f.properties; const text=layer==='risk'&&p.risk_tier? (p.risk_tier==='very_high'||p.risk_tier==='high'?TIER_LABEL[p.risk_tier as RiskTier]:null) : layer==='intensity'&&p.alert_level==='critical'?'! Critical':layer==='intensity'&&p.alert_level==='attention'?'△ Attention':null; if(text && recent.alerts) l.bindTooltip(text,{permanent:true,direction:'center',className:'risk-map-label'}); l.on('click',()=>cellCallback.current?.(f as DetectionFeature)); }
+      onEachFeature: (f,l) => { const p=f.properties; const text=layer==='risk'&&p.risk_tier? (p.risk_tier==='very_high'||p.risk_tier==='high'?TIER_LABEL[p.risk_tier as RiskTier]:null) : layer==='intensity'&&p.alert_level==='critical'?'! Critical':layer==='intensity'&&p.alert_level==='attention'?'△ Attention':null; if(text && recent.alerts) l.bindTooltip(text,{sticky:true,direction:'top',className:'risk-map-label'}); l.on('click',()=>cellCallback.current?.(f as DetectionFeature)); }
     }).addTo(map);
     void isCell;
-    return ()=>{map.removeLayer(marks);};
+    const rings=L.layerGroup();
+    if (layer==='intensity') {
+      for (const f of visible) {
+        if (f.geometry.type!=='Polygon') continue;
+        const ring=(f.geometry.coordinates[0]??[]) as number[][];
+        if (!ring.length) continue;
+        const lng=ring.reduce((a,c)=>a+(c[0]??0),0)/ring.length, lat=ring.reduce((a,c)=>a+(c[1]??0),0)/ring.length;
+        const lv=f.properties.alert_level;
+        if (recent.alerts && (lv==='critical'||lv==='attention')) {
+          L.circleMarker([lat,lng],{radius:16,color:'#ffffff',weight:7,fill:false,interactive:false}).addTo(rings);
+          L.circleMarker([lat,lng],{radius:16,color:RING_COLOR[lv],weight:3.5,fill:false,dashArray:lv==='attention'?'4 4':undefined,interactive:false}).addTo(rings);
+        }
+        if ((f.properties.n_high??0)>0) L.circleMarker([lat,lng],{radius:5,color:'#ffffff',weight:1.5,fillColor:'#101418',fillOpacity:1,interactive:false}).addTo(rings);
+      }
+      rings.addTo(map);
+    }
+    return ()=>{map.removeLayer(marks);map.removeLayer(rings);};
   },[recent,layer,levels,intensities,tiers,quietOnly]);
   useEffect(()=>{if(focus) mapRef.current?.setView([focus.center[1],focus.center[0]],8,{animate:false});},[focus]);
   useEffect(() => {
