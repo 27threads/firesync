@@ -1,5 +1,5 @@
 # RFC 0001: Backtest do nível de alerta (solução A + B)
-- **Status:** Implementado no PR #56 (primeira rodada no banco de teste). A escolha da `v1` espera as perguntas em aberto da frente B
+- **Status:** Implementado no PR #56 (primeira rodada no banco de teste). A frente B respondeu às perguntas em 15/11/2026 (piso contínuo). Falta levar a `v1` ao `alert_rules.json` e à API
 - **Autor:** Eduardo
 - **Data:** 2026-11-14
 
@@ -147,7 +147,7 @@ Segue o padrão do `tests/test_harmonizacao.py`: pytest com dados inventados.
 | Dia sem dado do S-NPP (falha do satélite) vira zero | Conferir a `cobertura` e listar no `relatorio.txt` os dias sem arquivo. Se houver muitos, as semanas que tocam esses dias saem do teste |
 | A conta do script diverge da que a API vai fazer | O script lê os parâmetros do próprio `alert_rules.json`. Quando a frente C implementar o `recent`, um teste compara as duas contas numa unidade |
 | Memória (matriz ~95 MB + somas) | `int32` e somas por bloco de unidades, se precisar |
-| Mediana zero em lugares quase sem fogo | Piso de 10 detecções (ver "Perguntas em aberto") |
+| Mediana zero em lugares quase sem fogo | Piso contínuo de 10 detecções (ver "Perguntas respondidas pela frente B") |
 | Data de evento sem fonte confiável | O script recusa a linha. O evento sai da lista em vez de entrar sem fonte |
 
 ## Plano de implementação
@@ -161,9 +161,15 @@ Branch nova `a-backtest-alerta`, a partir da `main` depois do merge do PR #42 e 
 3. **`eventos_conhecidos.csv`** com as fontes, mais o `eventos.csv` gerado. ~1 h.
 4. **PR** com o `backtest.csv` colado (ou anexado), o resumo para a frente B e a linha na tabela "Uso de IA" do README. A esteira roda `ruff` e `vulture`.
 
-## Perguntas em aberto
+## Perguntas respondidas pela frente B (Weberson, 15/11/2026)
 
-1. **Ganho mínimo** (frente B): qual o tamanho do ganho para a `v1` valer? O documento já fixa "positivo no total e em pelo menos 7 dos 12 anos", mas falta o valor mínimo.
-2. **Definição da tendência** (frentes B e C): o `alert_rules.json` diz `trend_days: 3` e `requires_rising_trend: true`, mas não diz contra o quê. Este RFC usa "últimos 3 dias > 3 dias anteriores". A API precisa usar a mesma conta.
-3. **Piso** (frente B, issue #59): piso só na mediana zero ou contínuo? As duas versões estão na grade.
-4. **Semana fixa (domingo) ou deslizante:** o RFC usa o domingo para não contar semanas sobrepostas duas vezes. Se a frente B preferir dia a dia, o custo sobe 7 vezes.
+As respostas vieram **depois** da primeira rodada (PR #56), com a tabela já vista. Fica declarado.
+
+1. **Ganho mínimo:** não há um número fixo. Para a `v1` valer, o ganho sobre a ingênua tem de ser positivo no total, em pelo menos 7 dos 12 anos **e no total de cada variação do gabarito** da sensibilidade (P80, P95, mínimo de 5 e mínimo de 20 detecções). O critério foi fixado depois da rodada, por causa da fragilidade apontada na revisão do PR #56 (issue #59, item 5).
+2. **Definição da tendência:** "últimos 3 dias > 3 dias anteriores", como este RFC e o backtest já usam. A API usa a mesma conta.
+3. **Piso:** **contínuo**: Crítico exige `s7 ≥ max(razão × mediana, 10)`. Na rodada do PR #56 (razão 2, tendência ligada), ele dá ganho de +6,0 pontos contra +3,1 do piso só na mediana zero, fica positivo em todas as variações do gabarito (+1,4 com P95 e +2,0 com mínimo de 5, onde o outro dá +0,1 e −0,4) e deixa o Crítico em 2,7% das semanas, dentro da meta de 2% a 5%. O piso só na mediana zero não passa no critério 1.
+4. **Semana fixa (domingo):** mantida.
+
+**O que isso não muda:** por bioma inteiro a regra perde da ingênua em 5 de 6 biomas, com qualquer piso. A linha da tela por bioma não mostra acerto.
+
+**Falta, fora deste RFC:** levar o piso contínuo ao `config/alert_rules.json` e à API (`recent`), com teste (issue #59, frentes A e C). O intervalo de confiança por bootstrap em blocos de ano, oferecido pela frente A, é bem-vindo se couber.
