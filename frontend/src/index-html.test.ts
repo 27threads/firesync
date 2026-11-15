@@ -50,6 +50,21 @@ describe('index.html (static page shell)', () => {
     }
   });
 
+  // Guia do Space Apps: todo uso de IA declarado. A lista bate com a tabela "Uso de IA" do README.
+  it('names every AI tool used in the project', () => {
+    const credits = doc.getElementById('credits')?.textContent ?? '';
+    for (const tool of ['Claude Code', 'OpenAI Codex', 'Antigravity', 'Lovable']) {
+      expect(credits).toContain(tool);
+    }
+  });
+
+  // Bug: o GLTFLoader do three.js busca as texturas dos satélites por URL blob:, e o CSP bloqueava.
+  it('lets the opening globe fetch the spacecraft textures (connect-src allows blob:)', () => {
+    const headers = readFileSync(join(__dirname, '..', 'public', '_headers'), 'utf-8');
+    const connectSrc = headers.match(/connect-src ([^;]+)/)?.[1].split(/\s+/) ?? [];
+    expect(connectSrc).toContain('blob:');
+  });
+
   it('counts detections, never fires', () => {
     const text = doc.body.textContent ?? '';
     expect(text).not.toMatch(/\bnumber of fires\b/i);
