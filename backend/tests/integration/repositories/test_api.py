@@ -59,7 +59,12 @@ def test_postgres_all_routes_and_filtered_map(api):
     assert body['recent']['last_7_days']['n_high'] == 2
     map_body = client.get('/api/v1/detections/recent?bbox=-61,-4,-59,-2&zoom=7&hours=24').json()
     assert map_body['total_detections'] == 3
-    assert map_body['features'][0]['properties'] == {'h3': h3.int_to_str(cell), 'detections': 3, 'n_low': 1, 'n_medium': 1, 'n_high': 1}
+    parent = h3.cell_to_parent(h3.int_to_str(cell), 4)
+    # A semana de 2026 (3) passa do P75 do normal (0) mas não chega ao piso de 10: Atenção (RFC 0003).
+    assert map_body['features'][0]['properties'] == {'h3': h3.int_to_str(cell), 'detections': 3, 'n_low': 1, 'n_medium': 1,
+                                                     'n_high': 1, 'alert_cell': parent, 'alert_level': 'attention'}
+    assert map_body['alerts']['data_through'] == '2026-11-14'
+    assert [(p['h3'], p['alert_level'], p['detections_7d']) for p in map_body['alerts']['priority']] == [(parent, 'attention', 3)]
     points = client.get('/api/v1/detections/recent?bbox=-61,-4,-59,-2&zoom=9').json()
     assert {f['properties']['intensity'] for f in points['features']} == {'low', 'medium', 'high'}
     assert all(f['properties']['satellite'] == 'N20' for f in points['features'])
@@ -167,6 +172,19 @@ def test_custom_intensity_thresholds_agree_for_points_and_hexagons(api_database,
         rows = reader.map_rows(MapQuery.parse('-61,-4,-59,-2', '24', '9'), NOW)
     assert sorted(p['intensity'] for p in rows['points']) == ['high', 'high', 'medium']
     assert rows['hexagons'][0]['n_high'] == 2
+
+
+def test_map_skips_alert_levels_when_too_many_cells_are_in_view(api_database, alert_rules, monkeypatch):
+    """RFC 0003: acima do limite de células res 4, o mapa não calcula o nível, em vez de ficar lento."""
+    from backend.adapters.outbound.postgres import api as postgres_api
+    from backend.domain.models.map_query import MapQuery
+    pool, _, cell = api_database
+    with postgres_api.PostgresApiRepository(pool, alert_rules).read() as reader:
+        rows = reader.map_rows(MapQuery.parse('-61,-4,-59,-2', '24', '4'), NOW)
+        assert set(rows['cell_daily']) == {h3.cell_to_parent(h3.int_to_str(cell), 4)}
+        monkeypatch.setattr(postgres_api, 'MAX_ALERT_CELLS', 0)
+        rows = reader.map_rows(MapQuery.parse('-61,-4,-59,-2', '24', '4'), NOW)
+    assert rows['cell_daily'] is None and rows['data_through'] == date(2026, 11, 14)
 
 
 def test_map_cache_expires_detections_when_time_moves_without_a_pipeline_update(api_database, alert_rules):

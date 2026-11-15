@@ -12,8 +12,13 @@ from backend.application.audit import DETECTION_LIMIT
 from backend.domain.models.error import CalendarError
 from backend.domain.models.month import SATELLITE_SWITCHES, Month
 from backend.domain.intensity import intensity_class
+from backend.domain.calculations.cell_alerts import history_ranges
+from backend.domain.calculations.map_features import ALERT_RESOLUTION
 
 POINT_LIMIT = 50_000
+DATABASE_RESOLUTION = 6
+# Above this many resolution 4 cells with recent fire in view, the map skips alert levels instead of slowing down.
+MAX_ALERT_CELLS = 3_000
 VALID_DETECTION = "confianca IN ('nominal','alta') AND (tipo = 0 OR tipo IS NULL) AND frp > 0"
 VIIRS_START = SATELLITE_SWITCHES[0][0]
 
@@ -177,4 +182,26 @@ class PostgresApiReader(PostgresHistoryRepository):
         # sliding window. Empty results are rechecked after one minute.
         expires_at = (min(row['first_acquired'] for row in grouped) + timedelta(hours=query.hours)
                       if grouped else now + timedelta(minutes=1))
-        return {'total': total, 'hexagons': grouped, 'points': points, 'expires_at': expires_at}
+        return {'total': total, 'hexagons': grouped, 'points': points, 'expires_at': expires_at,
+                **self._cell_history(grouped, now)}
+
+    def _cell_history(self, grouped, now):
+        """Daily VIIRS counts of each resolution 4 cell with recent fire, for its alert level (RFC 0003)."""
+        parents = {h3.cell_to_parent(h3.int_to_str(row['h3']), ALERT_RESOLUTION) for row in grouped}
+        self.cursor.execute(f"SELECT max(data) AS through FROM agregados_diarios WHERE data <= %s AND {satellite_sql('data', 'date')}",
+                            (now.date(),))
+        through = self.cursor.fetchone()['through']
+        if not parents or through is None or len(parents) > MAX_ALERT_CELLS:
+            return {'cell_daily': None, 'data_through': through, 'coverage_start': VIIRS_START}
+        child_to_parent = {h3.str_to_int(child): parent for parent in parents
+                           for child in h3.cell_to_children(parent, DATABASE_RESOLUTION)}
+        ranges = history_ranges(through, self.repository.rules)
+        between = ' OR '.join('data BETWEEN %s AND %s' for _ in ranges)
+        self.cursor.execute(f"""SELECT h3, data AS day, sum(focos_brutos)::bigint AS detections FROM agregados_diarios
+            WHERE h3=ANY(%s::bigint[]) AND ({between}) AND {satellite_sql('data', 'date')} GROUP BY h3, data""",
+                            (list(child_to_parent), *[day for pair in ranges for day in pair]))
+        cell_daily = {parent: {} for parent in parents}
+        for row in self.cursor.fetchall():
+            daily = cell_daily[child_to_parent[row['h3']]]
+            daily[row['day']] = daily.get(row['day'], 0) + row['detections']
+        return {'cell_daily': cell_daily, 'data_through': through, 'coverage_start': VIIRS_START}

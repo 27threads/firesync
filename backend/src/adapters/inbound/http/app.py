@@ -172,7 +172,7 @@ def create_app(repository: ApiRepository | None = None, clock=None, monotonic=No
             cached = cache.get(key)
             if cached is None or now > cached[1]:
                 rows = reader.map_rows(query, now)
-                body = map_result(query, rows, meta['updated_at'])
+                body = map_result(query, rows, meta['updated_at'], rules)
                 expires_at = rows['expires_at']
                 cache.put(key, (body, expires_at))
             else:

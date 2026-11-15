@@ -10,8 +10,8 @@ CELL4 = h3.latlng_to_cell(-10.0, -55.0, 4)
 OTHER4 = h3.latlng_to_cell(-12.0, -50.0, 4)
 
 
-def history(per_day, years=(2024, 2025), around=TODAY, span=40):
-    """Contagens constantes por dia, em torno da mesma data, nos anos dados."""
+def history(per_day, years=range(2012, 2026), around=TODAY, span=40):
+    """Contagens constantes por dia, em torno da mesma data, nos anos dados (padrão: todos os anos de referência)."""
     daily = {}
     for year in years:
         for offset in range(-span, span):
@@ -123,6 +123,20 @@ def test_map_result_marks_hexagons_with_their_cell_level_and_lists_priorities(al
     assert top['share_followed_by_high'] == 0.266
     lat, lon = h3.cell_to_latlng(CELL4)
     assert top['center'] == [pytest.approx(lon), pytest.approx(lat)]
+
+
+@pytest.mark.parametrize('rules_given,cell_daily', [(False, {}), (True, None)])
+def test_map_without_alert_data_keeps_the_old_shape(rules_given, cell_daily, alert_rules):
+    """Sem regras, ou com células demais para calcular (cell_daily None), o mapa sai como antes, sem `alerts`."""
+    from backend.domain.calculations.map_features import map_result
+    from backend.domain.models.map_query import MapQuery
+    child = h3.cell_to_children(CELL4, 6)[0]
+    rows = {'total': 1, 'points': None, 'expires_at': None,
+            'hexagons': [{'h3': h3.str_to_int(child), 'detections': 1, 'n_low': 1, 'n_medium': 0, 'n_high': 0}],
+            'data_through': TODAY, 'coverage_start': VIIRS_START, 'cell_daily': cell_daily}
+    body = map_result(MapQuery.parse('-60,-15,-45,-5', '24', '4'), rows, 'x', alert_rules if rules_given else None)
+    assert 'alerts' not in body
+    assert set(body['features'][0]['properties']) == {'h3', 'detections', 'n_low', 'n_medium', 'n_high'}
 
 
 def test_normal_cells_are_not_in_the_priority_list(alert_rules):
