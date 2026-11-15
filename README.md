@@ -1,4 +1,4 @@
-# firesync — documentação do sistema
+# Firesync: Documentação do Sistema
 
 O **firesync** transforma detecções MODIS e VIIRS do NASA FIRMS em um calendário harmonizado de focos de calor. Apoia equipes de alerta e combate a incêndios, gestores e pesquisadores na comparação entre a atividade recente e o histórico de uma área.
 
