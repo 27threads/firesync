@@ -7,7 +7,8 @@ ingênua, sempre com o MESMO número de alertas em cada ano.
 Pistas (todas só com dias até o domingo t):
   fogo    detecções em 7, 14 e 30 dias, tendência, potência (FRP) em 7 dias, células vizinhas, os 14 dias seguintes
           à mesma data no ano anterior e na média dos anos anteriores, semana do ano, posição e bioma da célula;
-  oni     índice El Niño/La Niña (NOAA CPC), da última estação já publicada (termina 2 meses antes);
+  oni     índice El Niño/La Niña (NOAA CPC), da última estação já publicada (termina 2 meses antes). Só como
+          comparação (--oni): na primeira rodada ele piorou o modelo, e o clima não parte dele;
   clima   chuva em 30 e 90 dias, dias secos, temperatura máxima, umidade e vento em 7 dias (NASA POWER).
 
 Validação em avanço: para cada ano de teste, treina só com as semanas cujo gabarito termina antes daquele ano.
@@ -331,10 +332,8 @@ def main():
     conjuntos = {"fogo": fogo}
     if a.oni:
         conjuntos["fogo+oni"] = {**fogo, "oni": pista_oni(ler_oni(a.oni), semanas)}
-    if a.clima:
-        base = conjuntos.get("fogo+oni", fogo)
-        nome = ("fogo+oni" if a.oni else "fogo") + "+clima"
-        conjuntos[nome] = {**base, **pistas_clima(clima_por_unidade(a.clima, unidades), semanas)}
+    if a.clima:  # o clima parte das pistas de fogo, sem o ONI (que não ajudou: RFC 0003)
+        conjuntos["fogo+clima"] = {**fogo, **pistas_clima(clima_por_unidade(a.clima, unidades), semanas)}
 
     partes = []
     for nome, pistas in conjuntos.items():
