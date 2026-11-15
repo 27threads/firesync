@@ -3,7 +3,7 @@
 // the build variable VITE_API_URL (docs/deploy.md).
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "firesync",
+  "name": "firesync-prd",
   "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "./dist",
