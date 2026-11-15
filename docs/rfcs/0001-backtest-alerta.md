@@ -119,6 +119,7 @@ nome,regiao,inicio,fim,fonte_url,fonte_descricao
 - **Nenhuma linha sem `fonte_url` oficial** (INPE, decreto de emergência, relatório do governo). O script recusa linha sem fonte.
 - Candidatos: Pantanal 2020, Amazônia ago/2019, Pantanal 2024 (início antecipado), Amazônia e Cerrado 2024.
 - Antecedência = dias (e semanas cheias) entre o primeiro domingo em Atenção ou Crítico (nas 8 semanas antes do `inicio`) e o `inicio`. **Vazia** quando não houve alerta, para não se confundir com "menos de 7 dias" (issue #59). `antecedencia_no_limite` marca o alerta já ligado na 1ª semana da janela: a antecedência real pode ser maior, e a tela diz "at least". `alerta_continuo` diz se o nível ficou em Atenção ou Crítico do primeiro alerta até o último domingo antes do `inicio`; sem isso, a tela não pode dizer "was already at Attention or Critical".
+- Antecedência contínua (#65) = dias desde o começo do trecho sem volta a Normal que chega ao último domingo antes do `inicio` (`antecedencia_continua_dias`, vazia se esse domingo foi Normal) e o primeiro Crítico desse trecho (`antecedencia_critico_continuo_dias`). É o número da frase "turned Critical X days before and stayed at Attention or Critical until it". `continua_no_limite` marca o trecho que começa na 1ª semana da janela.
 
 ### 5. Autoteste (`test_backtest_alerta.py`, sem banco)
 
