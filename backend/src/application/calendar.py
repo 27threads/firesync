@@ -13,7 +13,7 @@ from backend.ports.history import HistoryRepository
 
 
 class CalendarService:
-    """Historical portion of /calendar; recent monitoring is a separate delivery."""
+    """Scenario-preserving historical analysis, reusable within an API snapshot."""
 
     def __init__(self, repository: HistoryRepository, clock=None):
         self.repository = repository
@@ -21,6 +21,9 @@ class CalendarService:
 
     def calculate(self, area, start=None, end=None):
         snapshot = self.repository.load(area)
+        return self.calculate_snapshot(snapshot, start, end)
+
+    def calculate_snapshot(self, snapshot, start=None, end=None):
         last = Month.parse(snapshot.meta['last_month'])
         first = Month.parse(start) if start is not None else Month(2003, 1)
         final = Month.parse(end) if end is not None else last
