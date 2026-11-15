@@ -34,7 +34,8 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 18 | [Validação do nível de alerta](docs/validacao-alerta.md) | Solução A + B da issue #9: teste retroativo com "o que veio depois" e eventos conhecidos, no lugar da área queimada | Antes de mexer no alerta ou no `alert_rules.json` |
 | 19 | [RFC 0001: backtest do alerta](docs/rfcs/0001-backtest-alerta.md) | Como implementar a solução A + B: consultas, janelas, contas, saídas, autoteste e plano | Antes de implementar o backtest do alerta |
 | 20 | [Validação da API com a carga real](docs/validacao-api-eduardo.md) | Roteiro para o Eduardo conferir números, cobertura, ZIP e latência antes de fechar D7/M2 | Ao integrar a API com a carga real |
-| 21 | [Restrições para o mundo](docs/escala-mundial.md) | O que muda quando a cobertura passar do Brasil para o mundo, com a saída proposta para cada ponto | Antes de mexer em cobertura, seleção de área ou camada de focos |
+| 21 | [Simulação e auditoria pelos logs](docs/simulacao.md) | Como rodar o sistema de ponta a ponta num banco descartável e auditar pelos logs se ele entrega o que os critérios cobram | Antes de rodar a simulação ou investigar um problema |
+| 22 | [Restrições para o mundo](docs/escala-mundial.md) | O que muda quando a cobertura passar do Brasil para o mundo, com a saída proposta para cada ponto | Antes de mexer em cobertura, seleção de área ou camada de focos |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
@@ -136,6 +137,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `docs/decisoes-harmonizacao.md`, `docs/regras-variaveis.md`, `docs/ux-telas.md`, seção de harmonização de `docs/importacao-regioes.md` | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Redação e análise feitas a partir das decisões do Weberson e dos resultados rodados pela frente A. As escolhas de método são da equipe e estão marcadas como tal nos documentos. Revisado pela equipe |
 | Decisões do front em `docs/arquitetura.md` (pontos 5 a 8) e `frontend/README.md` | Claude Code (Claude Opus 5.5) | Levantamento das opções e redação das justificativas. As escolhas foram feitas pela equipe |
 | Ponto 4 de `docs/arquitetura.md` e responsáveis em `docs/tarefas.md` | Claude Code (Claude Opus 5.5) | Redação da justificativa e levantamento dos responsáveis pelos autores dos commits. As escolhas foram feitas pela equipe |
+| `data-pipeline/logs.py`, logs em `pipeline.py`, `agregar.py`, `job_nrt.py`, `tests/test_logs.py`, `docs/simulacao.md` | Claude Code (Claude Opus 5.5) | Logs estruturados gerados a partir do RNF07 e dos pontos de decisão do pipeline. Revisado pela equipe |
 | `frontend/` (D1–D7: `index.html`, `src/`, configuração do Vite, testes unitários e E2E) | Claude Code (Claude Opus 5.5) em D1, D4 e D5; Antigravity em D2, D3, D6 e D7 | Esqueleto (D1), calendário (D4) e indicadores/gráficos (D5) gerados a partir do `prompt-frontend.md`, `api.md` e `ux-telas.md`. Seleção de área e período (D2–D3: mapa Leaflet + Geoman em `src/controls/`, cliente API `src/api/client.ts`, validação UTC, fallback demo), camada de focos recentes e integração com a API (D7: `GET /api/v1/detections/recent` em hexágonos `cividis` log e pontos por intensidade, proxy `/api` no Vite) e downloads/exportação (D6: pacote de auditoria `POST /api/v1/export`, CSVs e PNG do calendário em `src/export/` e todas as jornadas J1–J9 em `e2e/jornadas.spec.ts`) escritos em TDD a partir dos docs. A equipe revisa no PR |
 
 ## Dados e créditos

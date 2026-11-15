@@ -84,6 +84,59 @@ def test_rodada_grava_focos_agregados_e_atualizado_em(banco):
     assert (datetime.now(timezone.utc) - gravado).total_seconds() < 600
 
 
+def test_rodada_registra_inicio_fim_e_quantos_focos_entraram(banco, capturar_logs):
+    """RNF07: cada rodada registra quantos focos entraram, quanto tempo levou e os erros."""
+    banco["job"].rodada()
+
+    [inicio] = capturar_logs.eventos("nrt_run_started")
+    [fim] = capturar_logs.eventos("nrt_run_finished")
+    assert inicio["run_id"] == fim["run_id"]
+    assert fim["detections_inserted"] == 2 and fim["detections_updated"] == 2  # a 2ª fonte traz os mesmos
+    assert fim["nrt_replaced_by_sp"] == 0
+    assert fim["duration_ms"] >= 0 and fim["updated_at"].endswith("Z")
+    importados = capturar_logs.eventos("import_file_done")
+    assert len(importados) == 2 and all(e["run_id"] == inicio["run_id"] for e in importados)
+    assert importados[0]["kind"] == "viirs" and importados[0]["rows_in_coverage"] == 2
+    janelas = capturar_logs.eventos("aggregate_window_done")  # duas quando a janela de 48 h cruza o mês
+    assert sum(j["monthly_rows"] for j in janelas) >= 1
+    assert sum(j["detections"] for j in janelas) == 2  # focos que entram no calendário, não linhas
+    assert all(j["satellite"] in ("SNPP", "N20") for j in janelas)
+    [agregacao] = capturar_logs.eventos("aggregate_finished")
+    assert agregacao["scope"] == "partial" and agregacao["data_version_changed"] is False
+
+
+def test_logs_nunca_mostram_a_map_key(banco, capturar_logs):
+    banco["job"].rodada()
+    assert "chave-de-teste" not in capturar_logs.stream.getvalue()
+
+
+def test_rodada_com_outra_rodando_registra_que_pulou(banco, capturar_logs):
+    outra = banco["p"].db()
+    outra.execute("SELECT pg_advisory_lock(%s)", (banco["job"].LOCK,))
+    try:
+        banco["job"].rodada()
+    finally:
+        outra.close()
+
+    [pulou] = capturar_logs.eventos("nrt_run_skipped")
+    assert pulou["reason"] == "lock_held" and pulou["level"] == "warning"
+    assert capturar_logs.eventos("nrt_run_started") == []
+
+
+def test_falha_registra_a_etapa_e_o_erro(banco, monkeypatch, capturar_logs):
+    def curl_falha(url, dest=None):
+        raise RuntimeError("curl falhou (22): https://x/api/area/csv/***/...")
+
+    monkeypatch.setattr(banco["p"], "curl", curl_falha)
+    with pytest.raises(RuntimeError):
+        banco["job"].rodada()
+
+    [falha] = capturar_logs.eventos("nrt_run_failed")
+    assert falha["step"] == "download" and falha["error_type"] == "RuntimeError"
+    assert falha["duration_ms"] >= 0
+    assert capturar_logs.eventos("nrt_run_finished") == []
+
+
 def test_rodada_repetida_nao_duplica(banco):
     conn, hoje = banco["conn"], banco["hoje"]
     banco["job"].rodada()
