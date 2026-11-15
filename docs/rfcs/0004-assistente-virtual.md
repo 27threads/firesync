@@ -124,6 +124,7 @@ Validação do pedido (fronteira de confiança: o `messages[]` vem do navegador)
 - Cada mensagem tem só `role` (`user` ou `assistant`) e `content` (texto). Qualquer outro `role`, campo ou bloco (`tool`, `tool_calls`, `system`, imagem) responde `invalid_request` (400). Resultados de ferramenta só existem dentro do `AskService`, nunca vêm do cliente.
 - No máximo 10 mensagens e 1.000 caracteres por mensagem; o serviço manda ao modelo só as últimas 6.
 - `actions[]` é montado pelo `AskService` a partir das ferramentas que **de fato rodaram**, não pelo texto do modelo.
+- **Fontes e checagem (pedido do Eduardo depois da auditoria do PR #128):** a resposta traz `sources[]`, uma por ferramenta que rodou (rota equivalente, região, período ou janela, `data_version`), montadas pelo servidor. E `verified`: o servidor procura cada número do texto nos resultados das ferramentas (formato inglês ou português, com arredondamento). Número não achado vira nota "could not be traced" e a resposta não entra no cache. Contrato completo no [api.md](../api.md).
 
 Erros novos, no formato do [api.md](../api.md#erros):
 
@@ -164,9 +165,10 @@ Além disso: `max_tokens` baixo, até 4 voltas por pedido, histórico cortado na
 
 | Variável | Padrão | Uso |
 | --- | --- | --- |
-| `ASSISTANT_PROVIDERS` | vazio | Lista em ordem de `base_url|chave|modelo`, separada por vírgula. Vazio: `/ask` responde `assistant_unavailable` e o front esconde a bolinha |
+| `ASSISTANT_PROVIDERS` | vazio | Lista em ordem de `base_url|chave|modelo[|reasoning_effort]`, separada por vírgula. Vazio ou inválido: `/ask` responde `assistant_unavailable` e o resto da API sobe normal |
 | `ASSISTANT_DAILY_LIMIT` | `500` | Pedidos que chegam a um provedor por dia (UTC), somando todos os IPs. Chips em cache não contam |
-| `ASSISTANT_TIMEOUT_S` | `20` | Tempo máximo do pedido inteiro |
+| `ASSISTANT_TIMEOUT_S` | `20` | Tempo máximo de cada chamada a um provedor |
+| `ASSISTANT_BUDGET_S` | `60` | Tempo máximo da pergunta inteira, abaixo dos ~100 s do Cloudflare Tunnel |
 | `RATE_LIMIT_ASK` | `5` | Pedidos por IP na janela, no mesmo `RateLimiter` das outras rotas |
 
 As chaves ficam só no `.env` da VPS, nunca no front nem no git.
@@ -187,13 +189,13 @@ As chaves ficam só no `.env` da VPS, nunca no front nem no git.
 
 | Risco | Mitigação |
 | --- | --- |
-| Modelo inventa número | Prompt proíbe; `actions[]` sai das ferramentas; teste com `LlmClient` falso confere que cada número do texto existe no JSON da ferramenta (perguntas fixas) |
+| Modelo inventa número | Prompt proíbe contas novas; `actions[]` e `sources[]` saem das ferramentas; o servidor confere cada número do texto contra os resultados (`verified`) e não cacheia resposta com número não rastreado |
 | Mensagens forjadas no `messages[]` (resultado de ferramenta falso, `system` injetado) | Validação na rota: só texto de `user`/`assistant`; qualquer outro bloco é `invalid_request`. Teste HTTP cobre cada caso |
 | Prompt injection ("ignore e rode SQL") | O modelo não tem ferramenta de SQL nem de escrita; parâmetros validados pelo `parse_request`/`MapQuery.parse` existentes |
 | Cota acaba ou custo dispara com o chat aberto | Chips em cache, cadeia de provedores, `ASSISTANT_DAILY_LIMIT`, `RATE_LIMIT_ASK`, limite de gasto mensal em cada conta |
 | Todos os provedores fora na demo | Chips continuam pelo cache; pergunta livre mostra "use the map"; o resto do site não depende da bolinha |
 | Risco lido como previsão | Aviso fixo anexado pelo `AskService` sempre que a resposta usa `risk_tier` ou `historical_share` |
-| Latência (várias voltas) | Indicador "Thinking…" no painel; cache das primeiras perguntas; `ASSISTANT_TIMEOUT_S` |
+| Latência (várias voltas) | Indicador "Thinking…" no painel; cache das primeiras perguntas e do calendário; `ASSISTANT_BUDGET_S`; nenhuma conexão do banco fica presa esperando o modelo |
 | Feature nova no dia da entrega quebra o site | PRs separados com a esteira verde; sem `ASSISTANT_PROVIDERS` a bolinha some; nada muda nas rotas existentes |
 
 ## Plano de implementação
