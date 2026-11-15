@@ -119,6 +119,12 @@ Fluxo de dados: **NASA FIRMS → importação e filtros → PostgreSQL/PostGIS �
 
 Uma integração começa pelo [contrato da API](docs/api.md) e pelo [JSON de exemplo](docs/api-exemplo.json); segue com implementação dos adaptadores, testes de contrato e integração, validação no front e publicação. Quebras exigem coordenação entre as frentes e atualização do contrato. A arquitetura utiliza jobs em lote e HTTP, sem ESB ou iPaaS documentados.
 
+## 7. Segurança de software
+
+A API valida área/período, limita o corpo a 1.000.000 bytes, usa SQL parametrizado, CORS com origem configurada e rate limit por IP. Erros internos retornam mensagens genéricas. O IP encaminhado só deve ser confiado atrás do proxy que sobrescreve o cabeçalho.
+
+Credenciais ficam em variáveis de ambiente e `.env` não versionado; valores `VITE_` são públicos. A API roda como usuário sem privilégio no container e só lê o banco. Cloudflare Tunnel, HTTPS e os headers CSP/HSTS complementam a proteção. Dependências devem ser revisadas antes de atualizações; esses controles não constituem certificação OWASP. Fontes: [deploy](docs/deploy.md), [API](backend/README.md) e [headers do front](frontend/public/_headers).
+
 ## Uso de IA
 
 | Parte | Ferramenta | Como foi usada |
