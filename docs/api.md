@@ -333,7 +333,8 @@ Sempre GeoJSON, que o Leaflet desenha direto, sem precisar da biblioteca H3 no f
 
 **Risco dos próximos 14 dias, do modelo treinado (RFC 0003).** O modelo roda **fora da API** (`data-pipeline/risco_celulas.py`) e grava a tabela `risco_celulas`; a API só lê. Para cada célula de resolução 4 na área visível, soma:
 
-- em cada hexágono, `risk_prob` (0 a 1) e `risk_tier` (`very_high`, `high`, `medium` ou `lower`) da célula que o contém. Ficam `null` quando a célula não tem nota;
+- **aviso antecipado:** as notas vêm da tabela e não dos focos recentes. Toda célula com nota dentro da área visível entra, mesmo **sem fogo agora**, e as de faixa muito alta ou alta aparecem em `alerts.priority` (com `alert_level` e `detections_7d` nulos quando não há histórico recente). Sem fogo na área, o bloco `alerts` vem só com o risco;
+- em cada hexágono (só onde há fogo), `risk_prob` (0 a 1) e `risk_tier` (`very_high`, `high`, `medium` ou `lower`) da célula que o contém. Ficam `null` quando a célula não tem nota;
 - em `alerts.risk`, a legenda: `scored_at` (quando as notas foram calculadas), `data_ref`, `model_version`, `horizon_days` (14), `rules_version` e `tiers[]`, com `min_prob` e `historical_share` de cada faixa (muito alto a partir de 60%, alto de 40%, médio de 20%);
 - em `alerts.priority[]`, os campos `risk_prob` e `risk_tier`. Com notas, a lista passa a ser **ordenada pela faixa de risco** (a mais alta primeiro), e o nível de alerta vira um selo ("incomum para a época"). Uma célula em faixa **muito alta ou alta** entra na lista mesmo com alerta Normal, e por isso `alert_level` pode vir `normal` ou `null`. Na temporada de fogo (ago a out) cerca de 29% das células ficam em "muito alto", e a lista pode ficar longa: o front limita os itens.
 

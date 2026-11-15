@@ -190,12 +190,16 @@ class PostgresApiReader(PostgresHistoryRepository):
         expires_at = (min(row['first_acquired'] for row in grouped) + timedelta(hours=query.hours)
                       if grouped else now + timedelta(minutes=1))
         return {'total': total, 'hexagons': grouped, 'points': points, 'expires_at': expires_at,
-                **self._cell_history(grouped, now), 'risk': self._risk_scores(grouped, now)}
+                **self._cell_history(grouped, now), 'risk': self._risk_scores(grouped, now, query.bbox)}
 
-    def _risk_scores(self, grouped, now):
-        """Scores of the trained model (`risco_celulas`) for the resolution 4 cells in view, or None without a fresh day."""
+    def _risk_scores(self, grouped, now, bbox):
+        """Scores of the trained model (`risco_celulas`) for the resolution 4 cells in view, or None without a fresh day.
+
+        Early warning (PR #97 review): the risk of the next 14 days matters most where there is no fire yet, so the
+        search starts from the table and not from the recent detections: every scored cell whose center is inside the
+        view, plus the cells that have fire."""
         parents = {h3.cell_to_parent(h3.int_to_str(row['h3']), ALERT_RESOLUTION) for row in grouped}
-        if not parents or len(parents) > MAX_ALERT_CELLS:
+        if len(parents) > MAX_ALERT_CELLS:
             return None
         self.cursor.execute("SELECT to_regclass('risco_celulas') IS NOT NULL AS present")
         if not self.cursor.fetchone()['present']:       # migration 005 not applied yet: the map works without risk
@@ -208,9 +212,15 @@ class PostgresApiReader(PostgresHistoryRepository):
         head = self.cursor.fetchone()
         if head is None:
             return None
-        self.cursor.execute("SELECT h3, prob FROM risco_celulas WHERE data_ref = %s AND h3 = ANY(%s::bigint[])",
-                            (head['data_ref'], [h3.str_to_int(cell) for cell in parents]))
-        return {**head, 'by_cell': {h3.int_to_str(row['h3']): float(row['prob']) for row in self.cursor.fetchall()}}
+        self.cursor.execute("SELECT h3, prob FROM risco_celulas WHERE data_ref = %s", (head['data_ref'],))   # at most ~4,600 cells
+        west, south, east, north = bbox
+        by_cell = {}
+        for row in self.cursor.fetchall():
+            cell = h3.int_to_str(row['h3'])
+            lat, lon = h3.cell_to_latlng(cell)
+            if cell in parents or (west <= lon <= east and south <= lat <= north):
+                by_cell[cell] = float(row['prob'])
+        return {**head, 'by_cell': by_cell}
 
     def _cell_history(self, grouped, now):
         """Daily VIIRS counts of each resolution 4 cell with recent fire, for its alert level (RFC 0003)."""

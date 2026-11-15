@@ -297,3 +297,41 @@ def test_map_reads_the_risk_of_cells_with_no_fire_inside_the_view_only(api_datab
         empty = reader.map_rows(MapQuery.parse('-51,-31,-49,-29', '24', '4'), NOW)        # no fire at all in this view
     assert rows['risk']['by_cell'] == {parent: pytest.approx(0.10), quiet: pytest.approx(0.70)}
     assert empty['total'] == 0 and empty['risk']['by_cell'] == {far: pytest.approx(0.90)}
+
+
+def score(conn, cell, data_ref, prob, version='gb-teste'):
+    conn.execute("""INSERT INTO risco_celulas (h3, data_ref, prob, faixa, modelo_versao, calculado_em)
+        VALUES (%s, %s, %s, 'high', %s, '2026-11-14T14:00Z')""", (h3.str_to_int(cell), data_ref, prob, version))
+
+
+def test_map_reads_the_risk_of_the_latest_fresh_day(api_database, alert_rules):
+    """RFC 0003: a API só lê `risco_celulas`; o job pontua fora dela. Vale o dia mais recente dentro do prazo."""
+    from backend.adapters.outbound.postgres.api import PostgresApiRepository
+    from backend.domain.models.map_query import MapQuery
+    pool, _, cell = api_database
+    parent = h3.cell_to_parent(h3.int_to_str(cell), 4)
+    with pool.connection() as conn:
+        score(conn, parent, '2026-11-13', 0.10)
+        score(conn, parent, '2026-11-14', 0.70, 'gb-2026-11-14-s42')
+    with PostgresApiRepository(pool, alert_rules).read() as reader:
+        risk = reader.map_rows(MapQuery.parse('-61,-4,-59,-2', '24', '4'), NOW)['risk']
+    assert risk['data_ref'] == date(2026, 11, 14) and risk['model_version'] == 'gb-2026-11-14-s42'
+    assert risk['by_cell'] == {parent: pytest.approx(0.70)}
+    assert risk['scored_at'].isoformat().startswith('2026-11-14T14:00')
+
+
+def test_map_ignores_risk_scores_that_are_too_old_or_missing(api_database, alert_rules, monkeypatch):
+    from backend.adapters.outbound.postgres.api import PostgresApiRepository
+    from backend.domain.models.map_query import MapQuery
+    pool, _, cell = api_database
+    parent = h3.cell_to_parent(h3.int_to_str(cell), 4)
+    query = MapQuery.parse('-61,-4,-59,-2', '24', '4')
+    with PostgresApiRepository(pool, alert_rules).read() as reader:
+        assert reader.map_rows(query, NOW)['risk'] is None            # empty table
+    with pool.connection() as conn:
+        score(conn, parent, '2026-11-10', 0.70)
+    with PostgresApiRepository(pool, alert_rules).read() as reader:
+        assert reader.map_rows(query, NOW)['risk'] is None            # 4 days old, above the default limit of 2
+    monkeypatch.setenv('RISK_MAX_AGE_DAYS', '10')
+    with PostgresApiRepository(pool, alert_rules).read() as reader:
+        assert reader.map_rows(query, NOW)['risk']['by_cell'] == {parent: pytest.approx(0.70)}

@@ -16,12 +16,14 @@ def alerts_block(rows, rules, risk_rules=None):
     level stays as a seal; a cell in a high tier is listed even when its alert is normal."""
     if rules is None:
         return None, {}
+    risk = rows.get('risk') if risk_rules is not None else None
     levels = rows.get('cell_levels')      # already computed (and cached per data version) by the repository
     if levels is None and rows.get('cell_daily') is not None:
         levels = cell_alerts(rows['data_through'], rows['cell_daily'], rules, rows['coverage_start'])
+    if levels is None and risk:
+        levels = {}      # early warning: no recent fire in view, the risk scores alone list the cells
     if levels is None:
         return None, {}
-    risk = rows.get('risk') if risk_rules is not None else None
     scores = risk['by_cell'] if risk else {}
     priority = []
     for cell in sorted(set(levels) | set(scores)):
