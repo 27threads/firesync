@@ -58,8 +58,8 @@ Condições do fator: **bioma × mês × dia/noite**. Essas são as condições 
 - **Fator = razão das somas.** `F_k(b, m, p) = S_k(b, m, p) / A_k(b, m, p)`, em que `S_k` e `A_k` são os totais de focos do S-NPP e do Aqua (confiança nominal e alta, `tipo = 0`) nas células do bioma `b`, no mês `m`, no período `p` (D ou N) e no ano `k`. Nunca a média das razões por célula, que explode em células com pouco Aqua.
 - **Dias sem dado ficam fora.** Na calibração, sai todo dia em que o Aqua ou o S-NPP aparece em `dias_sem_dados`, dos dois satélites ao mesmo tempo. Sem isso, a falha de um só satélite distorce a razão do mês.
 - **Janeiro de 2012 fica fora.** O S-NPP só começa em 20/01/2012. O mês de janeiro fica com um cenário a menos.
-- **Ordem da fusão** quando `A_k` não atinge o mínimo de focos: 1º somar com os meses vizinhos (`m − 1` e `m + 1`) no mesmo período; 2º usar o ano inteiro do bioma **no mesmo período** (noite com noite); 3º só em último caso, o ano inteiro com dia e noite juntos. A fusão usada fica em `fusao_com`, e `n_focos_origem` guarda o `A_k` que sustentou o fator. Ordem trocada pelo Weberson em 14/11/2026 depois do protótipo B1: o fator noturno é cerca de 5× o diurno (Amazônia 2024: dia 2,4 a 4,5, noite 12 a 25), e juntar dia e noite cedo puxava a noite para o fator do dia (Caatinga, março, noite: 25,4 próprio, 9,4 com dia e noite, 23,8 com o ano inteiro da noite).
-- **Validação deixando um ano de fora:** para o ano `y`, o fator de cada condição é a **mediana** dos `F_k` dos outros anos (como na série). Estimado = soma de `A_y × mediana`. Observado = `S_y`. A cobertura da faixa usa o P5 e o P95 dos `E_k` dos outros anos.
+- **Ordem da fusão** quando `A_k` não atinge o mínimo de focos: 1º somar com os meses vizinhos (`m − 1` e `m + 1`) no mesmo período e no mesmo ano (o vizinho de dezembro é o janeiro do mesmo ano, e não o do ano seguinte: cada cenário usa só o próprio ano, e os dois meses são da mesma estação); 2º usar o ano inteiro do bioma **no mesmo período** (noite com noite); 3º só em último caso, o ano inteiro com dia e noite juntos. A fusão usada fica em `fusao_com`, e `n_focos_origem` guarda o `A_k` que sustentou o fator. Ordem trocada pelo Weberson em 14/11/2026 depois do protótipo B1: o fator noturno é cerca de 5× o diurno (Amazônia 2024: dia 2,4 a 4,5, noite 12 a 25), e juntar dia e noite cedo puxava a noite para o fator do dia (Caatinga, março, noite: 25,4 próprio, 9,4 com dia e noite, 23,8 com o ano inteiro da noite). Esses números são o registro de como a decisão foi tomada, com os dados de 2024: o protótipo que os gerou saiu do repositório no PR #26 e ficou no histórico do git (commit `6ca3ac9`). Os números que vão para a tela de Método saem do `calibrar.py`, testado, com o histórico completo.
+- **Validação deixando um ano de fora:** para o ano `y`, cada outro ano `k` é um cenário: `E_k = soma de A_y × F_k` (dia e noite somados dentro do cenário). Estimado = **mediana dos `E_k`**, a mesma conta da API e do `calibrar.estimar`. Observado = `S_y`. A cobertura da faixa usa o P5 e o P95 dos `E_k` dos outros anos.
 - **Medida de erro (DECIDIDO, aprovado no PR #4):** **erro ponderado do ano**, `soma dos |estimado − observado| / soma dos observados` nos 12 meses, no lugar da média de `|estimado − observado| / observado` mês a mês. Motivo: num mês com pouco fogo, um erro pequeno vira uma porcentagem enorme e poderia disparar o critério de 1,5× sozinho, mesmo sem efeito no calendário. O critério de 1,5× não muda.
 
 **Salvaguardas obrigatórias (aceitas junto com a decisão):**
@@ -134,25 +134,117 @@ Dois alertas:
 - **Pampa subestimado:** na temporada, quando o real fica fora da faixa, ele fica **acima** em 30 de 39 casos. A estimativa do Pampa sai baixa, coerente com o Aqua quase sem fogo noturno lá e com a fusão de dia e noite no último recurso.
 - **2024 na Amazônia:** 3 dos 4 meses da temporada ficaram fora da faixa (seca extrema), o que confirma o limite dos anos excepcionais.
 
+### Resultado da comparação com o INPE (B6, rodada final de 14/11/2026)
+
+O Eduardo rodou `data-pipeline/harmonizacao/validar_inpe.py` (commit `7216712`, branch `trabalho/harmonizacao`) no banco de teste, **sem gravar nada**, de 2003 a 2025, só com `satelite = AQUA_M-T` e meses completos do INPE (PR #21). Resultado na issue #40. Todos os biomas ficaram com 276 meses e 23 anos completos, 1 mês com zero detecções entrou na comparação e nenhum mês ficou sem estimativa por falta de fator. Esta rodada já tem a correção dos três erros achados na revisão do PR #26 (faixa anual somada por cenário, meses zerados na comparação, versão dos dados ao gravar) e a conta nova do degrau (2013 a 2024). Os números das rodadas anteriores foram descartados.
+
+| Bioma | Correlação mensal | Correlação anual | Anos de mais fogo em comum (de 5) | Mês de pico igual (±1 mês) | Degrau em 2012 |
+| --- | --- | --- | --- | --- | --- |
+| Amazônia | 0,992 | 0,992 | 4 | 91% | −0,6% |
+| Caatinga | 0,955 | 0,891 | 5 | 96% | +5,4% |
+| Cerrado | 0,991 | 0,986 | 5 | 100% | +5,8% |
+| Pantanal | 0,983 | 0,987 | 4 | 96% | +6,9% |
+| Pampa | 0,944 | 0,952 | 4 | 83% | +12,3% |
+| Mata Atlântica | 0,973 | 0,950 | 4 | 100% | −12,7% |
+
+A correlação da sazonalidade fica entre 0,95 e 1,00 em todos os biomas.
+
+Leitura em palavras simples:
+
+- **A série harmonizada tem a mesma forma da série do INPE:** sobe e desce nos mesmos anos, com o pico no mesmo mês. Isso vale para os seis biomas.
+- **O degrau em 2012 é uma checagem de consistência, e não a prova de que o fator acerta** (ponto levantado pelo Mateus na issue #40). O fator vem da razão S-NPP/Aqua, e a série do INPE é quase o próprio Aqua (correlação mensal de 0,998, issue #19). Por isso o degrau tende a zero pela própria conta: um valor perto de zero mostra que a conversão não tem erro de código ou de dados na troca de satélite. **A prova de acerto é a validação deixando um ano de fora** (erro de cerca de 6% por ano na Amazônia e faixa que acerta cerca de 8 em 10), descrita na seção 4.
+- **A conta do degrau (DECIDIDO, Weberson, 14/11/2026):** o "depois" usa só 2013 a 2024, os anos da calibração. Antes ia até 2025, ano fora da calibração por causa da deriva do Aqua, que puxava a média para baixo. A mudança está no PR #26, com um teste que reproduz o problema.
+- **Amazônia, Cerrado, Caatinga e Pantanal:** a troca de satélite não cria salto artificial. A Amazônia fica praticamente em zero (−0,6%), e os outros três ficam até cerca de 7%.
+- **Mata Atlântica (−12,7%): a razão com o INPE muda aos poucos ao longo da série inteira**, numa tendência que atravessa os anos. Ela sobe de 5,74 em 2003 para 8,20 em 2010, fica perto de 6,8 em 2012 a 2015 e desce até 5,47 em 2024. A razão **também desce depois de 2012**, quando a série é o VIIRS medido, sem conversão. Então a tendência está na relação entre os satélites e o INPE nesse bioma, e o fator, que é o mesmo em todos os anos, não é a causa provável. Sem 2010 e 2011, o degrau ainda fica em cerca de −9% (conta aproximada da frente A, com a média simples das razões anuais). A explicação ainda não está provada: a conferência que fecha a questão é a razão entre o Aqua **bruto** do FIRMS e o do INPE ano a ano (pendência 5).
+- **Pampa (+12,3%): o resultado depende de anos com pouquíssimo fogo.** 2022 está fora da curva (razão de 7,63, com só 754 focos no INPE); sem 2022, o degrau cai para cerca de +8% (conta aproximada da frente A). O resto é ruído de contagem pequena, com 700 a 1.800 focos por ano no INPE. Soma-se o que já estava registrado: o Aqua quase não vê fogo noturno lá, e quase todos os fatores noturnos do Pampa usaram fusão.
+
+**Frase para a tela de Método** (base para a frente D):
+
+> "A troca de satélite em 2012 não cria salto artificial na Amazônia (−0,6%) nem no Cerrado, na Caatinga e no Pantanal (até cerca de 7%). Na Mata Atlântica, a relação com o INPE muda aos poucos ao longo de toda a série, inclusive depois de 2012, quando não há conversão. No Pampa, o resultado depende de anos com pouquíssimo fogo."
+
+Em inglês, para a interface: "The 2012 satellite switch creates no artificial jump in the Amazon (−0.6%), nor in the Cerrado, Caatinga and Pantanal (up to about 7%). In the Atlantic Forest, the ratio to INPE drifts gradually across the whole series, including after 2012, when no conversion is applied. In the Pampa, the result depends on years with very few fires."
+
+Ressalvas a declarar:
+
+- **Os totais anuais do relatório somam os valores centrais mensais**, enquanto a série anual e a API usam a **mediana do total do ano por cenário** (regra 7 da fórmula, `importacao-regioes.md`). As duas contas diferem um pouco (até cerca de 3 pontos percentuais no degrau, numa conferência da frente B feita com a série anual que o Eduardo mandou). Fica como melhoria menor da B6: fazer `comparar` usar o total anual por cenário, como a API.
+- **No Pantanal, a razão com o INPE oscila mais** do que na Amazônia: nos gráficos, fica entre cerca de 5,5 e 8,6, e é mais alta nos anos recentes (2020 em diante) do que em 2013 a 2019. Vale mostrar essa variação no Método, em vez de só o degrau.
+- **Gráficos:** o Eduardo gerou `grafico_Amazônia.png` e `grafico_Pantanal.png` com os dados reais, rótulos em inglês e a legenda abaixo do gráfico (branch `a-b6-graficos`, `docs/img/b6/`, commit `9807edf`). Eles vão para a tela de Método e para a página do projeto depois de um PR da frente A para a `main`.
+
 **Classe de intensidade na tela (aprovada no PR #4, `api.md`):** `low` abaixo de 5 MW, `medium` de 5 a 25 MW, `high` de 25 MW ou mais **ou** pixel saturado do VIIRS (confiança alta). Limites fixos na tela. A regra do pixel saturado vale só para o VIIRS: no MODIS, confiança alta não indica saturação.
 
 As colunas `n_focos_origem` e `fusao_com`, pedidas à frente A para a salvaguarda do mínimo de focos, entraram na migration 002 (PR #2) e já foram preenchidas pela calibração gravada.
 
 **NOAA-20 → S-NPP (DECIDIDO, Weberson, 14/11/2026): fator 1.** O NOAA-20 só é usado de novembro de 2026 em diante, ou seja, no mês atual, que o RF11 compara com a mediana. Tratar os dois como iguais faz o mês atual mostrar a mesma contagem que o usuário vê no FIRMS. As razões anuais NOAA-20/S-NPP ficaram entre 0,97 e 1,04, e um fator por mês e dia/noite teria mais ruído que a própria diferença. A razão de 1,12 em 2026 não conta, porque o S-NPP parou no meio do ano. Limite declarado no Método: diferença de até 4% entre os dois VIIRS.
 
-## 5. DECIDIDO (Weberson, 14/11/2026): o classificador (modelo A) como análise complementar
+## 5. DECIDIDO (Weberson, 14/11/2026): o modelo A como entrega, pelo caminho C
 
-O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, temperatura, confiança, mês, dia/noite, bioma e `modis_scan_mediano`. Ele **não gera o fator da série**. Serve para a tela de Método mostrar quais fogos o MODIS perde por potência (fraco ou forte).
+O modelo aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, temperatura, confiança, mês, dia/noite, bioma e `modis_scan_mediano`. Ele **não gera o fator da série** (o calendário usa o fator por contagens). Ele entrega a **curva de detecção** para a tela de Método (quais fogos o MODIS perde, por potência) e uma **prova cruzada** do fator. Como é feito: [rfcs/0002-modelo-a.md](rfcs/0002-modelo-a.md) (PR #48). Código: `data-pipeline/harmonizacao/modelo_a.py`.
 
-- Roda em volume pequeno (treino 2019 a 2021, teste 2022 a 2024).
+- **Etapa A (feita em 14/11/2026):** dados de 2024 do repositório, corte no espaço (blocos H3 de resolução 4, metade para treino e metade para teste, semente 42). A etapa B, com o histórico no banco da frente A, é opcional.
 - A regra "MODIS estava olhando" (foco do Aqua a até 50 km) vale só aqui, e o viés que ela causa é declarado.
-- Se só houver os arquivos de 2024, o corte é **no espaço**: metade das células H3 para treino e metade para teste, com todos os meses dos dois lados.
+
+### Resultado da etapa A (dados de 2024, janela de 90 minutos)
+
+**A janela de horário precisou mudar.** A regra original pedia até 10 minutos entre o Aqua e o S-NPP. Em 2024, o Aqua passa **44 minutos (dia) e 63 minutos (noite) depois** do S-NPP no mesmo lugar (deriva de órbita do Aqua, que saiu da órbita original em 2022), e só 6% a 9% dos pares ficam dentro de 10 minutos. Com 10 minutos, só 6,4% dos fogos do S-NPP entram na análise, e eles são uma amostra especial (bordas de faixa onde as duas passagens se sobrepõem). Com 90 minutos, entram 55,7% (983 mil fogos), e 92% dos pares ficam dentro da janela. O resultado abaixo usa 90 minutos, e **ele mistura a sensibilidade do sensor com a mudança do fogo ao longo da hora que separa as duas passagens**.
+
+**Curva de detecção** (chance de o MODIS também ver um fogo que o VIIRS viu, em áreas que o MODIS estava olhando):
+
+| Potência do fogo (FRP) | De dia | De noite |
+| --- | --- | --- |
+| Abaixo de 2 MW | 15% | 18% |
+| 2 a 5 MW | 26% | 40% |
+| 5 a 10 MW | 41% | 69% |
+| 10 a 25 MW | 57% | 81% |
+| 25 MW ou mais | 71% | 87% |
+
+- O MODIS perde a maior parte dos fogos fracos e vê a maior parte dos fortes. Isso explica, sem jargão, por que juntar as séries sem tratamento infla ou esconde fogo.
+- **De noite, quase metade dos fogos do VIIRS é fraca:** 162 mil dos 369 mil fogos noturnos (nas áreas que o MODIS estava olhando) têm menos de 2 MW, e o MODIS vê 18% deles. Isso ajuda a explicar por que o fator noturno (cerca de 5 vezes o diurno) é muito maior que o diurno. **Para a mesma potência, o MODIS vê mais fogos de noite do que de dia** (sem o brilho do sol); o fator noturno é maior pela mistura de fogos, e não por o MODIS ser pior de noite.
+
+**Gráfico para a tela de Método:** [`docs/img/modelo/curva_deteccao_2024.png`](img/modelo/curva_deteccao_2024.png), com os dados em [`curva_deteccao_2024.csv`](img/modelo/curva_deteccao_2024.csv) (por bioma, período e faixa de potência, para a frente D redesenhar se quiser). Ele explica **por que** as duas séries discordam; não é usado no cálculo do calendário. Legenda sugerida para a tela, em inglês:
+
+> **Why the two satellites disagree.** When VIIRS detects a fire, how often does MODIS also detect it? MODIS misses most weak fires (under 2 MW: seen 15 to 18% of the time) and sees most strong ones (25 MW or more: 71 to 87%). Because VIIRS sees many more small fires, the two raw counts cannot be compared directly. firesync converts MODIS to the VIIRS scale before building the calendar. *Based on 2024 data, areas where MODIS was observing, and a 90-minute window between passes. It explains the gap and is not used to compute the calendar.*
+
+Limites do gráfico, a declarar junto dele: (1) ele provavelmente **subestima** o quanto o MODIS perde, porque só entram áreas onde o Aqua viu algum fogo, e as áreas de fogo fraco que o MODIS não viu ficam de fora (viés da regra dos 50 km); (2) a janela de 90 minutos mistura a sensibilidade do sensor com a mudança do fogo ao longo da hora que separa as passagens; (3) são dados de um ano só (2024), com o Aqua já fora da órbita original.
+
+**Medidas nos blocos de teste** (AUC: 1 é perfeito e 0,5 é sorteio; Brier: menor é melhor):
+
+| Modelo | AUC | Brier |
+| --- | --- | --- |
+| Referência (taxa única, 43,7%) | 0,500 | 0,246 |
+| Tabela por faixa de potência, período e bioma | 0,708 | 0,214 |
+| Gradient boosting | 0,753 | 0,199 |
+
+O gradient boosting separa melhor que a tabela, e as chances previstas batem com as observadas na média (prevista 43,9% contra observada 43,7%).
+
+**Calibração** (as chances que o modelo dá batem com o que aconteceu? Conferida em dez faixas de chance prevista, com cerca de 49 mil fogos em cada, nos blocos de teste):
+
+| Modelo | Erro médio entre previsto e observado | Pior faixa |
+| --- | --- | --- |
+| Gradient boosting | 0,7 ponto percentual | 1,4 ponto |
+| Tabela por faixa de potência, período e bioma | 0,8 ponto percentual | 2,8 pontos |
+
+Quando o gradient boosting diz 11%, o MODIS viu 11,5% desses fogos; quando diz 46%, viu 46%; quando diz 82%, viu 80,5%. A calibração é muito boa **dentro de 2024 e dos blocos sorteados**; ela não diz que o modelo valeria para outro ano (isso só a etapa B mostra). Com a janela de 10 minutos ela é pior (erro médio de 2,9 pontos e até 8 pontos nas pontas), numa amostra pequena e especial, o que reforça a escolha dos 90 minutos.
+
+**O que a calibração afeta:** a calibração é um teste do modelo já treinado, e não muda o treino. Ela não afeta a curva de detecção (que sai das taxas observadas nos dados) nem o AUC (que só olha a ordem das chances). Ela só importa para a prova cruzada, que soma as chances previstas. Como a calibração está boa, a falha da prova cruzada (abaixo) **não vem de chances mal calibradas**.
+
+**Prova cruzada: como foi definida, ela NÃO é um teste do fator por contagens, e não deve ser apresentada como confirmação.** A razão entre o fator do modelo e o fator por contagens, nos blocos de teste:
+
+- **De dia, a razão fica perto de 1 em três biomas:** Amazônia 0,91, Mata Atlântica 1,05 e Cerrado 0,76.
+- **De noite, fica entre 0,29 e 0,44 em todos:** o fator do modelo fica em 2 a 3, e o por contagens em 7 a 10.
+- Pantanal (0,46 de dia) e Caatinga (1,96 de dia) também ficam longe de 1.
+
+**Por que a comparação não vale como teste (diferença de unidade, verificada nos dados).** O fator do modelo soma as chances previstas, e com a calibração boa essa soma é o número de **fogos do VIIRS cobertos por algum pixel do MODIS**. O fator por contagens usa o número de **fogos do Aqua**. Um pixel do MODIS (1 km²) pode cobrir vários fogos do VIIRS (375 m). Nos blocos de teste, **cada fogo do Aqua cobre em média 1,2 fogo do VIIRS de dia e 3,2 de noite**. Isso basta, sozinho, para a razão sair perto de 0,85 de dia e 0,31 de noite, sem nenhum defeito no fator por contagens nem no modelo. A razão que o modelo-e-contagens deveria ter é 1 só se cada foco do Aqua cobrisse exatamente um fogo do VIIRS.
+
+**Segunda causa provável, não testada:** o viés da regra dos 50 km, que só inclui fogos em áreas onde o Aqua viu algum fogo e descarta as áreas onde o VIIRS viu fogo fraco e o MODIS nada. Ele inflaria a chance de detecção, mais ainda de noite. Não foi medido o quanto ele pesa.
+
+**O que pode ser dito:** a curva é válida para áreas que o MODIS estava olhando; a prova cruzada, como foi definida, **compara unidades diferentes**, então ela não confirma nem desmente o fator por contagens. O que valida o fator é a validação deixando um ano de fora (seção 4). Para virar um teste de verdade, ela precisaria converter "fogos do VIIRS cobertos" em "fogos do MODIS" pelo número médio de fogos do VIIRS por pixel do MODIS, e comparar na mesma população de fogos (melhoria possível, não feita).
 
 ## 6. Limites a declarar no método
 
 - O fator é por bioma, mês e dia/noite. Não corrige por potência do fogo.
 - A faixa de incerteza reflete a variação entre anos de sobreposição e não cobre outras fontes de erro. Cobertura medida: cerca de 8 em 10 em cinco biomas, cerca de 7 em 10 no Pampa. Na temporada de fogo, cerca de 8,5 em 10 na Amazônia, no Pantanal e na Caatinga.
 - No Pampa, a estimativa tende a ficar abaixo do real (pouquíssimo fogo noturno visto pelo Aqua).
+- Na comparação com o INPE, a troca de satélite em 2012 deixa um degrau de −12,7% na Mata Atlântica e de +12,3% no Pampa. Na Mata Atlântica, a relação com o INPE muda aos poucos ao longo de toda a série, inclusive depois de 2012; no Pampa, o resultado depende de anos com pouquíssimo fogo. Nos outros biomas, o degrau fica até cerca de 7%.
 - Em anos de fogo excepcional (como 2020 e 2024 na Amazônia), a estimativa erra mais e a faixa cobre menos.
 - A deriva de órbita do Aqua (depois de 2022) só pode afetar a calibração, e a validação deixando um ano de fora mede isso. O calendário de 2012 em diante usa o VIIRS e não é afetado.
 - **Contagem baixa do Aqua no período estimado:** se o Aqua viu zero ou poucos focos numa área pequena num mês fraco, a estimativa também fica zero ou baixa, mesmo que o VIIRS fosse ver fogos pequenos. A faixa não captura isso. PROPOSTA para a frente C: a API marca o mês estimado como "estimativa pouco confiável" quando a contagem bruta do Aqua na área for menor que 10 (limite ESCOLHA DA EQUIPE).
@@ -163,9 +255,8 @@ O classificador aprende a chance de o MODIS ver cada fogo do VIIRS, usando FRP, 
 
 ## 7. Pendências
 
-1. ~~Cobertura da faixa por estação~~: feita (seção "Cobertura dentro e fora da temporada de fogo").
-2. **B6, comparação com o INPE.** O script está pronto (`data-pipeline/harmonizacao/validar_inpe.py`, branch `trabalho/harmonizacao`) e passou no autoteste com dados inventados (degrau de +1% com fatores certos, +102% com fatores pela metade). O PR #21 (série do INPE com o satélite de referência: NOAA-12 até 03/07/2002, Aqua depois) já entrou na `main`; o comando foi passado ao Eduardo no PR #26 e aguarda a rodada no banco de teste. Mede, por bioma: correlação mensal e anual, os 5 anos com mais fogo, o mês de pico, a sazonalidade e o **degrau em 2012** (razão firesync/INPE antes e depois da troca de satélite; perto de zero quer dizer que a troca não inventou fogo). Contexto da frente A (issue #19): a série do Aqua no FIRMS já tem correlação mensal de 0,998 com a do INPE e o mesmo mês de pico em 23 de 23 anos, então o degrau em 2012 mede principalmente a nossa conversão.
-3. **Levar o código da B3 e da B6 para o `main`.** Os scripts (`prototipo_fator.py`, `calibrar.py`, `validar_inpe.py` e os autotestes) estão só na branch `trabalho/harmonizacao`. O envio direto ao `main` foi bloqueado pelo controle de permissões em 14/11/2026. Depende de decisão do Weberson: abrir um PR ou liberar o envio.
-4. Confirmar o mínimo de focos por condição (a calibração gravada usou 30).
-5. Investigar a queda de S-NPP/Aqua em 2025.
-6. Esta decisão muda o que o contexto do projeto dizia sobre o modelo A (o classificador deixa de gerar o fator da série). A equipe deve concordar com a mudança.
+1. **B6, melhoria menor:** fazer `comparar` usar o total anual por cenário, como a API (ver "Ressalvas" da comparação com o INPE).
+2. Confirmar o mínimo de focos por condição (a calibração gravada usou 30).
+3. Investigar a queda de S-NPP/Aqua em 2025.
+4. Esta decisão muda o que o contexto do projeto dizia sobre o modelo A (o classificador deixa de gerar o fator da série). A equipe deve concordar com a mudança.
+5. **Opcional, Mata Atlântica:** calcular ano a ano a razão entre o Aqua bruto do FIRMS e o Aqua do INPE. Se ela tiver a mesma rampa de 2003 a 2010, fica confirmado que o degrau desse bioma vem da relação entre os satélites, e não do fator.

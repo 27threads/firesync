@@ -1,5 +1,5 @@
 # RFC 0001: Backtest do nível de alerta (solução A + B)
-- **Status:** Aprovado na revisão do PR #42 (Mateus). A implementação espera as perguntas em aberto da frente B
+- **Status:** Implementado no PR #56 (primeira rodada no banco de teste). A frente B respondeu às perguntas em 15/11/2026 (piso contínuo). Falta levar a `v1` ao `alert_rules.json` e à API
 - **Autor:** Eduardo
 - **Data:** 2026-11-14
 
@@ -15,7 +15,7 @@ Este RFC define **como** implementar: arquivos, consultas, contas e testes.
 
 **Objetivos**
 - `data-pipeline/validacao/backtest_alerta.py`: só **lê** o banco e gera `relatorios/alerta/backtest.csv`, `por_bioma.csv` e `eventos.csv`.
-- `data-pipeline/validacao/test_backtest_alerta.py`: autoteste sem banco, com dados inventados, que termina com "OK". Inclui o caso de sobreposição das janelas.
+- `data-pipeline/tests/test_backtest_alerta.py`: autoteste sem banco (pytest), com dados inventados. Fica em `tests/` para rodar na esteira e contar na cobertura. Inclui o caso de sobreposição das janelas.
 - `data-pipeline/referencia/eventos_conhecidos.csv`: crises com data, lugar e **fonte oficial**.
 
 **Não-objetivos**
@@ -71,21 +71,22 @@ Tudo em `numpy`, vetorizado por unidade. Para cada semana, `t` é o último dia 
 | Função | Entrada → saída |
 | --- | --- |
 | `somas_moveis(m, k)` | matriz diária → soma dos `k` dias terminando em cada dia (`cumsum`) |
-| `indices_normal(t, anos, raio=15)` | dia `t` → índices do mesmo dia do ano, deslocado de −15 a +15, **nos outros anos** (exclui o ano de `t`) |
+| `indices_normal(t, raio, anos, ano_excluido)` | dia `t` → índices do mesmo dia do ano, deslocado de −15 a +15, **nos outros anos** (o nível exclui o ano de `t`) |
+| `indices_gabarito(t, raio, anos)` | o mesmo para o normal do gabarito, centrado em `t+14` e excluindo o ano de `t+14` (no fim de dezembro, é o ano seguinte; issue #59) |
 | `normal(s, idx)` | somas móveis + índices → mediana, P75, P90 por unidade |
 | `nivel(s7, s3, s3_antes, normal7, regra)` | → 0 Normal, 1 Atenção, 2 Crítico |
 | `gabarito(s14_depois, p90_14, minimo=10)` | → bool "muito fogo" |
 | `medidas(niveis, gabarito)` | → frequência, acerto, cobertura, alarme falso, estabilidade |
-| `ingenua_mesma_frequencia(s7, normal7, gabarito, freq_alvo)` | percentil da ingênua ajustado até dar a frequência da regra → acerto |
+| `alerta_mesma_frequencia(score, freq_alvo)` | a ingênua com o mesmo número de alertas da regra: as `k` semanas de maior `(s7 + 1) / (P90 + 1)`. **Mudança na implementação:** o RFC previa ajustar o percentil da ingênua, mas com empates o percentil não chega à frequência exata; ordenar pelo score dá exatamente `k` alertas |
 
 **Janelas:** as definidas em "Janelas" no [validacao-alerta.md](../validacao-alerta.md). Na matriz de somas móveis, o nível lê `s7[t]`, a tendência compara `s3[t] > s3[t−3]` e o gabarito lê `s14[t+14]`. A soma de 14 dias que termina em `t+14` começa em `t+1`.
 
 **Nível** (regra `0.2`, com os parâmetros vindos da grade):
-- **Crítico:** `s7 ≥ razao × mediana` **e** (se a tendência estiver ligada) `s3[t] > s3[t−3]`. Com mediana zero, vale `s7 ≥ 10` (mesmo piso do gabarito; ver "Perguntas em aberto").
+- **Crítico:** `s7 ≥ razao × mediana` **e** (se a tendência estiver ligada) `s3[t] > s3[t−3]`. O piso de 10 detecções (o mesmo do gabarito) roda em duas versões: **só na mediana zero** (`s7 ≥ 10` onde a mediana é zero) e **contínuo** (`s7 ≥ max(razao × mediana, 10)` sempre, sem o degrau da mediana baixa; issue #59).
 - **Atenção:** não é Crítico e `s7 > P75` (ou P90, conforme a grade).
 - **Normal:** o resto.
 
-**Grade:** razão em {1,5; 2; 2,5; 3} × tendência {ligada, desligada} × Atenção em {P75, P90} = 16 regras, mais a `0.2` marcada. O P90 e o piso de 10 do gabarito também rodam com {P80, P95} e {5, 20}, para mostrar a sensibilidade.
+**Grade:** razão em {1,5; 2; 2,5; 3} × tendência {ligada, desligada} × Atenção em {P75, P90} × piso {só na mediana zero, contínuo} = 32 regras, mais a `0.2` marcada (piso só na mediana zero). O P90 e o mínimo de 10 do gabarito também rodam com {P80, P95} e {5, 20} nas duas versões do piso da regra atual, para mostrar a sensibilidade.
 
 **Medidas por regra** (sobre todas as semanas × unidades):
 - frequência de cada nível;
@@ -111,17 +112,17 @@ Tudo em `numpy`, vetorizado por unidade. Para cada semana, `t` é o último dia 
 `data-pipeline/referencia/eventos_conhecidos.csv`:
 
 ```csv
-nome,regiao_id,inicio,fim,fonte_url,fonte_descricao
+nome,regiao,inicio,fim,fonte_url,fonte_descricao
 ```
 
-- Lugar = `regiao_id` (bioma). UF ou polígono menor ficam para depois.
+- Lugar = `regiao`, o nome do bioma em `regioes` (o id muda de um banco para outro). UF ou polígono menor ficam para depois.
 - **Nenhuma linha sem `fonte_url` oficial** (INPE, decreto de emergência, relatório do governo). O script recusa linha sem fonte.
 - Candidatos: Pantanal 2020, Amazônia ago/2019, Pantanal 2024 (início antecipado), Amazônia e Cerrado 2024.
-- Antecedência = semanas entre a primeira semana em Atenção ou Crítico (nas 8 semanas antes do `inicio`) e o `inicio`.
+- Antecedência = dias (e semanas cheias) entre o primeiro domingo em Atenção ou Crítico (nas 8 semanas antes do `inicio`) e o `inicio`. **Vazia** quando não houve alerta, para não se confundir com "menos de 7 dias" (issue #59).
 
 ### 5. Autoteste (`test_backtest_alerta.py`, sem banco)
 
-Segue o padrão do `harmonizacao/test_validar_inpe.py`: dados inventados, `assert` e "OK" no fim.
+Segue o padrão do `tests/test_harmonizacao.py`: pytest com dados inventados.
 
 1. **Sobreposição (pedido do Mateus):** fogo alto só em `t−6..t` e zero depois → gabarito `False`. Se a janela do gabarito incluir `t`, o teste quebra.
 2. **Sem futuro no normal:** um ano com fogo enorme não entra no normal do próprio ano.
@@ -146,7 +147,7 @@ Segue o padrão do `harmonizacao/test_validar_inpe.py`: dados inventados, `asser
 | Dia sem dado do S-NPP (falha do satélite) vira zero | Conferir a `cobertura` e listar no `relatorio.txt` os dias sem arquivo. Se houver muitos, as semanas que tocam esses dias saem do teste |
 | A conta do script diverge da que a API vai fazer | O script lê os parâmetros do próprio `alert_rules.json`. Quando a frente C implementar o `recent`, um teste compara as duas contas numa unidade |
 | Memória (matriz ~95 MB + somas) | `int32` e somas por bloco de unidades, se precisar |
-| Mediana zero em lugares quase sem fogo | Piso de 10 detecções (ver "Perguntas em aberto") |
+| Mediana zero em lugares quase sem fogo | Piso contínuo de 10 detecções (ver "Perguntas respondidas pela frente B") |
 | Data de evento sem fonte confiável | O script recusa a linha. O evento sai da lista em vez de entrar sem fonte |
 
 ## Plano de implementação
@@ -160,9 +161,15 @@ Branch nova `a-backtest-alerta`, a partir da `main` depois do merge do PR #42 e 
 3. **`eventos_conhecidos.csv`** com as fontes, mais o `eventos.csv` gerado. ~1 h.
 4. **PR** com o `backtest.csv` colado (ou anexado), o resumo para a frente B e a linha na tabela "Uso de IA" do README. A esteira roda `ruff` e `vulture`.
 
-## Perguntas em aberto
+## Perguntas respondidas pela frente B (Weberson, 15/11/2026)
 
-1. **Ganho mínimo** (frente B): qual o tamanho do ganho para a `v1` valer? O documento já fixa "positivo no total e em pelo menos 7 dos 12 anos", mas falta o valor mínimo.
-2. **Definição da tendência** (frentes B e C): o `alert_rules.json` diz `trend_days: 3` e `requires_rising_trend: true`, mas não diz contra o quê. Este RFC usa "últimos 3 dias > 3 dias anteriores". A API precisa usar a mesma conta.
-3. **Mediana zero** (frente B): Crítico só com `s7 ≥ 10` é aceitável, ou o lugar fica sempre Normal?
-4. **Semana fixa (domingo) ou deslizante:** o RFC usa o domingo para não contar semanas sobrepostas duas vezes. Se a frente B preferir dia a dia, o custo sobe 7 vezes.
+As respostas vieram **depois** da primeira rodada (PR #56), com a tabela já vista. Fica declarado.
+
+1. **Ganho mínimo:** não há um número fixo. Para a `v1` valer, o ganho sobre a ingênua tem de ser positivo no total, em pelo menos 7 dos 12 anos **e no total de cada variação do gabarito** da sensibilidade (P80, P95, mínimo de 5 e mínimo de 20 detecções). O critério foi fixado depois da rodada, por causa da fragilidade apontada na revisão do PR #56 (issue #59, item 5).
+2. **Definição da tendência:** "últimos 3 dias > 3 dias anteriores", como este RFC e o backtest já usam. A API usa a mesma conta.
+3. **Piso:** **contínuo**: Crítico exige `s7 ≥ max(razão × mediana, 10)`. Na rodada do PR #56 (razão 2, tendência ligada), ele dá ganho de +6,0 pontos contra +3,1 do piso só na mediana zero, fica positivo em todas as variações do gabarito (+1,4 com P95 e +2,0 com mínimo de 5, onde o outro dá +0,1 e −0,4) e deixa o Crítico em 2,7% das semanas, dentro da meta de 2% a 5%. O piso só na mediana zero não passa no critério 1.
+4. **Semana fixa (domingo):** mantida.
+
+**O que isso não muda:** por bioma inteiro a regra perde da ingênua em 5 de 6 biomas, com qualquer piso. A linha da tela por bioma não mostra acerto.
+
+**Falta, fora deste RFC:** levar o piso contínuo ao `config/alert_rules.json` e à API (`recent`), com teste (issue #59, frentes A e C). O intervalo de confiança por bootstrap em blocos de ano, oferecido pela frente A, é bem-vindo se couber.

@@ -19,6 +19,15 @@ def test_niveis_do_alerta(alert_rules):
     assert 50 < lv["attention"]["above_percentile"] < 100
 
 
+def test_decisao_da_issue_59(alert_rules):
+    assert alert_rules['version'] == '1.0'
+    assert alert_rules['levels']['critical'] == {
+        'min_ratio_to_median': 2.0, 'min_detections': 10,
+        'trend_days': 3, 'requires_rising_trend': True,
+    }
+    assert alert_rules['levels']['attention']['above_percentile'] == 75
+
+
 def test_classe_de_intensidade(alert_rules):
     it = alert_rules["intensity"]
     assert 0 < it["medium_min_mw"] < it["high_min_mw"]

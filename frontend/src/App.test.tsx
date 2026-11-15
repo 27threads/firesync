@@ -37,6 +37,16 @@ function mockApi(
     if (url.endsWith('/api/v1/calendar')) {
       return jsonResponse(calendarBody, calendarStatus, calendarHeaders);
     }
+    if (url.includes('/api/v1/detections/recent')) {
+      return jsonResponse({
+        type: 'FeatureCollection',
+        mode: 'points',
+        hours: 24,
+        updated_at: example.meta.updated_at,
+        total_detections: 0,
+        features: [],
+      });
+    }
     throw new Error(`Unexpected URL: ${url}`);
   });
 }
@@ -168,5 +178,32 @@ describe('App (interactive tool shell)', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(/may be out of date/i);
+  });
+
+  it('automatically loads the first region via POST /api/v1/calendar when GET /regions returns regions and no area was chosen yet', async () => {
+    const autoLoadedResponse = {
+      ...example,
+      indicators: { ...example.indicators, total_detections: 54321 },
+    };
+    const fetchMock = mockApi({ calendarBody: autoLoadedResponse });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+    await screen.findByRole('option', { name: 'Amazônia' });
+
+    await waitFor(() => {
+      expect(screen.getByText('54,321')).toBeInTheDocument();
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/calendar',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          area: { type: 'region', region_id: 1 },
+          start: '2003-01',
+          end: '2026-11',
+        }),
+      }),
+    );
   });
 });

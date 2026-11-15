@@ -1,10 +1,6 @@
 """Especificação TDD do núcleo da API (domínio, arquitetura hexagonal).
 
-Os testes implementados executam as interfaces reais do domínio. Apenas intensidade,
-alerta e janelas recentes permanecem em xfail(strict=True), pois pertencem à próxima entrega.
-
-Quando você implementar uma parte e o teste passar, o `strict=True` faz a esteira quebrar com XPASS.
-É o aviso para tirar o marcador daquele teste: a partir daí, ele vale de verdade.
+Os testes executam as interfaces reais do domínio, incluindo o alerta aprovado na issue #59.
 
 Os valores esperados foram calculados à mão e seguem o docs/api.md. Mudar um valor aqui é mudar o contrato.
 """
@@ -13,7 +9,6 @@ from datetime import date
 
 import pytest
 
-TDD = pytest.mark.xfail(strict=True, reason="TDD: domínio ainda não implementado")
 
 
 # ---------------------------------------------------------------- faixa de incerteza (P5–P95)
@@ -54,7 +49,6 @@ def test_origem_e_satelite_dependem_so_da_data(ano, mes, origem, satelite):
 
 
 # ---------------------------------------------------------------- classe de intensidade
-@TDD
 @pytest.mark.parametrize("frp, sensor, confianca, classe", [
     (4.9, "VIIRS", "nominal", "low"),
     (5.0, "VIIRS", "nominal", "medium"),
@@ -69,7 +63,6 @@ def test_classe_de_intensidade(frp, sensor, confianca, classe, alert_rules):
 
 
 # ---------------------------------------------------------------- nível de alerta
-@TDD
 @pytest.mark.parametrize("agora, mediana, p75, ultimos, anteriores, nivel", [
     (100, 40, 50, [20, 25, 30], [5, 10, 15], "critical"),   # 2,5× a mediana e subindo
     (80, 40, 50, [20, 25, 30], [5, 10, 15], "critical"),    # exatamente 2× conta
@@ -83,7 +76,6 @@ def test_nivel_de_alerta(agora, mediana, p75, ultimos, anteriores, nivel, alert_
 
 
 # ---------------------------------------------------------------- janelas do normal (±15 dias)
-@TDD
 def test_janelas_de_referencia():
     from backend.domain.windows import reference_windows
     w = reference_windows(date(2026, 11, 14), window_days=7, neighbor_days=15, years=range(2012, 2026))
@@ -92,7 +84,6 @@ def test_janelas_de_referencia():
     assert all((fim - ini).days == 6 for ini, fim in w)
 
 
-@TDD
 def test_janela_de_29_de_fevereiro_em_ano_comum():
     from backend.domain.windows import reference_windows
     w = reference_windows(date(2024, 2, 29), window_days=7, neighbor_days=0, years=[2023])
