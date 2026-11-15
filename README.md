@@ -158,6 +158,23 @@ As responsabilidades e pendências ficam em [tarefas](docs/tarefas.md). A docume
 - [ ] Operação, atualização dos dados e instruções de deploy conferidas quando afetadas.
 - [ ] Links, exemplos, créditos e uso de IA atualizados; aprovação dos responsáveis solicitada.
 
+## 12. Anexo técnico: ambiente de desenvolvimento
+
+Pré-requisitos: Python 3.12, Node.js 20 (versão da CI), npm e PostGIS; Docker é utilizado nos testes com banco. Na raiz:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r backend/requirements-dev.txt
+npm --prefix frontend ci
+# Configure DATABASE_URL para um PostGIS com migrations e dados válidos.
+python -m uvicorn backend.adapters.inbound.http.app:create_app --factory --host 127.0.0.1 --port 8000
+```
+
+Em outro terminal: `cd frontend` e `VITE_DEV_API_PROXY=http://127.0.0.1:8000 npm run dev`. Para verificar: `python -m pytest backend/tests -q`, `npm --prefix frontend test` e `npm --prefix frontend run build`. Testes de integração exigem `TEST_DATABASE_URL` apontando para banco descartável; o teste HTTP ao vivo exige `API_URL`.
+
+O gerador `backend/scripts/demo_data.py` é exclusivo de banco vazio e descartável com nome terminado em `_test` ou `_demo`. Instalação do pipeline, carga sintética e Playwright: [backend](backend/README.md), [pipeline](data-pipeline/README.md) e [testes](docs/testes.md).
+
 ## Uso de IA
 
 | Parte | Ferramenta | Como foi usada |
