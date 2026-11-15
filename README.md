@@ -156,7 +156,7 @@ As responsabilidades e pendências ficam em [tarefas](docs/tarefas.md). A docume
 - [ ] Entradas, consultas, segredos, limites e mensagens de erro revisados.
 - [ ] Testes pertinentes executados; resultados, limitações e impacto de desempenho registrados.
 - [ ] Operação, atualização dos dados e instruções de deploy conferidas quando afetadas.
-- [ ] Links, exemplos, créditos e uso de IA atualizados; aprovação dos responsáveis solicitada.
+- [ ] Links, exemplos e créditos atualizados; aprovação dos responsáveis solicitada.
 
 ## 12. Anexo técnico: ambiente de desenvolvimento
 
@@ -181,13 +181,5 @@ O gerador `backend/scripts/demo_data.py` é exclusivo de banco vazio e descartá
 | --- | --- |
 | [Índice e ordem de leitura](docs/indice-documentacao.md) | Antes de iniciar uma tarefa; preserva o catálogo de documentos do projeto. |
 | [Requisitos](docs/requisitos.md), [arquitetura](docs/arquitetura.md) e [API](docs/api.md) | Especificação, decisões e contratos detalhados. |
-| [Histórico de uso de IA](docs/uso-de-ia.md) | Atribuições completas das contribuições anteriores. |
 
 Fontes: [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) (MODIS C6.1 e VIIRS C2), IBGE (biomas 1:250.000), INPE (Programa Queimadas), [NASA GIBS](https://www.earthdata.nasa.gov/gibs), [NASA 3D Resources](https://github.com/nasa/NASA-3D-Resources) e [Natural Earth/geo-countries](https://github.com/datasets/geo-countries). Referências técnicas: [FastAPI](https://fastapi.tiangolo.com/), [PostGIS](https://postgis.net/documentation/), [H3](https://h3geo.org/docs/) e [SemVer](https://semver.org/lang/pt-BR/). Estrutura documental: template PDSI2, UFU, 2026, fornecido pelo responsável pela documentação.
-
-## Uso de IA
-
-| Parte | Ferramenta | Como foi usada |
-| --- | --- | --- |
-| Documentação formal deste README | OpenAI Codex | Síntese do template PDSI2 e das fontes do repositório, com rastreabilidade de requisitos e diagramas; submetida à revisão da equipe. |
-| Contribuições anteriores | Diversas, discriminadas no histórico | Registro integral preservado em [docs/uso-de-ia.md](docs/uso-de-ia.md). |
