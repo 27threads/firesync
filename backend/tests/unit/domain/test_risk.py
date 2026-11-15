@@ -71,3 +71,14 @@ def test_without_scores_the_priority_is_the_old_one(alert_rules, risk_rules):
 
 def test_risk_order_ranks_tiers_from_the_highest():
     assert sorted(RISK_ORDER, key=RISK_ORDER.get) == ['very_high', 'high', 'medium', 'lower']
+
+
+def test_early_warning_lists_a_high_risk_cell_with_no_fire_in_view(alert_rules, risk_rules):
+    """Revisão do PR #97: o risco dos 14 dias vale justamente onde ainda não há fogo; a lista não depende do fogo de agora."""
+    body = {'cell_levels': None, 'cell_daily': None, 'data_through': date(2026, 11, 14), 'coverage_start': date(2012, 2, 1),
+            'risk': {'data_ref': date(2026, 11, 14), 'scored_at': datetime(2026, 11, 14, 15, tzinfo=UTC), 'model_version': 'v',
+                     'by_cell': {A: 0.72, B: 0.05}}}
+    block, levels = alerts_block(body, alert_rules, risk_rules)
+    assert levels == {}
+    assert [(p['h3'], p['risk_tier'], p['alert_level'], p['detections_7d']) for p in block['priority']] == [(A, 'very_high', None, None)]
+    assert block['risk']['horizon_days'] == 14

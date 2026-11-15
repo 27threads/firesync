@@ -51,3 +51,11 @@ def test_without_fresh_scores_the_map_is_as_before(client, repository):  # noqa:
     body = client.get(URL).json()
     assert 'risk' not in body['alerts']
     assert 'risk_prob' not in body['features'][0]['properties'] and 'risk_tier' not in body['features'][0]['properties']
+
+
+def test_high_risk_cell_without_fire_in_view_is_listed_for_early_warning(client, repository):  # noqa: F811
+    """Revisão do PR #97: uma célula com 70% de chance e nenhum foco nas últimas horas também entra na lista."""
+    other = h3.latlng_to_cell(-2.5, -59.5, 4)
+    repository.risk = {**scored(0.72), 'by_cell': {PARENT: 0.10, other: 0.70}}
+    priority = client.get(URL).json()['alerts']['priority']
+    assert [(p['h3'], p['risk_tier']) for p in priority] == [(other, 'very_high')]

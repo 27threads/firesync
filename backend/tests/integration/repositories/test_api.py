@@ -278,3 +278,22 @@ def test_history_is_read_once_per_day_and_each_data_version_only_reads_the_recen
     assert second['cell_levels'][parent]['detections_7d'] == first['cell_levels'][parent]['detections_7d'] + 7
     with postgres_api.PostgresApiRepository(pool, alert_rules).read() as reader:
         assert reader.map_rows(query, NOW)['cell_levels'] == second['cell_levels']      # same as computing from scratch
+
+
+def test_map_reads_the_risk_of_cells_with_no_fire_inside_the_view_only(api_database, alert_rules):
+    """Revisão do PR #97: o aviso antecipado parte de `risco_celulas` dentro da área visível, e não dos focos recentes."""
+    from backend.adapters.outbound.postgres.api import PostgresApiRepository
+    from backend.domain.models.map_query import MapQuery
+    pool, _, cell = api_database
+    parent = h3.cell_to_parent(h3.int_to_str(cell), 4)
+    quiet = h3.latlng_to_cell(-2.5, -59.5, 4)          # inside the view, no fire
+    far = h3.latlng_to_cell(-30, -50, 4)               # outside the view
+    with pool.connection() as conn:
+        score(conn, parent, '2026-11-14', 0.10)
+        score(conn, quiet, '2026-11-14', 0.70)
+        score(conn, far, '2026-11-14', 0.90)
+    with PostgresApiRepository(pool, alert_rules).read() as reader:
+        rows = reader.map_rows(MapQuery.parse('-61,-4,-59,-2', '24', '4'), NOW)
+        empty = reader.map_rows(MapQuery.parse('-51,-31,-49,-29', '24', '4'), NOW)        # no fire at all in this view
+    assert rows['risk']['by_cell'] == {parent: pytest.approx(0.10), quiet: pytest.approx(0.70)}
+    assert empty['total'] == 0 and empty['risk']['by_cell'] == {far: pytest.approx(0.90)}
