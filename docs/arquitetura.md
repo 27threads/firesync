@@ -75,23 +75,25 @@ Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases,
 
 ## Princípios de código
 
-Valem para todo código novo, principalmente a API, que ainda não começou.
+Valem para todo código novo, incluindo a continuação da API.
 
 ### Arquitetura hexagonal (portas e adaptadores)
 
 O núcleo (domínio e casos de uso) não conhece HTTP, SQL nem arquivo. Ele fala com o mundo só por **portas** (interfaces). Os **adaptadores** ligam as portas ao mundo real. Trocar o banco, o framework web ou a fonte de configuração não mexe no núcleo, e o núcleo é testado sem nada disso.
 
 ```
-backend/src/firesync_api/
+backend/src/
 ├── domain/          regras puras: faixa P5–P95, origem do mês, classe de intensidade, alerta, janelas, IDs H3
 ├── application/     casos de uso: calendário, janela recente, focos recentes, export
-├── ports/           interfaces (Protocol): AggregatesPort, DetectionsPort, RulesPort, ClockPort
+├── ports/           interfaces (Protocol): HistoryRepository implementada; demais portas conforme os casos de uso
 └── adapters/
     ├── inbound/http/        rotas (FastAPI): validam a entrada e devolvem o formato do api.md
     └── outbound/
         ├── postgres/        consultas SQL e tradução dos nomes do banco (português) para o domínio (inglês)
         └── config_file/     leitura do config/alert_rules.json
 ```
+
+O pacote Python continua chamado `backend`, mapeado para `backend/src/` pelo `pyproject.toml`; não há diretório intermediário de pacote.
 
 | Camada | Pode depender de | Não pode depender de |
 | --- | --- | --- |
@@ -126,7 +128,7 @@ backend/src/firesync_api/
 
 O PostgreSQL é ACID, mas só protege o que estiver dentro de uma transação.
 
-- **Escrita (pipeline):** os dados novos e a versão (`config.updated_at`) vão no mesmo commit, para a API nunca ler metade de uma atualização. Verificação do pipeline na issue #15.
+- **Escrita (pipeline):** os dados novos e a versão (`config.atualizado_em`, exposto como `meta.updated_at`) vão no mesmo commit, para a API nunca ler metade de uma atualização. Verificação do pipeline na issue #15.
 - **Leitura (API):** cada pedido abre uma transação `REPEATABLE READ` e lê o `updated_at` dentro dela. Assim, todas as consultas do pedido veem o banco no mesmo instante, mesmo que o job faça commit no meio.
 - **Recarga SP**, quando voltar: apagar o NRT e inserir o SP numa transação só.
 

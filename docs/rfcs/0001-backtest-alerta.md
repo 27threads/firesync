@@ -1,5 +1,5 @@
 # RFC 0001: Backtest do nível de alerta (solução A + B)
-- **Status:** Implementado no PR #56 (primeira rodada no banco de teste). A escolha da `v1` espera as perguntas em aberto da frente B
+- **Status:** Implementado no PR #56 (primeira rodada no banco de teste). A frente B respondeu às perguntas em 15/11/2026 (piso contínuo). Falta levar a `v1` ao `alert_rules.json` e à API
 - **Autor:** Eduardo
 - **Data:** 2026-11-14
 
@@ -86,7 +86,7 @@ Tudo em `numpy`, vetorizado por unidade. Para cada semana, `t` é o último dia 
 - **Atenção:** não é Crítico e `s7 > P75` (ou P90, conforme a grade).
 - **Normal:** o resto.
 
-**Grade:** razão em {1,5; 2; 2,5; 3} × tendência {ligada, desligada} × Atenção em {P75, P90} × piso {só na mediana zero, contínuo} = 32 regras, mais a `0.2` marcada (piso só na mediana zero). O P90 e o mínimo de 10 do gabarito também rodam com {P80, P95} e {5, 20} nas duas versões do piso da regra atual, para mostrar a sensibilidade.
+**Grade:** razão em {1,5; 2; 2,5; 3} × tendência {ligada, desligada} × Atenção em {P75, P90} × piso {só na mediana zero, contínuo} = 32 regras, com a regra do `alert_rules.json` marcada (hoje a `v1`, piso contínuo). Todas usam o piso `min_detections` do `alert_rules.json`. O `eventos.csv` usa a regra marcada, a mesma regra de nível do `recent` da API; o normal é que difere, porque aqui entram os anos posteriores (ver os limites em [validacao-alerta.md](../validacao-alerta.md)). O P90 e o mínimo de 10 do gabarito também rodam com {P80, P95} e {5, 20} nas duas versões do piso da regra atual, para mostrar a sensibilidade.
 
 **Medidas por regra** (sobre todas as semanas × unidades):
 - frequência de cada nível;
@@ -104,8 +104,8 @@ Tudo em `numpy`, vetorizado por unidade. Para cada semana, `t` é o último dia 
 | --- | --- | --- |
 | `backtest.csv` | 1 por regra da grade (+ sensibilidade) | `regra, razao, tendencia, atencao, p_gabarito, minimo, freq_normal, freq_atencao, freq_critico, acerto, cobertura, cobertura_critico, alarme_falso, trocas_mes, acerto_ingenua, ganho, anos_com_ganho_positivo` |
 | `por_bioma.csv` | 1 por regra × bioma | as mesmas, nos 6 biomas inteiros |
-| `eventos.csv` | 1 por evento × semana | `evento, semana, nivel, detections, typical_median` e a `antecedencia_semanas` |
-| `relatorio.txt` | resumo | a melhor regra por ganho e se alguma passou na regra de decisão |
+| `eventos.csv` | 1 por evento × semana | `evento, semana, nivel, detections, typical_median`, a `antecedencia_semanas`, `antecedencia_no_limite` e `alerta_continuo` |
+| `relatorio.txt` | resumo | a regra atual com a situação dela, as regras aprovadas no critério completo (gabarito principal e as quatro variações) e as que passam no principal sem sensibilidade calculada, que não contam como aprovadas |
 
 ### 4. Eventos conhecidos (solução B)
 
@@ -118,7 +118,7 @@ nome,regiao,inicio,fim,fonte_url,fonte_descricao
 - Lugar = `regiao`, o nome do bioma em `regioes` (o id muda de um banco para outro). UF ou polígono menor ficam para depois.
 - **Nenhuma linha sem `fonte_url` oficial** (INPE, decreto de emergência, relatório do governo). O script recusa linha sem fonte.
 - Candidatos: Pantanal 2020, Amazônia ago/2019, Pantanal 2024 (início antecipado), Amazônia e Cerrado 2024.
-- Antecedência = dias (e semanas cheias) entre o primeiro domingo em Atenção ou Crítico (nas 8 semanas antes do `inicio`) e o `inicio`. **Vazia** quando não houve alerta, para não se confundir com "menos de 7 dias" (issue #59).
+- Antecedência = dias (e semanas cheias) entre o primeiro domingo em Atenção ou Crítico (nas 8 semanas antes do `inicio`) e o `inicio`. **Vazia** quando não houve alerta, para não se confundir com "menos de 7 dias" (issue #59). `antecedencia_no_limite` marca o alerta já ligado na 1ª semana da janela: a antecedência real pode ser maior, e a tela diz "at least". `alerta_continuo` diz se o nível ficou em Atenção ou Crítico do primeiro alerta até o último domingo antes do `inicio`; sem isso, a tela não pode dizer "was already at Attention or Critical".
 
 ### 5. Autoteste (`test_backtest_alerta.py`, sem banco)
 
@@ -143,16 +143,16 @@ Segue o padrão do `tests/test_harmonizacao.py`: pytest com dados inventados.
 
 | Risco | Mitigação |
 | --- | --- |
-| Acerto inflado pela persistência do fogo | O número que decide é o ganho sobre a ingênua na mesma frequência, com a regra de decisão fixada antes de rodar |
+| Acerto inflado pela persistência do fogo | O número que decide é o ganho sobre a ingênua na mesma frequência. A primeira parte da regra de decisão foi fixada antes de rodar; o complemento da frente B veio depois e fica declarado como posterior ("Perguntas respondidas pela frente B") |
 | Dia sem dado do S-NPP (falha do satélite) vira zero | Conferir a `cobertura` e listar no `relatorio.txt` os dias sem arquivo. Se houver muitos, as semanas que tocam esses dias saem do teste |
 | A conta do script diverge da que a API vai fazer | O script lê os parâmetros do próprio `alert_rules.json`. Quando a frente C implementar o `recent`, um teste compara as duas contas numa unidade |
 | Memória (matriz ~95 MB + somas) | `int32` e somas por bloco de unidades, se precisar |
-| Mediana zero em lugares quase sem fogo | Piso de 10 detecções (ver "Perguntas em aberto") |
+| Mediana zero em lugares quase sem fogo | Piso contínuo de 10 detecções (ver "Perguntas respondidas pela frente B") |
 | Data de evento sem fonte confiável | O script recusa a linha. O evento sai da lista em vez de entrar sem fonte |
 
 ## Plano de implementação
 
-Branch nova `a-backtest-alerta`, a partir da `main` depois do merge do PR #42 e das respostas da frente B às perguntas em aberto (precisam vir antes da rodada, não antes do merge). TDD: o teste vem antes de cada função.
+Plano histórico. Branch nova `a-backtest-alerta`, a partir da `main` depois do merge do PR #42. O plano previa as respostas da frente B antes da rodada; elas vieram depois (PR #56) e isso fica declarado em "Perguntas respondidas pela frente B". TDD: o teste vem antes de cada função.
 
 0. `data-pipeline/relatorios/` no `.gitignore`.
 
@@ -161,9 +161,15 @@ Branch nova `a-backtest-alerta`, a partir da `main` depois do merge do PR #42 e 
 3. **`eventos_conhecidos.csv`** com as fontes, mais o `eventos.csv` gerado. ~1 h.
 4. **PR** com o `backtest.csv` colado (ou anexado), o resumo para a frente B e a linha na tabela "Uso de IA" do README. A esteira roda `ruff` e `vulture`.
 
-## Perguntas em aberto
+## Perguntas respondidas pela frente B (Weberson, 15/11/2026)
 
-1. **Ganho mínimo** (frente B): qual o tamanho do ganho para a `v1` valer? O documento já fixa "positivo no total e em pelo menos 7 dos 12 anos", mas falta o valor mínimo.
-2. **Definição da tendência** (frentes B e C): o `alert_rules.json` diz `trend_days: 3` e `requires_rising_trend: true`, mas não diz contra o quê. Este RFC usa "últimos 3 dias > 3 dias anteriores". A API precisa usar a mesma conta.
-3. **Piso** (frente B, issue #59): piso só na mediana zero ou contínuo? As duas versões estão na grade.
-4. **Semana fixa (domingo) ou deslizante:** o RFC usa o domingo para não contar semanas sobrepostas duas vezes. Se a frente B preferir dia a dia, o custo sobe 7 vezes.
+As respostas vieram **depois** da primeira rodada (PR #56), com a tabela já vista. Fica declarado.
+
+1. **Ganho mínimo:** não há um número fixo. Para a `v1` valer, o ganho sobre a ingênua tem de ser positivo no total, em pelo menos 7 dos 12 anos **e no total de cada variação do gabarito** da sensibilidade (P80, P95, mínimo de 5 e mínimo de 20 detecções). O critério foi fixado depois da rodada, por causa da fragilidade apontada na revisão do PR #56 (issue #59, item 5).
+2. **Definição da tendência:** "últimos 3 dias > 3 dias anteriores", como este RFC e o backtest já usam. A API usa a mesma conta.
+3. **Piso:** **contínuo**: Crítico exige `s7 ≥ max(razão × mediana, 10)`. Na rodada do PR #56 (razão 2, tendência ligada), ele dá ganho de +6,0 pontos contra +3,1 do piso só na mediana zero, fica positivo em todas as variações do gabarito (+1,4 com P95 e +2,0 com mínimo de 5, onde o outro dá +0,1 e −0,4) e deixa o Crítico em 2,7% das semanas, dentro da meta de 2% a 5%. O piso só na mediana zero não passa no critério 1.
+4. **Semana fixa (domingo):** mantida.
+
+**O que isso não muda:** por bioma inteiro a regra perde da ingênua em 5 de 6 biomas, com qualquer piso. A linha da tela por bioma não mostra acerto.
+
+O piso contínuo já está no `config/alert_rules.json` e no `recent` da API (PR #69). O intervalo de confiança por bootstrap em blocos de ano, oferecido pela frente A, é bem-vindo se couber.

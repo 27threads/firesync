@@ -74,4 +74,4 @@ Jornadas de usuário (a partir de `frontend/e2e/`): `npm ci` e `npx playwright t
 
 Front (a partir de `frontend/`): `npm ci`, `npm test` (Vitest), `npm run dev` (porta 5173) e `npm run build`.
 
-O resto da API: a preencher quando a stack estiver definida.
+API HTTP: `python -m uvicorn backend.adapters.inbound.http.app:create_app --factory --host 127.0.0.1 --port 8000`, com `DATABASE_URL` configurada. Variáveis e integração em [backend/README.md](backend/README.md).

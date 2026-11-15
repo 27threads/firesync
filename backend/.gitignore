@@ -1,0 +1,44 @@
+# Bytecode e caches do Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+ENV/
+
+# Configuração local e segredos (preserva modelos versionáveis)
+.env
+.env.*
+!.env.example
+!.env.template
+
+# Distribuição e metadados de empacotamento
+/build/
+/dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Testes, cobertura e análise estática
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Notebooks e logs
+.ipynb_checkpoints/
+*.log
+
+# Dados locais; mantém a pasta no Git
+/data/*
+!/data/.gitkeep

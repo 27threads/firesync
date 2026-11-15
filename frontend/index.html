@@ -55,7 +55,50 @@
           percentile. In a leave-one-year-out test, the observed value fell inside this range in 68% to 80% of the
           months, depending on the biome.
         </p>
+        <h3>How the alert is assessed</h3>
+        <p>
+          Normal, Attention and Critical describe recent detection activity compared with the usual level for
+          that time of year. The alert compares the last 7 days with a seasonal reference drawn from the same
+          dates, within 15 days, in other years.
+        </p>
+        <p>
+          The retrospective test evaluates weekly alerts from 2013 to 2024, then checks the following 14 days.
+          A high-detection outcome means at least 10 VIIRS detections and a total above the seasonal 90th
+          percentile. The comparison is a simple persistence rule: high activity this week continues into the
+          next period. Both rules are compared at the same alert frequency.
+        </p>
+        <h4>Local-area results</h4>
+        <p>
+          The test groups detections into H3 resolution 4 cells. Results describe these test cells on average;
+          they do not establish performance for each area drawn on the map. Final figures are pending selection
+          and evaluation of rule v1.
+        </p>
+        <p>
+          The reported percentage will mean the share of Critical alerts followed by unusually high detections,
+          alongside the difference from the persistence rule. It is not the share of all high-detection periods
+          caught by the alert.
+        </p>
+        <h4>Whole-biome results</h4>
+        <p>
+          Local-area performance does not carry over to a whole biome. Biome results will report how often
+          each alert level occurs, without a predictive success percentage. Final frequencies are pending the
+          evaluation of rule v1.
+        </p>
+        <h4>Historical example: Pantanal, 2020</h4>
+        <p>
+          The Pantanal case compares alert levels with the date of the Mato Grosso do Sul emergency decree
+          (<a href="https://www.semadesc.ms.gov.br/?p=108045">Decree 080/2020, official state source</a>).
+          The final lead time will be reported with the selected rule. An alert before a decree indicates
+          elevated activity before the official response; it does not show that the alert predicted a fire
+          before it started. This case is an illustration, not statistical evidence.
+        </p>
         <h3>Limits</h3>
+        <p>
+          The alert and its test outcome use the same VIIRS sensor. The test measures subsequent satellite
+          detections, not burned area. Comparison with NASA MCD64A1 burned-area data remains a next step.
+          The seasonal reference excludes the evaluated year but includes later years, so this is a
+          retrospective assessment, not a historical forecast using only information available at the time.
+        </p>
         <p>
           firesync describes the past and the present; it does not forecast fire. Months with a satellite outage are
           marked as missing data, which is different from a month with zero detections.
@@ -68,6 +111,7 @@
           <li>Fire detections: <a href="https://firms.modaps.eosdis.nasa.gov/" rel="noopener">NASA FIRMS</a>, MODIS C6.1 (Aqua) and VIIRS C2 (S-NPP, NOAA-20).</li>
           <li>Biome boundaries: IBGE, Biomas do Brasil 1:250,000.</li>
           <li>Reference series for validation: INPE, Programa Queimadas.</li>
+          <li>Historical alert example: Government of Mato Grosso do Sul, <a href="https://www.semadesc.ms.gov.br/?p=108045" rel="noopener">Decree 080/2020</a>, environmental emergency in the Pantanal (24 July 2020).</li>
           <li>Base map imagery and tiles: <a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs" rel="noopener">NASA EOSDIS GIBS</a> (Blue Marble Next Generation, Reference Features), <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a> contributors, and <a href="https://carto.com/attributions" rel="noopener">CARTO</a> Dark Matter.</li>
           <li>Interface libraries: React, Vite, D3, Leaflet, and Leaflet-Geoman.</li>
           <li>Built for the NASA Space Apps Challenge 2026, challenge "MODIS and VIIRS Hot Spots". Parts of the code were written with AI assistance (Claude Code); the full list is in the project repository.</li>

@@ -1,10 +1,6 @@
 """Especificação TDD do núcleo da API (domínio, arquitetura hexagonal).
 
-Estes testes vêm ANTES do código (fase vermelha do TDD). Enquanto `backend/src/firesync_api/domain`
-não existir, eles falham, e o `xfail(strict=True)` registra isso sem quebrar a esteira.
-
-Quando você implementar uma parte e o teste passar, o `strict=True` faz a esteira quebrar com XPASS.
-É o aviso para tirar o marcador daquele teste: a partir daí, ele vale de verdade.
+Os testes executam as interfaces reais do domínio, incluindo o alerta aprovado na issue #59.
 
 Os valores esperados foram calculados à mão e seguem o docs/api.md. Mudar um valor aqui é mudar o contrato.
 """
@@ -13,35 +9,31 @@ from datetime import date
 
 import pytest
 
-TDD = pytest.mark.xfail(strict=True, reason="TDD: domínio ainda não implementado")
 
 
 # ---------------------------------------------------------------- faixa de incerteza (P5–P95)
-@TDD
 def test_faixa_p5_p95_por_interpolacao_linear():
-    from firesync_api.domain.bands import uncertainty_band
-    b = uncertainty_band([10, 20, 30, 40, 50])
-    assert (b.central, b.low, b.high) == pytest.approx((30, 12, 48))  # índices 0,2 e 3,8
+    from backend.domain.calculations.statistics import summarize
+    b = summarize(dict(enumerate([10, 20, 30, 40, 50])), estimated=True)
+    assert (b["detections"], b["band_low"], b["band_high"]) == pytest.approx((30, 12, 48))  # índices 0,2 e 3,8
 
 
-@TDD
 def test_faixa_com_13_cenarios():
-    from firesync_api.domain.bands import uncertainty_band
-    b = uncertainty_band(list(range(1, 14)))
-    assert (b.central, b.low, b.high) == pytest.approx((7, 1.6, 12.4))
+    from backend.domain.calculations.statistics import summarize
+    b = summarize(dict(enumerate(range(1, 14))), estimated=True)
+    assert (b["detections"], b["band_low"], b["band_high"]) == pytest.approx((7, 1.6, 12.4))
 
 
-@TDD
 def test_faixa_e_calculada_depois_de_somar():
     """A soma dos percentis das células não é o percentil da soma."""
-    from firesync_api.domain.bands import uncertainty_band
+    from backend.domain.calculations.statistics import summarize
     a, b = [1, 10, 1], [10, 1, 1]           # duas células, três cenários
     soma = [x + y for x, y in zip(a, b)]     # [11, 11, 2]
-    assert uncertainty_band(soma).high != pytest.approx(uncertainty_band(a).high + uncertainty_band(b).high)
+    assert summarize(dict(enumerate(soma)), True)["band_high"] != pytest.approx(
+        summarize(dict(enumerate(a)), True)["band_high"] + summarize(dict(enumerate(b)), True)["band_high"])
 
 
 # ---------------------------------------------------------------- origem e satélite do mês
-@TDD
 @pytest.mark.parametrize("ano, mes, origem, satelite", [
     (2003, 1, "estimated_modis", "Aqua"),
     (2012, 1, "estimated_modis", "Aqua"),     # o S-NPP só começa em 20/01/2012
@@ -50,13 +42,13 @@ def test_faixa_e_calculada_depois_de_somar():
     (2026, 11, "observed_viirs", "N20"),      # o S-NPP parou em 02/11/2026; NOAA-20 com fator 1
 ])
 def test_origem_e_satelite_dependem_so_da_data(ano, mes, origem, satelite):
-    from firesync_api.domain.sources import month_satellite, month_source
-    assert month_source(ano, mes) == origem
-    assert month_satellite(ano, mes) == satelite
+    from backend.domain.models.month import Month
+    month = Month(ano, mes)
+    assert month.source == origem
+    assert month.satellite == satelite
 
 
 # ---------------------------------------------------------------- classe de intensidade
-@TDD
 @pytest.mark.parametrize("frp, sensor, confianca, classe", [
     (4.9, "VIIRS", "nominal", "low"),
     (5.0, "VIIRS", "nominal", "medium"),
@@ -66,12 +58,11 @@ def test_origem_e_satelite_dependem_so_da_data(ano, mes, origem, satelite):
     (10.0, "MODIS", "alta", "medium"),        # no MODIS, confiança alta não é saturação
 ])
 def test_classe_de_intensidade(frp, sensor, confianca, classe, alert_rules):
-    from firesync_api.domain.intensity import intensity_class
+    from backend.domain.intensity import intensity_class
     assert intensity_class(frp, sensor, confianca, alert_rules["intensity"]) == classe
 
 
 # ---------------------------------------------------------------- nível de alerta
-@TDD
 @pytest.mark.parametrize("agora, mediana, p75, ultimos, anteriores, nivel", [
     (100, 40, 50, [20, 25, 30], [5, 10, 15], "critical"),   # 2,5× a mediana e subindo
     (80, 40, 50, [20, 25, 30], [5, 10, 15], "critical"),    # exatamente 2× conta
@@ -80,31 +71,28 @@ def test_classe_de_intensidade(frp, sensor, confianca, classe, alert_rules):
     (45, 40, 50, [5, 5, 5], [5, 5, 5], "normal"),
 ])
 def test_nivel_de_alerta(agora, mediana, p75, ultimos, anteriores, nivel, alert_rules):
-    from firesync_api.domain.alert import alert_level
+    from backend.domain.alert import alert_level
     assert alert_level(agora, mediana, p75, ultimos, anteriores, alert_rules) == nivel
 
 
 # ---------------------------------------------------------------- janelas do normal (±15 dias)
-@TDD
 def test_janelas_de_referencia():
-    from firesync_api.domain.windows import reference_windows
+    from backend.domain.windows import reference_windows
     w = reference_windows(date(2026, 11, 14), window_days=7, neighbor_days=15, years=range(2012, 2026))
     assert len(w) == 14 * 31                       # 31 posições (−15 a +15 dias) em cada um dos 14 anos
     assert w[0] == (date(2012, 10, 24), date(2012, 10, 30))
     assert all((fim - ini).days == 6 for ini, fim in w)
 
 
-@TDD
 def test_janela_de_29_de_fevereiro_em_ano_comum():
-    from firesync_api.domain.windows import reference_windows
+    from backend.domain.windows import reference_windows
     w = reference_windows(date(2024, 2, 29), window_days=7, neighbor_days=0, years=[2023])
     assert w == [(date(2023, 2, 22), date(2023, 2, 28))]
 
 
 # ---------------------------------------------------------------- IDs H3
-@TDD
 def test_id_h3_sai_como_texto_e_volta_igual():
-    from firesync_api.domain.h3_ids import cell_to_text
+    from h3 import int_to_str as cell_to_text
     cell = int("86a8100c7ffffff", 16)
     texto = cell_to_text(cell)
     assert texto == "86a8100c7ffffff"

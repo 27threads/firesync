@@ -187,6 +187,6 @@ Reservar ~30 GB livres (banco + dump + folga). Roteiro testado em 14/11/2026: du
 | `POSTGRES_PASSWORD` | compose (serviço `db`) | só no `.env` |
 | `FIRMS_MAP_KEY` | pipeline (`download`) | só no `.env` |
 
-## Ainda em aberto
+## API HTTP
 
-- Linguagem e framework da API (arquitetura, ponto 4)
+Python 3.12 + FastAPI e psycopg 3, conforme [arquitetura.md](arquitetura.md), ponto 4. Execução e variáveis em [backend/README.md](../backend/README.md).

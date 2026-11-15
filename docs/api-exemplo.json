@@ -4074,6 +4074,8 @@
   }
  ],
  "recent": {
+  "alert_level": "attention",
+  "alert_rules_version": "1.0",
   "data_through": "2026-11-14",
   "last_7_days": {
    "start": "2026-11-08",

@@ -11,6 +11,7 @@ Baixa os focos do FIRMS, normaliza, aplica os filtros de qualidade, carrega no b
 | `pipeline.py` | `cadastrar`, `download`, `stage`, `importar`, `sem_dados`, `inpe`, `clean` |
 | `agregar.py` | Gera `agregados` e `agregados_diarios` (B4) |
 | `job_nrt.py`, `Dockerfile` | Job NRT: rodada a cada 3 h, no container |
+| `logs.py` | Logs estruturados em JSON (RNF07), usados por todas as etapas |
 | `eda.py` | Análise exploratória por satélite |
 | `test_pipeline.py` | Testes dos filtros |
 | `test_banco.py`, `tests/` | Testes de integração num Postgres descartável |

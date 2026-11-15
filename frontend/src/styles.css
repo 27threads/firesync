@@ -346,10 +346,98 @@ p, li { max-width: var(--measure); }
 }
 
 .area-map__actions,
+.area-map__detections-controls,
 .area-map__layers {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+}
+
+.map-select {
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--night);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.map-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.area-map__legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--night);
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.area-map__legend-count {
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.area-map__legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.area-map__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-swatch {
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.map-swatch--hex {
+  width: 24px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+  background: linear-gradient(90deg, #002051 0%, #575c6e 45%, #a69d75 75%, #fdea45 100%);
+}
+
+.map-swatch--low {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #56b4e9;
+  border: 1px dashed #0e131a;
+}
+
+.map-swatch--medium {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #f5a623;
+  border: 2px solid #161d27;
+}
+
+.map-swatch--high {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ff5c39;
+  border: 2.5px solid #fff4d6;
 }
 
 .map-btn {
@@ -366,6 +454,11 @@ p, li { max-width: var(--measure); }
 
 .map-btn:hover {
   border-color: var(--text-muted);
+}
+
+.map-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .map-btn--active {
@@ -487,4 +580,23 @@ p, li { max-width: var(--measure); }
   .area-map__viewport {
     height: 280px;
   }
+}
+
+/* Exportação e pacote de auditoria (D6) */
+.export-panel {
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+
+.export-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  margin-top: 16px;
+}
+
+.export-panel__details {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
 }

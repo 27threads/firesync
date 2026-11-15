@@ -37,6 +37,7 @@ describe('index.html (static page shell)', () => {
       'VIIRS C2',
       'IBGE',
       'INPE',
+      'Decree 080/2020',
       'NASA EOSDIS GIBS',
       'OpenStreetMap',
       'CARTO',

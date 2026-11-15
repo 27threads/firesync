@@ -1,7 +1,20 @@
 import { buildCalendarRequest } from '../controls/areaPeriodModel';
-import type { CalendarApiResult, CalendarRequest, HealthResponse, RegionOption } from './types';
+import { defaultAuditFilenameUtc, parseContentDispositionFilename } from '../export/exportModel';
+import type {
+  CalendarApiResult,
+  CalendarRequest,
+  HealthResponse,
+  RecentDetectionsParams,
+  RecentDetectionsResponse,
+  RegionOption,
+} from './types';
 
 export { buildCalendarRequest };
+
+export interface AuditPackageDownload {
+  blob: Blob;
+  filename: string;
+}
 
 /** Typed API error carrying contract code, HTTP status, and Retry-After seconds when present. */
 export class ApiClientError extends Error {
@@ -84,6 +97,42 @@ export function fetchCalendar(request: CalendarRequest, signal?: AbortSignal): P
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
+    signal,
+  });
+}
+
+/** Fetches the audit package ZIP (POST /api/v1/export) for a requested area and period. */
+export async function fetchAuditPackage(
+  request: CalendarRequest,
+  signal?: AbortSignal,
+): Promise<AuditPackageDownload> {
+  const response = await fetch(`${getApiBaseUrl()}/api/v1/export`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+    signal,
+  });
+  if (!response.ok) {
+    throw await parseErrorResponse(response);
+  }
+  const filename =
+    parseContentDispositionFilename(response.headers.get('content-disposition')) ?? defaultAuditFilenameUtc();
+  const blob = await response.blob();
+  return { blob, filename };
+}
+
+/** Fetches recent fire detections (hexagons or points) for the visible map bounding box. */
+export function fetchRecentDetections(
+  params: RecentDetectionsParams,
+  signal?: AbortSignal,
+): Promise<RecentDetectionsResponse> {
+  const [west, south, east, north] = params.bbox;
+  const hours = params.hours ?? 24;
+  const zoom = Math.round(params.zoom);
+  const modeParam = params.mode ? `&mode=${encodeURIComponent(params.mode)}` : '';
+  const query = `bbox=${west},${south},${east},${north}&hours=${hours}&zoom=${zoom}${modeParam}`;
+  return requestJson<RecentDetectionsResponse>(`/api/v1/detections/recent?${query}`, {
+    method: 'GET',
     signal,
   });
 }

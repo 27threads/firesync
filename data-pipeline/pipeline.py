@@ -15,6 +15,7 @@ import os
 import re
 import sys
 import subprocess
+import time
 import zipfile
 from datetime import date, timedelta
 from io import StringIO
@@ -26,6 +27,9 @@ import pandas as pd
 import psycopg
 import shapely
 
+import logs
+
+log = logs.logger("pipeline")
 ROOT = Path(__file__).parent
 RAW = ROOT / "data" / "raw"
 STAGE = ROOT / "data" / "staged"
@@ -78,16 +82,25 @@ def config(conn, chave):
 def curl(url, dest=None):
     # curl em vez de urllib: o Python deste Windows falha na cadeia SSL da NASA
     args = ["curl", "-sS", "-f", "--retry", "3", "-m", "600", url]
+    inicio = time.monotonic()
     try:
         if dest:
             tmp = Path(str(dest) + ".part")
             subprocess.run(args + ["-o", str(tmp)], check=True)
             tmp.replace(dest)
-            return None
-        return subprocess.run(args, check=True, capture_output=True, text=True, encoding="utf-8").stdout
+            out = None
+        else:
+            out = subprocess.run(args, check=True, capture_output=True, text=True, encoding="utf-8").stdout
     except subprocess.CalledProcessError as e:
         # a MAP_KEY vai na URL (/csv/<chave>/...): nunca deixar ela chegar ao log
         raise RuntimeError(f"curl falhou ({e.returncode}): {mask_key(url)}") from None
+    log.debug("http_get", url=mask_key(url), duration_ms=ms_desde(inicio))
+    return out
+
+
+def ms_desde(inicio):
+    """Milissegundos desde `inicio` (time.monotonic()), para o `duration_ms` dos logs."""
+    return round((time.monotonic() - inicio) * 1000)
 
 
 def mask_key(url):
@@ -126,6 +139,7 @@ def cadastrar():
         src = RAW / r["arquivo"]
         if not src.exists():
             src.parent.mkdir(parents=True, exist_ok=True)
+            log.info("region_polygon_download", region=r["nome"], file=r["arquivo"])
             curl(r["url"], src)
         g = gpd.read_file(f"zip://{src}")
         # SIRGAS2000 ≈ WGS84 (<1 m)
@@ -135,7 +149,10 @@ def cadastrar():
     # Uma transação: a tabela vira exatamente o JSON. Região renomeada ou removida sai (o cascade limpa
     # células, agregados e fatores dela); sem isso a célula ficaria em duas regiões.
     with conn.transaction():
-        conn.execute("DELETE FROM regioes WHERE nome <> ALL(%s)", ([r["nome"] for r in regs],))
+        removidas = conn.execute("DELETE FROM regioes WHERE nome <> ALL(%s) RETURNING nome",
+                                 ([r["nome"] for r in regs],)).fetchall()
+        if removidas:  # o cascade apaga células, agregados e fatores delas
+            log.warning("regions_removed", regions=[n for (n,) in removidas])
         conn.execute("DELETE FROM celula_regiao")
         for r, geom, cells in zip(regs, geoms, cells_by_region):
             rid = conn.execute(
@@ -147,7 +164,7 @@ def cadastrar():
             with conn.cursor().copy("COPY celula_regiao (h3, regiao_id) FROM STDIN") as cp:
                 for c in cells:
                     cp.write_row((c, rid))
-            print(f"cadastrar: {r['nome']} ({len(cells):,} células res {res})", flush=True)
+            log.info("region_registered", region=r["nome"], region_id=rid, cells=len(cells), h3_resolution=res)
 
 
 def load_regions(conn):
@@ -174,9 +191,10 @@ def download():
         for y in years:
             dest = RAW / "country" / f"{src}_{y}.csv"
             if dest.exists():
+                log.debug("download_skipped", file=dest.name, reason="already_downloaded")
                 continue
             dest.parent.mkdir(parents=True, exist_ok=True)
-            print("país:", dest.name, flush=True)
+            log.info("download_country_file", source=src, year=y, country=pais)
             curl(COUNTRY_URL.format(src=src, y=y, pais=pais), dest)
 
     avail = pd.read_csv(StringIO(curl(f"{API}/data_availability/csv/{key}/ALL"))).set_index("data_id")
@@ -185,8 +203,10 @@ def download():
         sp_end = date.fromisoformat(avail.loc[sp, "max_date"])
         nrt_end = date.fromisoformat(avail.loc[nrt, "max_date"])
         jobs = [(sp, date.fromisoformat(start), sp_end), (nrt, sp_end + timedelta(days=1), nrt_end)]
+        log.info("firms_availability", sp_source=sp, sp_end=sp_end, nrt_source=nrt, nrt_end=nrt_end)
         for old in (RAW / "api" / nrt).glob("*.csv"):  # o SP chegou: o NRT desses dias sai (e o staged dele)
             if date.fromisoformat(old.stem) + timedelta(days=4) <= sp_end:
+                log.info("nrt_file_superseded_by_sp", file=f"{nrt}/{old.name}", sp_end=sp_end)
                 old.unlink()
                 (STAGE / ("viirs" if "VIIRS" in nrt else "modis") / f"{nrt}_{old.stem}.parquet").unlink(missing_ok=True)
         for source, d0, d1 in jobs:
@@ -197,8 +217,11 @@ def download():
                 # chunk que alcança o fim da disponibilidade é rebaixado: o NRT ainda está chegando
                 if not dest.exists() or d + timedelta(days=n - 1) >= nrt_end:
                     dest.parent.mkdir(parents=True, exist_ok=True)
-                    print("api:", source, d, flush=True)
+                    log.info("download_api_chunk", source=source, start=d, days=n,
+                             reason="near_availability_end" if dest.exists() else "missing")
                     curl(f"{API}/area/csv/{key}/{source}/{bbox}/{n}/{d}", dest)
+                else:
+                    log.debug("download_skipped", file=f"{source}/{dest.name}", reason="already_downloaded")
                 d += timedelta(days=n)
 
 
@@ -229,13 +252,16 @@ def stage():
         for p in raw_files(kind):
             dest = STAGE / kind / f"{p.parent.name}_{p.stem}.parquet"
             if dest.exists() and dest.stat().st_mtime > p.stat().st_mtime:
+                log.debug("stage_skipped", file=dest.name, reason="up_to_date")
                 continue
             dest.parent.mkdir(parents=True, exist_ok=True)
             df = read_raw(p, bbox)
             if df.empty:
+                log.info("stage_skipped", file=p.name, reason="no_rows_in_bbox")
                 continue
-            in_coverage(normalize(df, kind), regions).to_parquet(dest, index=False)
-            print("stage:", dest.name, flush=True)
+            dentro = in_coverage(normalize(df, kind), regions)
+            dentro.to_parquet(dest, index=False)
+            log.info("stage_file_done", file=dest.name, rows_in_bbox=len(df), rows_in_coverage=len(dentro))
 
 
 def normalize(df, kind):
@@ -296,6 +322,7 @@ def write(df, path, cols):
 
 def clean():
     import shutil
+    eventos = logs.logger("clean")
     OUT.mkdir(parents=True, exist_ok=True)
     report = {}
     for kind, fn, cols in [("modis", clean_modis, MODIS_COLS), ("viirs", clean_viirs, VIIRS_COLS)]:
@@ -310,7 +337,7 @@ def clean():
             write(main, OUT / f"{kind}_main", cols)
             write(low, OUT / f"{kind}_lowconf", cols)
         report[kind] = log
-        print(kind, json.dumps(log, ensure_ascii=False), flush=True)
+        eventos.info("clean_done", kind=kind, counts=log)
     (OUT / "clean_report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False))
 
 
@@ -358,7 +385,8 @@ def sem_dados():
     with conn.transaction():
         conn.execute("DELETE FROM dias_sem_dados")
         conn.cursor().executemany("INSERT INTO dias_sem_dados (data, satelite) VALUES (%s, %s)", sorted(rows))
-    print(f"sem_dados: {len(rows)} dias × satélite", flush=True)
+    por_satelite = {s: sum(1 for _, x in rows if x == s) for s in sorted({x for _, x in rows})}
+    log.info("missing_days_loaded", rows=len(rows), by_satellite=por_satelite, sp_end=sp_fim)
 
 
 # ---------------------------------------------------------------- importar
@@ -412,6 +440,7 @@ def importar(paths=()):
     Sem argumento: todos os parquet de data/staged/ (saída do `stage`).
     Com argumento: CSVs ou ZIPs do FIRMS, normalizados e recortados pela cobertura aqui mesmo.
     Cada arquivo é uma transação: ou entra inteiro, ou não entra.
+    Devolve os totais de todos os arquivos (o job NRT registra quantos focos entraram).
     """
     conn = db()
     res = int(config(conn, "h3_resolucao"))
@@ -425,14 +454,19 @@ def importar(paths=()):
         jobs = [(p, p.parent.name) for p in sorted(STAGE.glob("*/*.parquet"))]
     cols = ",".join(FOCOS_COLS)
     upd = ",".join(f"{c} = EXCLUDED.{c}" for c in FOCOS_COLS if c not in FOCOS_KEY)
+    totais = {"detections_inserted": 0, "detections_updated": 0, "nrt_replaced_by_sp": 0}
     for p, kind in jobs:
+        inicio = time.monotonic()
         if kind is None:  # CSV/ZIP direto do FIRMS
             raw = read_raw(p, bbox)
             kind = kind_of(raw)
             df = in_coverage(normalize(raw, kind), regions)
+            lidas = len(raw)
         else:
             df = pd.read_parquet(p)
+            lidas = len(df)
         if df.empty:
+            log.info("import_file_skipped", file=p.name, reason="no_rows_in_coverage", rows_read=lidas)
             continue
         f = to_focos(df, kind, p.name, res)
         buf = StringIO()
@@ -458,7 +492,15 @@ def importar(paths=()):
                 SET data_inicio = least(cobertura.data_inicio, EXCLUDED.data_inicio),
                     data_fim = greatest(cobertura.data_fim, EXCLUDED.data_fim), atualizado_em = now()""")
             sub = drop_nrt_under_sp(conn, sorted(f.satelite.unique()))
-        print(f"importar: {p.name}: {ins:,} novos, {upd_n:,} atualizados, {sub:,} NRT substituídos pelo SP", flush=True)
+        log.info("import_file_done", file=p.name, kind=kind, rows_read=lidas, rows_in_coverage=len(df),
+                 duplicate_keys_dropped=len(df) - len(f), satellites=sorted(f.satelite.unique()),
+                 quality=sorted(f.qualidade.unique()), period_start=f.datahora_utc.min(),
+                 period_end=f.datahora_utc.max(), inserted=ins, updated=upd_n, nrt_replaced_by_sp=sub,
+                 duration_ms=ms_desde(inicio))
+        totais["detections_inserted"] += ins
+        totais["detections_updated"] += upd_n
+        totais["nrt_replaced_by_sp"] += sub
+    return totais
 
 
 def drop_nrt_under_sp(conn, satelites):
@@ -469,11 +511,14 @@ def drop_nrt_under_sp(conn, satelites):
     """
     n = 0
     for sat in satelites:
-        n += conn.execute("""
+        apagados = conn.execute("""
             DELETE FROM focos
             WHERE satelite = %(s)s AND qualidade = 'NRT'
               AND datahora_utc < (SELECT date_trunc('day', max(datahora_utc)) + interval '1 day'
                                   FROM focos WHERE satelite = %(s)s AND qualidade = 'SP')""", {"s": sat}).rowcount
+        if apagados:
+            log.info("nrt_replaced_by_sp", satellite=sat, rows=apagados)
+        n += apagados
     return n
 
 
@@ -510,14 +555,25 @@ def inpe():
     df = inpe_mensal(d)
     INPE_CSV.parent.mkdir(exist_ok=True)
     df.to_csv(INPE_CSV, index=False)
-    sat = "; ".join(f"{f['satelite']} {f['inicio']} a {f['fim']}" for f in d["meta"]["faixas_de_satelite"])
-    print(f"inpe: {len(df):,} linhas até {d['meta']['data_limite']} ({sat}) -> {INPE_CSV.name}", flush=True)
+    log.info("inpe_series_saved", rows=len(df), data_limit=d["meta"]["data_limite"], file=INPE_CSV.name,
+             satellite_ranges=d["meta"]["faixas_de_satelite"])
+
+
+def main(argv):
+    cmd = argv[0]
+    inicio = time.monotonic()
+    log.info("command_started", command=cmd)
+    try:
+        if cmd == "importar":
+            importar(argv[1:])
+        else:
+            {"cadastrar": cadastrar, "download": download, "stage": stage, "clean": clean,
+             "sem_dados": sem_dados, "inpe": inpe}[cmd]()
+    except BaseException:
+        log.exception("command_failed", command=cmd, duration_ms=ms_desde(inicio))
+        raise
+    log.info("command_finished", command=cmd, duration_ms=ms_desde(inicio))
 
 
 if __name__ == "__main__":
-    cmd = sys.argv[1]
-    if cmd == "importar":
-        importar(sys.argv[2:])
-    else:
-        {"cadastrar": cadastrar, "download": download, "stage": stage, "clean": clean,
-         "sem_dados": sem_dados, "inpe": inpe}[cmd]()
+    main(sys.argv[1:])

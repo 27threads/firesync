@@ -163,8 +163,12 @@ Sempre calculado até o último dia com dado (`data_through`), **independente do
 | Campo | Tipo | Significado |
 | --- | --- | --- |
 | `data_through` | data | Último dia com dado |
+| `alert_level` | texto ou `null` | `normal`, `attention` ou `critical`, calculado na janela de 7 dias; `null` sem referência histórica ou com dia indisponível na janela atual |
+| `alert_rules_version` | texto | Versão de `config/alert_rules.json` usada no cálculo |
 | `last_7_days` | objeto | Os 7 dias até `data_through` (janela principal, para alerta precoce) |
 | `month_to_date` | objeto | Do dia 1 do mês atual até `data_through` (RF11) |
+
+**Regra do alerta (decisão da [issue #59](https://github.com/27threads/firesync/issues/59#issuecomment-6886903635)):** Crítico exige `s7 >= max(2 × mediana, 10)` e soma de `t−2..t` maior que a de `t−5..t−3`. O piso de 10 vale para qualquer mediana, inclusive zero. Se não for Crítico, Atenção exige `s7 > P75`; caso contrário, Normal. Razão, piso, percentil e tendência vêm da configuração versionada. A semana fixa em domingo pertence ao backtest; a API avalia a janela móvel até `data_through`. O nível vale para `last_7_days`, não para o mês.
 
 Os dois objetos têm o mesmo formato:
 
@@ -205,7 +209,7 @@ A fórmula é a de [importacao-regioes.md](importacao-regioes.md). Resumo do que
    - **`observed_viirs`:** `detections = soma das contagens brutas`. Sem faixa. De 2012-02 a 2026-10 é o S-NPP. De 2026-11 em diante é o NOAA-20, também somado **sem fator** (fator 1, decisão da frente B).
    - **`estimated_modis`:** para cada cenário `c` (ano de calibração), `detections_c = Σ bruto[bioma, periodo] × fator[bioma, Aqua→S-NPP, mes, periodo, c]`.
 4. Totais por ano, sazonalidade e anomalias são calculados **por cenário**. Só no fim: valor central = mediana dos cenários, faixa = percentis 5 e 95 por **interpolação linear** (o padrão do `numpy.percentile`). Com 13 cenários, o método muda o número, então ele vai escrito também no `metadata.json`.
-   - **O número de cenários não é fixo.** A API usa os anos de calibração que existem em `fatores_harmonizacao` (10 ou 13, conforme a validação, e janeiro tem um a menos). Nada no código assume uma quantidade.
+   - **A quantidade de cenários não é fixa:** meses isolados (`months[]`) usam todos os cenários que têm fator naquele mês (em janeiro, o cenário 2012 fica de fora), e os **totais do ano (`years[]`, ranking e anomalias anuais) usam só os cenários completos** (com todos os fatores necessários no ano, sem entrar com zero nem preencher mês ausente pela mediana), conforme [importacao-regioes.md, "Fórmula do calendário", itens 6 e 7](importacao-regioes.md#fórmula-do-calendário-para-refazer-a-partir-do-export-de-auditoria).
 5. Preenche com zero os meses sem linha e junta os dias sem dado.
 6. Para `recent`, soma as contagens diárias da área na janela atual e em todas as janelas de mesmo tamanho num raio de ±15 dias da mesma data, em cada ano de referência, e tira a mediana e o P25–P75 entre essas janelas.
 
@@ -434,4 +438,3 @@ A resposta também leva `ETag` com `updated_at`, para o navegador reaproveitar.
 | 1 | Nível de alerta (Normal / Atenção / Crítico) | Regra num `alert_rules.json` versionado, lido pela API. Validação por teste retroativo (solução A + B) em [validacao-alerta.md](validacao-alerta.md); área queimada da NASA fica como próximo passo (issue #9) | Equipe, frentes B e C |
 | 2 | Anos de referência da anomalia (RF12) | Todos os anos completos menos o próprio ano, fixo, independente do intervalo pedido | Equipe |
 | 3 | Medida da anomalia | Diferença absoluta e percentual contra a mediana. O RD06 pede "média de vários anos", então `indicators` usa a média | Equipe |
-| 4 | Linguagem e framework da API | Python, pela biblioteca `h3` e pelo código de consulta do [banco.md](banco.md) | Equipe (arquitetura, ponto 4) |
