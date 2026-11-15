@@ -125,39 +125,9 @@ Medido com o formato anterior de `agregados` (uma linha por célula × mês, só
 
 Carga com `COPY`: 3,8 s para ~1 milhão de linhas. Conclusão: o Postgres dá conta sem cache. Só a conversão de polígonos grandes precisa ser feita antes, no `cadastrar`.
 
-## Compose sugerido para o banco e o job NRT
+## Compose do banco e do job NRT
 
-O backend é dono do `docker-compose.yml`. Este trecho é só a configuração recomendada para os serviços `db` e `job-nrt`:
-
-```yaml
-services:
-  db:
-    image: postgis/postgis:16-3.4
-    environment:
-      POSTGRES_DB: firesync
-      POSTGRES_USER: firesync
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}      # vem do .env, nunca no compose
-    volumes:
-      - db-data:/var/lib/postgresql/data
-      - ./data-pipeline/migrations:/docker-entrypoint-initdb.d:ro   # aplica as migrations no primeiro boot
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U firesync -d firesync"]
-      interval: 5s
-      retries: 10
-  job-nrt:                                         # issue #5: focos NRT a cada 3 h
-    build: ./data-pipeline                         # Dockerfile da frente A
-    environment:
-      DATABASE_URL: postgresql://firesync:${POSTGRES_PASSWORD}@db:5432/firesync
-      FIRMS_MAP_KEY: ${FIRMS_MAP_KEY}
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-volumes:
-  db-data:
-```
+O compose de produção está em [`infra/docker-compose.yml`](../infra/docker-compose.yml) e o passo a passo em [deploy.md](deploy.md). O `db` não publica a porta 5432: só a API e o job NRT falam com ele, pela rede interna do compose.
 
 - O `docker-entrypoint-initdb.d` só roda com o volume vazio. Migrations novas (`002_...sql`) precisam ser aplicadas à mão ou por um passo de deploy.
 - A API deve esperar o `healthcheck` (`depends_on: db: condition: service_healthy`).

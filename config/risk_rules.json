@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "status": "tiers and rates from the calibration of the final 10-variable model in the walk-forward test 2021-2024 (RFC 0003)",
+  "horizon_days": 14,
+  "target": "10 or more VIIRS detections in the H3 resolution 4 cell during the next 14 days",
+  "unit": "H3 resolution 4 cell (about 1,770 km2)",
+  "tiers": [
+    { "tier": "very_high", "min_prob": 0.6 },
+    { "tier": "high", "min_prob": 0.4 },
+    { "tier": "medium", "min_prob": 0.2 },
+    { "tier": "lower", "min_prob": 0.0 }
+  ],
+  "historical_share": {
+    "very_high": 0.820,
+    "high": 0.461,
+    "medium": 0.271,
+    "lower": 0.029
+  },
+  "historical_share_by_season": {
+    "peak_aug_oct": { "very_high": 0.840, "high": 0.471, "medium": 0.276, "lower": 0.046 },
+    "other_months": { "very_high": 0.777, "high": 0.448, "medium": 0.267, "lower": 0.026 }
+  },
+  "overall_share": 0.152,
+  "period": "tested year by year on 2021-2024, training only on earlier years, without the Pantanal",
+  "source": "walk-forward test of the gradient boosting on public FIRMS VIIRS data (RFC 0003); probabilities were within about 4 points of the observed frequency"
+}

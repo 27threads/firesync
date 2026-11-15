@@ -35,8 +35,11 @@ def error_response(code, message, status, headers=None):
 
 
 def create_app(repository: ApiRepository | None = None, clock=None, monotonic=None,
-               limits=None, rate_window=None, frontend_origin=None):
+               limits=None, rate_window=None, frontend_origin=None, client_ip_header=None):
     clock = clock or (lambda: datetime.now(UTC))
+    # Only set behind a proxy that overwrites the header (CF-Connecting-IP with Cloudflare Tunnel);
+    # otherwise any client could pick its own rate-limit bucket.
+    client_ip_header = client_ip_header or os.environ.get('CLIENT_IP_HEADER', '')
     monotonic = monotonic or system_monotonic
     rules = load_rules()
     configured_limits = limits if limits is not None else {
@@ -73,7 +76,9 @@ def create_app(repository: ApiRepository | None = None, clock=None, monotonic=No
         started = monotonic()
         try:
             endpoint = request.url.path.rsplit('/', 1)[-1]
-            wait = limiter.retry_after(request.client.host if request.client else 'unknown', endpoint)
+            client_ip = (client_ip_header and request.headers.get(client_ip_header)) or (
+                request.client.host if request.client else 'unknown')
+            wait = limiter.retry_after(client_ip, endpoint)
             if wait and request.method != 'OPTIONS':
                 response = error_response('rate_limited', 'Too many requests. Try again later.', 429, {'Retry-After': str(wait)})
             else:
