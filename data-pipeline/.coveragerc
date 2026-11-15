@@ -9,5 +9,5 @@ omit =
 
 [report]
 # Só sobe, nunca desce: quando a cobertura medida passar deste número, suba o mínimo no mesmo PR.
-fail_under = 56
+fail_under = 61
 show_missing = True
