@@ -599,10 +599,10 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
         </div>
         <div className="map-stage__group" role="group" aria-label="Base map layer">
           <button type="button" className="map-btn" aria-pressed={basemap === 'black-marble'} onClick={() => switchBasemap('black-marble')}>
-            Black Marble
+            Black Marble (NASA GIBS)
           </button>
           <button type="button" className="map-btn" aria-pressed={basemap === 'blue-marble'} onClick={() => switchBasemap('blue-marble')}>
-            Blue Marble
+            Blue Marble (NASA GIBS)
           </button>
         </div>
       </div>

@@ -25,7 +25,7 @@ Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir"
 | 3 | Resolução H3 | 5, 6, 7 | 6 (aprovado no PR #2, ver [banco.md](banco.md)) | frentes A e C |
 | 4 | Linguagem e framework da API | Python | Python 3.12 + FastAPI, com psycopg 3 para o banco | frente C |
 | 5 | Framework do front | HTML/JS sem build; Vite + React; Vite + Svelte | Vite + React + TypeScript | frente D |
-| 6 | Biblioteca de mapa e desenho de área (RD01) | Leaflet; MapLibre GL | Leaflet com renderizador canvas + Leaflet-Geoman; tiles do NASA GIBS (VIIRS Black Marble como padrão, Blue Marble como alternativa) | frente C, confirmado pela frente D |
+| 6 | Biblioteca de mapa e desenho de área (RD01) | Leaflet; MapLibre GL | Leaflet com renderizador canvas + Leaflet-Geoman; tiles do NASA GIBS (VIIRS Black Marble como padrão, Blue Marble como alternativa), para os dados da NASA ficarem no centro (critério Relevance) | frente C, confirmado pela frente D |
 | 7 | Biblioteca de gráficos do calendário | ECharts; D3 + SVG; Observable Plot | D3 + SVG próprio (módulos `d3-scale`, `d3-scale-chromatic`, `d3-shape`, `d3-array`) | frente D |
 | 8 | Paleta acessível (RD04) | viridis ou cividis; escala linear ou log | cividis com escala logarítmica | frente C, confirmado pela frente D |
 | 9 | Formato do download (RF13) | PNG, PDF, CSV | ZIP de auditoria com CSVs (`POST /export`); o PNG do calendário é gerado no front ([requisitos.md](requisitos.md), seção 4; [api.md](api.md)) | equipe |

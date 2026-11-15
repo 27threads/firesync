@@ -105,7 +105,7 @@ O acerto é a proporção dos alertas Crítico seguidos do evento definido, não
 
 Nenhuma data entra sem a fonte ao lado. O próprio banco ajuda a conferir o pico de cada evento.
 
-**Números de cada evento:** o nível semana a semana no lugar do evento e a **antecedência** (quantas semanas antes do início o nível já estava em Atenção ou Crítico).
+**Números de cada evento:** o nível semana a semana no lugar do evento e a **antecedência** (quantas semanas antes do início o nível já estava em Atenção ou Crítico). A frase da tela depende de duas colunas do `eventos.csv`: se a antecedência bateu no limite da janela e se o alerta ficou ligado até o início (regra no [RFC 0001](rfcs/0001-backtest-alerta.md), seção "Eventos conhecidos").
 
 **Uso:** é **ilustração, não prova**, para a tela de Método e o vídeo ("o alerta teria ficado Crítico X semanas antes da crise de..."). As crises são conhecidas justamente porque tiveram muitas detecções, então o alerta fica Crítico nelas de qualquer jeito. A informação útil é a **antecedência**. Com poucos casos, não é estatística: a estatística é a solução A. O vídeo segue a mesma regra.
 
