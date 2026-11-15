@@ -1,6 +1,6 @@
 # RFC 0004: Assistente virtual (chat) sobre a API
 
-- **Status:** Revisado pelo Mateus no PR #121 (pontos aplicados). Entra **antes da submissão**, no escopo mínimo da seção "Plano" (tarefas C11 e D11)
+- **Status:** Aprovado no PR #121 (revisão do Mateus aplicada). Entra **antes da submissão**, no escopo mínimo da seção "Plano" (tarefas C11 e D11)
 - **Autor:** Eduardo
 - **Data:** 2026-11-15
 
@@ -30,7 +30,7 @@ A proposta é uma **bolinha de chat** no canto do site que responde essas pergun
 - Responder, em linguagem natural, perguntas sobre focos por região (bioma), período, janela recente, alerta, risco dos próximos 14 dias e "onde está queimando agora".
 - **Todo número vem dos casos de uso que já existem.** O modelo só escolhe a ferramenta, preenche os parâmetros e redige o texto.
 - Toda resposta com número traz um botão que aplica a mesma área e período na tela (calendário de verdade) e, quando fizer sentido, o download do ZIP de auditoria.
-- **Responde sempre em inglês**, como todo texto público ([CLAUDE.md](../../CLAUDE.md#regras-de-código)). Entende pergunta em qualquer idioma. Responder no idioma da pergunta exigiria mudar essa regra da equipe, e fica fora deste RFC.
+- **Responde no idioma da pergunta.** Decisão do Eduardo em 15/11/2026, registrada como exceção na regra de idioma do [CLAUDE.md](../../CLAUDE.md#regras-de-código): o jurado pergunta em inglês e recebe em inglês; a brigada pergunta em português e recebe em português. O texto fixo do painel (botão, placeholder, chips, erros) continua em inglês.
 - Crédito ao NASA FIRMS visível no painel do chat.
 - **Continua respondendo quando a cota do provedor acaba** (ver "Provedores e cota").
 
@@ -106,16 +106,16 @@ Pedido:
 { "messages": [ { "role": "user", "content": "What was the worst month in the Pantanal in 2020?" } ] }
 ```
 
-Resposta (os valores entre `< >` saem do banco na hora; nenhum número é escrito à mão):
+Resposta, com os números reais da API no ar (`POST /api/v1/calendar` com `region_id` 6, de `2020-01` a `2020-12`, consultada em 15/11/2026, `data_version` `2026-11-14T19:48:30Z`). O texto do `answer` é ilustrativo; os números e os campos são os que a API devolveu:
 
 ```json
 {
-  "answer": "<month> 2020 had <count> hotspots in the Pantanal, the highest month of that year (harmonized VIIRS scale, NASA FIRMS).",
+  "answer": "September 2020 had 64,824 hotspots in the Pantanal, the highest month of that year (185,929 in the whole year, the highest year in the series). Harmonized VIIRS scale, NASA FIRMS.",
   "actions": [
-    { "type": "show_calendar", "area": { "region_id": "<region_id>" }, "start": "2020-01", "end": "2020-12" },
-    { "type": "download_export", "area": { "region_id": "<region_id>" }, "start": "2020-01", "end": "2020-12" }
+    { "type": "show_calendar", "area": { "type": "region", "region_id": 6 }, "start": "2020-01", "end": "2020-12" },
+    { "type": "download_export", "area": { "type": "region", "region_id": 6 }, "start": "2020-01", "end": "2020-12" }
   ],
-  "meta": { "updated_at": "<updated_at>", "data_version": "<data_version>" }
+  "meta": { "updated_at": "2026-11-15T14:54:00Z", "data_version": "2026-11-14T19:48:30Z" }
 }
 ```
 
@@ -156,7 +156,7 @@ Além disso: `max_tokens` baixo, até 4 voltas por pedido, histórico cortado na
 
 ### Prompt de sistema (resumo)
 
-- Answer in English. Use only numbers returned by tools. If no tool answered, say you don't know.
+- Answer in the language of the user's question. Use only numbers returned by tools. If no tool answered, say you don't know.
 - Always state the region, the period and that the series is harmonized to the VIIRS scale (MODIS + VIIRS, NASA FIRMS).
 - A month without satellite data is not a month with zero hotspots.
 - Outside Brazil or below biome level: explain the limit and suggest drawing on the map.
@@ -179,6 +179,7 @@ As chaves ficam só no `.env` da VPS, nunca no front nem no git.
 | **Text-to-SQL** sobre views liberadas | Responde qualquer pergunta | Número diferente do calendário, risco de consulta pesada, segundo caminho de cálculo | Descartada (ver "Contexto") |
 | **Só FAQ fixo / intents sem LLM** | Sem custo, nunca fica sem cota | Não entende pergunta livre | Fica como camada 1 (chips em cache), não como o assistente inteiro |
 | **Modelo próprio na VPS** (ex.: modelo pequeno local) | Sem cota nem custo por pergunta | VPS sem GPU: respostas lentas, e tool calling de modelo pequeno erra mais. Disputa CPU com a API e os jobs | Descartada para a submissão. Entra na cadeia depois, se quiserem, por ser compatível com o formato OpenAI |
+| **Proxy "grátis" não oficial** (ex.: `gpt4free`, que usa provedores por engenharia reversa) | Sem custo | Viola os termos dos provedores, cai sem aviso e manda as perguntas por terceiros desconhecidos | Descartada. Camada gratuita **oficial** (lista em `cheahjs/free-llm-api-resources`) serve como segundo provedor |
 | **Um provedor só** | Mais simples | Cota acabou, chat parou | Descartada: cadeia de provedores |
 | **LLM chamando a API HTTP pública** (em vez de em processo) | Desacoplado | Passa pelo rate limit e pelo túnel à toa, mais latência | Descartada: em processo, com o mesmo `reader` e a mesma transação `REPEATABLE READ READ ONLY` |
 | **LLM no navegador** (chave no front) | Sem backend novo | Expõe a chave | Descartada |
@@ -209,4 +210,4 @@ Antes da submissão, no escopo mínimo abaixo. Cada etapa é um PR pequeno, com 
 
 1. **Mateus (frente D):** posição da bolinha no layout (mapa + `ExportBar` no celular).
 2. **Mateus:** `show_calendar` reaproveita o estado do `SelectionPanel` direto ou precisa de um evento/contexto novo?
-3. **Equipe:** qual é o segundo provedor da cadeia (e o modelo de cada um). Não muda código, só o `ASSISTANT_PROVIDERS`.
+3. **Equipe:** qual camada gratuita oficial entra como segundo provedor (precisa de tool calling e endpoint compatível com OpenAI), e o modelo de cada um. Não muda código, só o `ASSISTANT_PROVIDERS`.
