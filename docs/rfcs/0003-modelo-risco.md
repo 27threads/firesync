@@ -133,10 +133,97 @@ São duas datas escolhidas para ilustrar, e não uma medição. Na segunda, as f
 - O job precisa do banco com `agregados_diarios` e de um servidor onde rodar. Sem a VPS, as notas podem ser calculadas no banco local e levadas no dump.
 - A frequência de uma faixa é uma média do passado, e não uma previsão para aquele lugar.
 
+## Acerto na Amazônia (2021 a 2024)
+
+Só as células do bioma Amazônia (2.129 células, pelo centro da célula), todos os domingos de 2021 a 2024, treinando cada ano só com os anteriores. Alvo: 10 ou mais detecções VIIRS nos 14 dias seguintes. "Aviso" é uma nota de 50% ou mais.
+
+| Pergunta | Resultado |
+| --- | --- |
+| Quando o modelo avisa, houve fogo relevante? (precisão) | **78,5%** |
+| Dos locais com fogo relevante, quantos foram avisados? (cobertura) | **74,0%** |
+| Em quantas células ele acertou, avisando ou não? (acerto geral) | 93,7%, contra 86,3% de quem dissesse sempre "sem fogo" |
+
+O acerto geral **exagera**, porque a maioria das células não tem fogo. Mostrar a precisão e a cobertura, e nunca o acerto geral sozinho.
+
+| | Ago a out | Resto do ano |
+| --- | --- | --- |
+| Células com fogo relevante | 34% | 7% |
+| Precisão | 82% | 71% |
+| Cobertura | 81% | 61% |
+
+Fora da temporada o modelo deixa passar quase 4 de cada 10 locais com fogo relevante. Por ano (precisão e cobertura): 2021, 73% e 77%; 2022, 77% e 71%; 2023, 82% e 73%; 2024, 81% e 76%. O AUC é de 0,970 (0,966 a 0,972 por ano).
+
+Faixas do mapa na Amazônia: muito alto (11% das células) teve fogo relevante em 83%; alto (4%), em 45%; médio (5%), em 27%; menor (80%), em 2%. São as mesmas taxas do Brasil (82%, 46%, 27%, 3%).
+
+**Calibração:** a nota média é 14,1% e a frequência observada é 13,7%. Mas no meio da escala (notas de 30% a 80%) o modelo **exagera de 3 a 5 pontos percentuais** (no máximo 5,2). Exemplo: nota de 65% e frequência observada de 60%. Nos extremos (abaixo de 20% e acima de 80%) a diferença é de 0 a 2 pontos. O erro é para o lado de avisar um pouco demais. "Ponto percentual" é a diferença entre duas porcentagens da mesma coisa: 65% menos 60% são 5 pontos, e não 5% de erro.
+
+## O que foi testado e não melhorou (e foi registrado mesmo assim)
+
+Os resultados abaixo vêm de scripts locais que ainda não estão versionados no repositório. Os critérios foram fixados antes de rodar cada teste.
+
+### Mais anos de histórico (o que um MODIS de 2002 a 2011 acrescentaria)
+
+O modelo de risco **não usa o MODIS**: só contagens do VIIRS S-NPP de 2012 em diante. O MODIS entra na harmonização do modelo A, e não no treino. Para saber se mais histórico ajudaria, treinei o mesmo modelo com 3, 5, 7 e 8 anos e testei nos mesmos domingos de 2021 a 2024 (Brasil sem o Pantanal):
+
+| Anos de treino | AUC | Brier | Amazônia: precisão e cobertura |
+| --- | --- | --- | --- |
+| 3 | 0,9464 | 0,0618 | 75,1% e 76,8% |
+| 5 | 0,9464 | 0,0612 | 76,5% e 75,1% |
+| 7 | 0,9474 | 0,0604 | 77,8% e 74,1% |
+| 8 | 0,9479 | 0,0602 | 77,8% e 74,5% |
+
+De 7 para 8 anos o AUC sobe 0,0004 e o Brier cai 0,4%. A curva já está achatada, e dobrar o histórico com o MODIS harmonizado traria pouco ganho e o erro da harmonização. Limite: a curva vai até 8 anos de treino, e não 20.
+
+### Ajuste dos parâmetros
+
+O modelo usa os valores padrão (200 rodadas, taxa 0,1, 31 folhas) e nunca foi ajustado. Escolhi a melhor entre 6 configurações num período de validação (treino até 2018, validação 2019 e 2020) e só depois testei em 2021 a 2024 (treino até 2020), contra o padrão. Critério: o AUC sobe 0,005 ou o Brier cai 2%, em pelo menos 3 dos 4 anos.
+
+| | AUC | Brier | Amazônia: precisão e cobertura |
+| --- | --- | --- | --- |
+| Padrão | 0,9479 | 0,06017 | 77,8% e 74,5% |
+| Escolhida (400 rodadas, taxa 0,05) | 0,9480 | 0,06006 | 78,1% e 74,4% |
+
+Ganho de +0,0001 no AUC e +0,2% no Brier, em 0 dos 4 anos: **sem ganho relevante**. Na validação, as seis configurações ficaram entre 0,0596 e 0,0599 de Brier. Limite: só seis configurações.
+
+### Dias da semana
+
+O modelo é treinado só em domingos e usado em qualquer dia. Apliquei o modelo (treino até 2020) a cada dia da semana de 2021 a 2024, de 3 em 3 semanas, com as mesmas semanas para os sete dias (69 datas por dia). Critério: nenhum dia pode ficar mais de 0,005 de AUC abaixo, nem mais de 2% de Brier acima, do domingo.
+
+| Dia | AUC | Brier | Amazônia: precisão e cobertura |
+| --- | --- | --- | --- |
+| Domingo | 0,9495 | 0,0592 | 77,5% e 75,0% |
+| Segunda | 0,9502 | 0,0587 | 78,5% e 74,4% |
+| Terça | 0,9504 | 0,0587 | 78,0% e 74,7% |
+| Quarta | 0,9502 | 0,0589 | 78,0% e 75,0% |
+| Quinta | 0,9494 | 0,0592 | 78,3% e 75,2% |
+| Sexta | 0,9484 | 0,0597 | 78,4% e 75,4% |
+| Sábado | 0,9481 | 0,0600 | 79,1% e 75,1% |
+
+A pior queda de AUC é de 0,0014 e a pior alta de Brier é de 1,4% (sábado), dentro dos limites: **o dia da semana não importa**. Sexta e sábado ficam um pouco piores, e sábado é o que mais se aproxima do limite de Brier.
+
+### O dia de hoje, ainda incompleto
+
+O job roda a cada 3 horas, e o dia corrente entra nas janelas de 7, 14 e 30 dias com só parte dos dados. Simulei, com o VIIRS S-NPP de 2022 a 2024, o que o job enxerga em cada hora (domingos de 3 em 3 semanas, 53 datas, sem o Pantanal, treino só com anos anteriores). De manhã (até 12:00 UTC) chega de 25% a 43% do dia; às 18:00 UTC, de 92% a 98%.
+
+| | Erro de calibração | Brier | AUC | Acerto nas 10% mais arriscadas |
+| --- | --- | --- | --- | --- |
+| Dia completo | +0,10 pp | 0,0586 | 0,9494 | 62,2% |
+| Manhã (dia parcial) | −0,19 pp | 0,0591 | 0,9487 | 62,0% |
+| Ontem (`hoje − 1`) | +0,19 pp | 0,0595 | 0,9482 | 61,9% |
+
+Na manhã, 0,92% das células descem uma faixa. Usar ontem é um pouco pior que usar o dia parcial, e 3,2% das células mudam de faixa (1,4% descem e 1,8% sobem). **Decisão:** o job continua pontuando com o dia corrente. Limite: o corte por horário simula o que já chegou, e não os atrasos e lotes reais do NRT.
+
+### O que não foi testado, e por quê
+
+**Aprendizado por reforço** ("voltar no tempo, ver o gabarito e ajustar"): não testado. O gabarito é conhecido para cada exemplo, então o problema é de aprendizado supervisionado, e o gradient boosting já se ajusta contra o gabarito, rodada a rodada. Não há decisões que mudem o ambiente. O teste em avanço (treinar só com anos anteriores) já é a forma de "voltar no tempo" sem decorar o passado.
+
+**Conclusão dos testes:** o modelo parece estar no teto do que as 10 variáveis atuais permitem. Mais anos, ajuste de parâmetros e outros dias da semana não mudam o resultado. Para a acurácia subir, precisam entrar variáveis novas (ver o próximo passo).
+
 ## Limites
 
 - Escala de célula H3 res 4, avaliação semanal, horizonte de 14 dias. Em escala mais fina ou horizonte mais longo, o resultado pode ser outro.
 - O gabarito mede detecções do VIIRS, não área queimada.
+- Só quatro anos de teste (2021 a 2024), com domingos. Falta testar 2025 e 2026 fora da amostra.
 - O clima do NASA POWER tem grade de 0,5° × 0,625° (cerca de 55 km), maior que a célula.
 
 ## Próximo passo (depois da submissão)
