@@ -2,7 +2,7 @@
 
 Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir" precisa de um responsável e de uma escolha antes de alguém escrever código naquela parte.
 
-**Status:** decisões dos pontos 1–13 registradas na tabela abaixo.
+**Status:** decisões dos pontos 1–14 registradas na tabela abaixo.
 
 ## Já decidido (vem dos outros documentos)
 
@@ -33,6 +33,7 @@ Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir"
 | 11 | Onde roda o job NRT e a recarga SP | | Job NRT no serviço `job-nrt` do `docker compose` da VPS ([banco.md](banco.md)). A recarga SP ficou fora da submissão | frente A |
 | 12 | Hospedagem pública (front, API e banco) | VPS; Postgres gerenciado; front no Cloudflare | Front estático no Cloudflare. Banco, API e job NRT na VPS com `docker compose`, incluindo `focos` (PR #2), sem porta aberta: a API sai pelo Cloudflare Tunnel. O front fica perto do jurado em qualquer país e o IP da VPS não aparece ([deploy.md](deploy.md)) | frentes A e C |
 | 13 | Cálculo da anomalia (RF11, RF12) | mediana histórica, média de vários anos | mediana dos anos de referência, em todo lugar, com todos os anos completos menos o próprio ano (decidido em 15/11/2026, [api.md](api.md), "Decisões fechadas", itens 2 e 3; implementação do indicador na issue #78) | equipe |
+| 14 | Provedor de LLM do assistente ([RFC 0004](rfcs/0004-assistente-virtual.md)) | Anthropic; OpenAI; modelo local na VPS | Formato OpenAI chat completions com cadeia de provedores em `ASSISTANT_PROVIDERS`: OpenAI primeiro, um segundo provedor compatível como reserva | Eduardo e Mateus |
 
 Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases, por que ela foi escolhida.
 
@@ -45,6 +46,7 @@ Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases,
 - **6. Leaflet (canvas):** num teste lado a lado com os mesmos pontos (14/11/2026), Leaflet e MapLibre ficaram a 61 fps ao arrastar com até 60.000 focos, e o Leaflet desenhou mais rápido (141 ms contra 309 ms com 60.000). Com o desempenho empatado no nosso volume, ganhou o mais simples de colocar no ar: mais exemplos prontos e desenho de polígono, retângulo e círculo pelo Geoman. Os focos usam o renderizador canvas (`preferCanvas`), não marcadores DOM. A camada de focos recentes vem da nossa API, porque as camadas de fogo do GIBS são vector tiles (o Leaflet não lê sem plugin) e deram erro nos testes. O mapa base vem todo do **NASA EOSDIS GIBS**, sem chave de API: `BlueMarble_ShadedRelief_Bathymetry` (padrão desde 15/11/2026: é a camada da descida do globo na abertura, então a passagem para o mapa não troca de imagem, e combina com o tema claro) e `VIIRS_Black_Marble` (alternativa, do próprio VIIRS), com `Coastlines_15m` por cima. O mapa abre no mesmo centro e zoom em que o globo termina (Brasil, zoom 4) enquanto o exemplo está na tela. Os tiles CARTO Dark Matter, escolha anterior, passaram a devolver uma imagem "API key required" em 14/11/2026. A `Reference_Features_15m` respondeu com erro 400/500 no mesmo teste, e a camada de nomes (`Reference_Labels_15m`) deixou blocos pretos no mapa; nenhuma das duas é usada. Todas as fontes de tiles e bibliotecas estão creditadas em `#credits` do `frontend/index.html`.
 - **7. D3 + SVG próprio:** o calendário é a peça que o jurado vê primeiro, e um heatmap de biblioteca pronta tem a cara de qualquer painel. Com D3 desenhando SVG, a gente controla cada célula: hachura nos meses estimados, borda nos incompletos, estado próprio para sem dados e fora da cobertura, a marca da troca de sensor em fev/2012 e a animação com GSAP. O SVG também é acessível (foco por teclado, rótulo por célula). O D3 só calcula escalas e formas e não substitui o React no DOM. O ECharts foi descartado por isso, mesmo sendo mais rápido de montar. O PNG do download sai serializando o SVG num canvas.
 - **8. Cividis com escala logarítmica:** o cividis é o mais seguro para daltonismo e é citado no desafio (RD04). A escala é logarítmica porque setembro tem cerca de 30× mais focos que março: numa escala linear, todos os meses fora da temporada ficariam da mesma cor. Estados especiais (mês incompleto, estimado pelo MODIS, fora da cobertura) são marcados por hachura, borda ou rótulo, nunca só por cor.
+- **14. Cadeia de provedores no formato OpenAI:** a equipe já tem chave da OpenAI, e o mesmo formato é aceito por outros provedores. Assim, se a cota de um acabar, o próximo responde sem mudar código, e os chips em cache funcionam mesmo com todos fora.
 
 ## Componentes
 
