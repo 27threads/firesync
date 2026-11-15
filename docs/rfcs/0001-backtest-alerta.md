@@ -105,7 +105,7 @@ Tudo em `numpy`, vetorizado por unidade. Para cada semana, `t` é o último dia 
 | `backtest.csv` | 1 por regra da grade (+ sensibilidade) | `regra, razao, tendencia, atencao, p_gabarito, minimo, freq_normal, freq_atencao, freq_critico, acerto, cobertura, cobertura_critico, alarme_falso, trocas_mes, acerto_ingenua, ganho, anos_com_ganho_positivo` |
 | `por_bioma.csv` | 1 por regra × bioma | as mesmas, nos 6 biomas inteiros |
 | `eventos.csv` | 1 por evento × semana | `evento, semana, nivel, detections, typical_median` e a `antecedencia_semanas` |
-| `relatorio.txt` | resumo | a melhor regra por ganho e se alguma passou na regra de decisão |
+| `relatorio.txt` | resumo | a regra atual com a situação dela, as regras aprovadas no critério completo (gabarito principal e as quatro variações) e as que passam no principal sem sensibilidade calculada, que não contam como aprovadas |
 
 ### 4. Eventos conhecidos (solução B)
 
@@ -143,7 +143,7 @@ Segue o padrão do `tests/test_harmonizacao.py`: pytest com dados inventados.
 
 | Risco | Mitigação |
 | --- | --- |
-| Acerto inflado pela persistência do fogo | O número que decide é o ganho sobre a ingênua na mesma frequência, com a regra de decisão fixada antes de rodar |
+| Acerto inflado pela persistência do fogo | O número que decide é o ganho sobre a ingênua na mesma frequência. A primeira parte da regra de decisão foi fixada antes de rodar; o complemento da frente B veio depois e fica declarado como posterior ("Perguntas respondidas pela frente B") |
 | Dia sem dado do S-NPP (falha do satélite) vira zero | Conferir a `cobertura` e listar no `relatorio.txt` os dias sem arquivo. Se houver muitos, as semanas que tocam esses dias saem do teste |
 | A conta do script diverge da que a API vai fazer | O script lê os parâmetros do próprio `alert_rules.json`. Quando a frente C implementar o `recent`, um teste compara as duas contas numa unidade |
 | Memória (matriz ~95 MB + somas) | `int32` e somas por bloco de unidades, se precisar |
@@ -152,7 +152,7 @@ Segue o padrão do `tests/test_harmonizacao.py`: pytest com dados inventados.
 
 ## Plano de implementação
 
-Branch nova `a-backtest-alerta`, a partir da `main` depois do merge do PR #42 e das respostas da frente B às perguntas em aberto (precisam vir antes da rodada, não antes do merge). TDD: o teste vem antes de cada função.
+Plano histórico. Branch nova `a-backtest-alerta`, a partir da `main` depois do merge do PR #42. O plano previa as respostas da frente B antes da rodada; elas vieram depois (PR #56) e isso fica declarado em "Perguntas respondidas pela frente B". TDD: o teste vem antes de cada função.
 
 0. `data-pipeline/relatorios/` no `.gitignore`.
 
@@ -172,4 +172,4 @@ As respostas vieram **depois** da primeira rodada (PR #56), com a tabela já vis
 
 **O que isso não muda:** por bioma inteiro a regra perde da ingênua em 5 de 6 biomas, com qualquer piso. A linha da tela por bioma não mostra acerto.
 
-**Falta, fora deste RFC:** levar o piso contínuo ao `config/alert_rules.json` e à API (`recent`), com teste (issue #59, frentes A e C). O intervalo de confiança por bootstrap em blocos de ano, oferecido pela frente A, é bem-vindo se couber.
+O piso contínuo já está no `config/alert_rules.json` e no `recent` da API (PR #69). O intervalo de confiança por bootstrap em blocos de ano, oferecido pela frente A, é bem-vindo se couber.

@@ -227,19 +227,44 @@ def eventos(ev, unidades, semanas, a, niv):
     return pd.DataFrame(linhas)
 
 
+def situacao(bt):
+    """Linhas do gabarito principal (sem a ingênua) com a coluna `situacao` no critério completo da regra de decisão:
+    ganho > 0 no total e em >= 7 dos 12 anos no gabarito principal e ganho > 0 em cada variação de SENSIBILIDADE.
+    Regra que passa no principal mas não tem as quatro variações calculadas fica como "sensibilidade não avaliada"."""
+    principal = (bt["p_gabarito"] == GABARITO[0]) & (bt["minimo"] == GABARITO[1])
+    linhas = bt[principal & (bt["regra"] != "ingenua_p90")].copy()
+    variacoes = bt[~principal].set_index(["regra", "p_gabarito", "minimo"])["ganho"]
+
+    def uma(r):
+        if not (r["ganho"] > 0 and r["anos_com_ganho_positivo"] >= ANOS_COM_GANHO_MIN):
+            return "reprovada"
+        ganhos = [variacoes.get((r["regra"], p, mn)) for p, mn in SENSIBILIDADE]
+        if any(g is not None and not g > 0 for g in ganhos):
+            return "reprovada"
+        return "sensibilidade não avaliada" if None in ganhos else "aprovada"
+
+    linhas["situacao"] = linhas.apply(uma, axis=1)
+    return linhas
+
+
 def relatorio(bt):
-    atual = bt[bt["regra_atual"] & (bt["p_gabarito"] == GABARITO[0]) & (bt["minimo"] == GABARITO[1])]
-    passam = bt[(bt["regra"] != "ingenua_p90") & (bt["p_gabarito"] == GABARITO[0]) & (bt["minimo"] == GABARITO[1])
-                & (bt["ganho"] > 0) & (bt["anos_com_ganho_positivo"] >= ANOS_COM_GANHO_MIN)]
+    sit = situacao(bt)
+    atual = sit[sit["regra_atual"]]
+    aprovadas = sit[sit["situacao"] == "aprovada"].sort_values("ganho", ascending=False)
+    sem_sens = sit[sit["situacao"] == "sensibilidade não avaliada"].sort_values("ganho", ascending=False)
     cols = ["regra", "freq_critico", "acerto", "acerto_ingenua", "ganho", "anos_com_ganho_positivo", "cobertura_critico"]
+    variacoes = ", ".join(f"P{p} e mínimo {mn}" for p, mn in SENSIBILIDADE)
     return "\n".join([
         f"Backtest do alerta, {PRIMEIRO_DOMINGO} a {ULTIMO_DOMINGO} (domingos), unidades H3 res 4.",
         f"Gabarito: {JANELA_GABARITO} dias seguintes acima do P{GABARITO[0]} do normal e >= {GABARITO[1]} detecções.",
         "Ganho = acerto do Crítico - acerto da ingênua (persistência) com a MESMA frequência de alerta.",
-        "", "Regra atual do alert_rules.json:", atual[cols].to_string(index=False), "",
-        f"Regras com ganho > 0 no total e em >= {ANOS_COM_GANHO_MIN} dos 12 anos (regra de decisão):",
-        passam.sort_values("ganho", ascending=False)[cols].to_string(index=False) if len(passam)
-        else "NENHUMA. A tela não mostra acerto (docs/validacao-alerta.md, \"Regra de decisão\")."])
+        "", "Regra atual do alert_rules.json:", atual[cols + ["situacao"]].to_string(index=False), "",
+        f"Regras aprovadas: ganho > 0 no total e em >= {ANOS_COM_GANHO_MIN} dos 12 anos e ganho > 0 no total de cada "
+        f"variação do gabarito ({variacoes}):",
+        aprovadas[cols].to_string(index=False) if len(aprovadas)
+        else "NENHUMA. A tela não mostra acerto (docs/validacao-alerta.md, \"Regra de decisão\").",
+        "", "Passam no gabarito principal, mas a sensibilidade não foi calculada (NÃO aprovadas):",
+        sem_sens[cols].to_string(index=False) if len(sem_sens) else "nenhuma"])
 
 
 def ler(conn, sql):

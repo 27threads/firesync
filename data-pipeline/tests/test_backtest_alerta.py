@@ -163,3 +163,40 @@ def test_evento_sem_alerta_tem_antecedencia_vazia_e_regiao_errada_avisa_o_evento
     assert set(linhas["antecedencia_dias"]) == {7} and set(linhas["antecedencia_semanas"]) == {1}
     with pytest.raises(ValueError, match="X"):
         bt.eventos(ev, np.array(["Cerrado"]), semanas, a, niv)
+
+
+def linha(regra, p, mn, ganho, anos=12):
+    return {"regra": regra, "regra_atual": False, "p_gabarito": p, "minimo": mn, "freq_critico": 0.05,
+            "acerto": 0.5, "acerto_ingenua": 0.5 - ganho, "ganho": ganho, "anos_com_ganho_positivo": anos,
+            "cobertura_critico": 0.2}
+
+
+def principal_e_sensibilidade(regra, ganhos_sensibilidade):
+    return [linha(regra, *bt.GABARITO, 0.1)] + [linha(regra, p, mn, g)
+                                                 for (p, mn), g in zip(bt.SENSIBILIDADE, ganhos_sensibilidade)]
+
+
+def test_situacao_aplica_o_criterio_completo_com_a_sensibilidade():
+    tab = pd.DataFrame(principal_e_sensibilidade("passa_em_tudo", [0.1, 0.1, 0.1, 0.1])
+                       + principal_e_sensibilidade("falha_no_minimo_5", [0.1, 0.1, -0.01, 0.1])
+                       + [linha("sem_sensibilidade", *bt.GABARITO, 0.1),
+                          linha("poucos_anos", *bt.GABARITO, 0.1, anos=6),
+                          linha("ingenua_p90", *bt.GABARITO, 0.0)])
+    s = bt.situacao(tab).set_index("regra")["situacao"].to_dict()
+    assert s == {"passa_em_tudo": "aprovada", "falha_no_minimo_5": "reprovada",
+                 "sem_sensibilidade": "sensibilidade não avaliada", "poucos_anos": "reprovada"}
+
+
+def test_relatorio_so_lista_como_aprovada_a_regra_que_passa_em_todas_as_variacoes():
+    tab = pd.DataFrame(principal_e_sensibilidade("passa_em_tudo", [0.1, 0.1, 0.1, 0.1])
+                       + principal_e_sensibilidade("falha_no_minimo_5", [0.1, 0.1, -0.01, 0.1])
+                       + [linha("sem_sensibilidade", *bt.GABARITO, 0.1)])
+    aprovadas, resto = bt.relatorio(tab).split("Passam no gabarito principal")
+    assert "passa_em_tudo" in aprovadas
+    assert "falha_no_minimo_5" not in aprovadas and "sem_sensibilidade" not in aprovadas
+    assert "sem_sensibilidade" in resto
+
+
+def test_relatorio_sem_regra_aprovada_diz_que_a_tela_nao_mostra_acerto():
+    tab = pd.DataFrame(principal_e_sensibilidade("falha_no_minimo_5", [0.1, 0.1, -0.01, 0.1]))
+    assert "NENHUMA" in bt.relatorio(tab)
