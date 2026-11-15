@@ -1,6 +1,6 @@
 # RFC 0003: Modelo de risco treinado (experimento)
 
-- **Status:** Experimento concluído em 15/11/2026. **Não entra no produto.** O alerta da submissão continua sendo a regra `v1` ([RFC 0001](0001-backtest-alerta.md)). Decisão do Weberson (frente B)
+- **Status:** Experimento concluído em 15/11/2026. O modelo da pergunta "fogo acima do normal?" não entra no produto. O **modelo treinado de "onde vai ter fogo?" entra** como o risco dos próximos 14 dias (seção "Segunda pergunta"), e a `v1` entra como **nível de alerta**, com a frequência histórica como contexto (decisão 4). O alerta da submissão continua sendo a regra `v1` ([RFC 0001](0001-backtest-alerta.md)). Decisão do Weberson (frente B)
 - **Autor:** Weberson (frente B)
 - **Data:** 2026-11-15
 
@@ -69,6 +69,15 @@ As diferenças do clima são contra a `v1`. A do ONI e a da chuva bruta, de roda
 2. **O resultado entra na tela de Método** como prova de que a regra simples foi testada contra um modelo treinado. Sugestão de frase, em inglês:
    > *We also trained a machine-learning model on 13 years of fire history plus rainfall, temperature, humidity, wind and El Niño data. With the same number of alerts, it was right only 0.9 points more often than rule v1 (26.4% vs 25.5%, 2017–2023), so we kept the simpler, explainable rule.*
 3. **O código fica no repositório** (`data-pipeline/validacao/modelo_risco.py`), com testes, para quem quiser refazer.
+4. **A `v1` entra no produto como *nível de alerta* ("fora do normal para a época"), e a palavra "risco" fica para o modelo treinado (Weberson, 15/11/2026).** O backtest da `v1` responde, por nível, com que frequência houve muito fogo nos 14 dias seguintes, na mesma célula de resolução 4 em que foi medido. Isso é o contexto do nível de alerta, e não o risco dos 14 dias do modelo; assim a tela não mostra duas medidas de "risco" na mesma célula:
+
+   | Nível da `v1` | Parte das semanas | Seguido de muito fogo nos 14 dias seguintes | Em relação à média (4,2%) |
+   | --- | --- | --- | --- |
+   | Normal | 85% | 2,6% | 0,6× |
+   | Atenção | 12% | 10,7% | 2,5× |
+   | Crítico | 3% | 26,6% | 6,3× |
+
+   O mapa de focos recentes, que é a entrada principal do usuário, passa a marcar cada célula de resolução 4 com o seu nível e a listar "onde olhar primeiro" (Crítico, depois Atenção), com essa frequência (`docs/api.md`, `GET /detections/recent`, bloco `alerts`). As taxas ficam no `alert_rules.json` 1.1. É uma frequência do passado, não uma previsão. **Limite declarado:** metade (52%) das semanas de muito fogo acontece em células que estavam em Normal.
 
 ## Segunda pergunta: "onde vai ter fogo nos próximos 14 dias?" (entra no produto)
 
