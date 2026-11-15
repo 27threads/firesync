@@ -134,7 +134,7 @@ Erros novos, no formato do [api.md](../api.md#erros):
 
 O medo é a cota da IA acabar e o chat parar. Três camadas, da mais barata para a mais cara:
 
-1. **Cache dos chips (custo zero).** A resposta das 5 perguntas de exemplo fica guardada com a chave `(pergunta, data_version)`. São as que os jurados mais vão clicar. Depois da primeira resposta, não gastam token e **continuam funcionando mesmo com todos os provedores fora**. Com o job NRT mudando o `data_version`, o cache renova sozinho.
+1. **Cache dos chips (custo zero).** A resposta das 5 perguntas de exemplo fica guardada com a chave `(pergunta, updated_at, data_version)`. São as que os jurados mais vão clicar. Depois da primeira resposta, não gastam token e **continuam funcionando mesmo com todos os provedores fora**. Quando o job NRT muda o `updated_at`, o cache renova sozinho.
 2. **Cadeia de provedores.** O adaptador fala o formato **OpenAI chat completions**, que vários provedores aceitam com outra `base_url`. A variável `ASSISTANT_PROVIDERS` traz a lista em ordem. Se um responde 429, sem cota (`insufficient_quota`), 5xx ou timeout, o serviço tenta o próximo. O primeiro é a OpenAI; o segundo é qualquer provedor compatível com chave própria (ex.: um com camada gratuita), escolhido pela equipe sem mudar código.
 3. **Teto global diário no servidor** (`ASSISTANT_DAILY_LIMIT`), contado no processo da API. Ao atingir, `/ask` responde `assistant_unavailable` antes de chamar qualquer provedor. O limite por IP (`RATE_LIMIT_ASK`) sozinho não segura o custo com o chat aberto.
 
@@ -142,9 +142,8 @@ Além disso: `max_tokens` baixo, até 4 voltas por pedido, histórico cortado na
 
 ### Cache
 
-- `get_calendar` usa **a mesma chave do `ResponseCache` da rota `/calendar`**: `('calendar', <payload em JSON ordenado> + <data UTC>, updated_at, data_version)`, com o payload `{area, start, end}` igual ao que o front mandaria. Assim o chat e o calendário dividem as entradas: o clique em `show_calendar` depois da resposta já acha o resultado pronto.
-- `get_fire_map` usa a chave da rota do mapa: `('map', query, updated_at, data_version)`.
-- O cache dos chips (camada 1 acima) usa uma chave própria `('ask', pergunta, data_version)` no mesmo `ResponseCache`.
+- Só o cache das perguntas de uma mensagem (os chips e qualquer primeira pergunta): chave `('ask', pergunta, updated_at, data_version)` no mesmo `ResponseCache` das rotas. Com o `updated_at`, a resposta de "agora" renova a cada rodada do job NRT.
+- As ferramentas chamam `calculate_calendar` e `map_rows` direto, sem dividir as entradas das rotas `/calendar` e do mapa. Dividir exigiria mexer nessas rotas, e a regra da implementação é não tocar no que já funciona.
 
 ### Frontend
 
@@ -194,7 +193,7 @@ As chaves ficam só no `.env` da VPS, nunca no front nem no git.
 | Cota acaba ou custo dispara com o chat aberto | Chips em cache, cadeia de provedores, `ASSISTANT_DAILY_LIMIT`, `RATE_LIMIT_ASK`, limite de gasto mensal em cada conta |
 | Todos os provedores fora na demo | Chips continuam pelo cache; pergunta livre mostra "use the map"; o resto do site não depende da bolinha |
 | Risco lido como previsão | Aviso fixo anexado pelo `AskService` sempre que a resposta usa `risk_tier` ou `historical_share` |
-| Latência (várias voltas) | Indicador "Thinking…" no painel; cache compartilhado com as rotas; `ASSISTANT_TIMEOUT_S` |
+| Latência (várias voltas) | Indicador "Thinking…" no painel; cache das primeiras perguntas; `ASSISTANT_TIMEOUT_S` |
 | Feature nova no dia da entrega quebra o site | PRs separados com a esteira verde; sem `ASSISTANT_PROVIDERS` a bolinha some; nada muda nas rotas existentes |
 
 ## Plano de implementação
