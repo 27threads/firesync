@@ -26,6 +26,7 @@ services:
       DATABASE_URL: postgresql://firesync_api:${API_DB_PASSWORD:?set API_DB_PASSWORD in .env}@db:5432/firesync
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?set FRONTEND_ORIGIN in .env}
       CLIENT_IP_HEADER: CF-Connecting-IP   # o túnel sobrescreve esse header; sem túnel, apague
+      RISK_MAX_AGE_DAYS: ${RISK_MAX_AGE_DAYS:-2}   # notas de risco mais velhas que isso somem do mapa
     depends_on:
       db:
         condition: service_healthy
@@ -36,6 +37,20 @@ services:
     environment:
       DATABASE_URL: postgresql://firesync:${POSTGRES_PASSWORD}@db:5432/firesync
       FIRMS_MAP_KEY: ${FIRMS_MAP_KEY:?set FIRMS_MAP_KEY in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Risco dos 14 dias por célula (docs/rfcs/0003-modelo-risco.md): treina, pontua e grava em risco_celulas
+  # uma vez por dia. Mesma imagem do job-nrt. As faixas vêm do config/risk_rules.json, montado só para leitura.
+  job-risco:
+    build: ../data-pipeline
+    command: ["sh", "-c", "while true; do python risco_celulas.py --gravar --regras /config/risk_rules.json || true; sleep 86400; done"]
+    environment:
+      DATABASE_URL: postgresql://firesync:${POSTGRES_PASSWORD}@db:5432/firesync
+    volumes:
+      - ../config/risk_rules.json:/config/risk_rules.json:ro
     depends_on:
       db:
         condition: service_healthy
