@@ -137,7 +137,7 @@ def test_prova_cruzada_recupera_o_fator_conhecido():
     n = 4000
     snpp = pd.DataFrame({"bioma": ["X"] * n, "periodo": ["D"] * n, "mes": [8] * n, "p": [0.25] * n})
     aqua = pd.DataFrame({"bioma": ["X"] * (n // 4), "periodo": ["D"] * (n // 4), "mes": [8] * (n // 4)})
-    prova = m.prova_cruzada(snpp, aqua, "p", ["bioma", "periodo"])
+    prova = m.prova_cruzada(snpp, aqua, "p", ["bioma", "periodo"], snpp)
     assert prova["fator_modelo"].iloc[0] == pytest.approx(4.0)
     assert prova["fator_contagens"].iloc[0] == pytest.approx(4.0)
     assert prova["razao_modelo_contagens"].iloc[0] == pytest.approx(1.0)

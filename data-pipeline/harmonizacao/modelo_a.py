@@ -50,7 +50,7 @@ OLHANDO_KM = 50.0          # ESCOLHA DA EQUIPE (regras-variaveis.md, seção 4)
 JANELA_MINUTOS = 10        # regra original; em 2024 precisa ser maior (ver o topo do arquivo)
 BLOCO_H3 = 4               # cerca de 1.770 km² por bloco. ESCOLHA DA EQUIPE
 SEMENTE = 42
-FAIXAS_FRP = [0.0, 2.0, 5.0, 10.0, 25.0, np.inf]   # em MW. ESCOLHA DA EQUIPE (a reconferir com a base limpa)
+FAIXAS_FRP = [0.0, 2.0, 5.0, 10.0, 25.0, np.inf]   # em MW. ESCOLHA DA EQUIPE (RFC 0002)
 ROTULOS_FAIXA = ["0-2", "2-5", "5-10", "10-25", "25+"]
 BIOMAS = {1: "Amazônia", 2: "Caatinga", 3: "Cerrado", 4: "Mata Atlântica", 5: "Pampa", 6: "Pantanal"}
 PISTAS = ["frp", "bright_ti4", "alta_confianca", "noite", "mes", "bioma", "modis_scan_mediano"]
@@ -204,17 +204,24 @@ def calibracao(y, p, modelo):
     return t.assign(modelo=modelo)
 
 
-def prova_cruzada(snpp, aqua, coluna_p, chaves):
+def prova_cruzada(snpp, aqua, coluna_p, chaves, snpp_todos):
     """Fator do modelo (fogos do VIIRS por foco do MODIS que ele espera) contra o fator por contagens.
 
-    snpp: fogos do VIIRS nos blocos de teste, com a chance prevista em `coluna_p` e as `chaves`.
+    snpp: fogos do VIIRS em áreas olhadas, nos blocos de teste, com a chance prevista em `coluna_p` e as `chaves`.
     aqua: fogos do Aqua nos mesmos blocos, com as mesmas `chaves`.
+    snpp_todos: todos os fogos do VIIRS dos blocos de teste (olhados ou não), com as mesmas `chaves`.
+
+    O CSV expõe os dois fatores por contagens: `fator_contagens` na mesma população do modelo (só os olhados, e é
+    com ele que a razão é calculada) e `fator_contagens_total` com todos os fogos do VIIRS, que é o da série.
     """
     esperado = snpp.groupby(chaves, observed=True).agg(n_viirs=(coluna_p, "size"), esperado_modis=(coluna_p, "sum")).reset_index()
     contados = aqua.groupby(chaves, observed=True).size().rename("n_modis").reset_index()
-    t = esperado.merge(contados, on=chaves, how="left").fillna({"n_modis": 0})
+    total = snpp_todos.groupby(chaves, observed=True).size().rename("n_viirs_total").reset_index()
+    t = esperado.merge(contados, on=chaves, how="left").merge(total, on=chaves, how="left").fillna({"n_modis": 0})
+    n_modis = t["n_modis"].where(t["n_modis"] > 0)
     t["fator_modelo"] = t["n_viirs"] / t["esperado_modis"].where(t["esperado_modis"] > 0)
-    t["fator_contagens"] = t["n_viirs"] / t["n_modis"].where(t["n_modis"] > 0)
+    t["fator_contagens"] = t["n_viirs"] / n_modis
+    t["fator_contagens_total"] = t["n_viirs_total"] / n_modis
     t["razao_modelo_contagens"] = t["fator_modelo"] / t["fator_contagens"]
     return t
 
@@ -252,12 +259,9 @@ def executar(aqua_bruto, snpp_bruto, biomas, janela=JANELA_MINUTOS, semente=SEME
     aqua_teste = aqua[aqua["grupo"] == "teste"].assign(periodo=lambda d: d["daynight"])
     esperado = teste.assign(p=teste["p_boosting"])
     prova = pd.concat([
-        prova_cruzada(esperado, aqua_teste, "p", ["bioma", "periodo"]).assign(mes=np.nan),
-        prova_cruzada(esperado, aqua_teste, "p", ["bioma", "periodo", "mes"]),
+        prova_cruzada(esperado, aqua_teste, "p", ["bioma", "periodo"], snpp_teste).assign(mes=np.nan),
+        prova_cruzada(esperado, aqua_teste, "p", ["bioma", "periodo", "mes"], snpp_teste),
     ], ignore_index=True)
-    # o fator por contagens usa todos os fogos do VIIRS dos blocos de teste, e não só os de áreas olhadas
-    todos_viirs = snpp_teste.groupby(["bioma", "periodo"]).size().rename("n_viirs_total").reset_index()
-    prova = prova.merge(todos_viirs, on=["bioma", "periodo"], how="left")
 
     relatorio = "\n".join([
         "Modelo A (RFC 0002): chance de o MODIS (Aqua) ver um fogo do VIIRS (S-NPP)",
