@@ -190,4 +190,61 @@ describe('AreaPeriodControls', () => {
     expect(ring).toHaveLength(4);
     expect(ring[0]).toEqual(ring[3]);
   });
+
+  it('toggles recent hot spots layer and switches time window (24 h, 72 h, 7 days) calling GET /api/v1/detections/recent', async () => {
+    const fetchMock = vi.fn().mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          type: 'FeatureCollection',
+          mode: 'points',
+          hours: 72,
+          updated_at: '2026-11-14T15:00:00Z',
+          total_detections: 128,
+          features: [
+            {
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [-60.21, -3.12] },
+              properties: {
+                satellite: 'N20',
+                acquired_utc: '2026-11-14T05:42:00Z',
+                confidence: 'nominal',
+                intensity: 'high',
+                daynight: 'N',
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <AreaPeriodControls
+        regions={SAMPLE_REGIONS}
+        lastMonth="2026-11"
+        activeArea={null}
+        onSubmitRequest={vi.fn()}
+      />,
+    );
+
+    const toggleBtn = screen.getByRole('button', { name: /recent hot spots/i });
+    expect(toggleBtn).toHaveAttribute('aria-pressed', 'true');
+
+    const windowSelect = screen.getByRole('combobox', { name: /recent hot spots window/i }) as HTMLSelectElement;
+    expect(windowSelect.value).toBe('24');
+
+    fireEvent.change(windowSelect, { target: { value: '72' } });
+    expect(windowSelect.value).toBe('72');
+
+    expect(await screen.findByText(/128 hot spots in view/i)).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/api\/v1\/detections\/recent\?bbox=.*&hours=72&zoom=/),
+      expect.objectContaining({ method: 'GET' }),
+    );
+
+    fireEvent.click(toggleBtn);
+    expect(toggleBtn).toHaveAttribute('aria-pressed', 'false');
+    vi.unstubAllGlobals();
+  });
 });

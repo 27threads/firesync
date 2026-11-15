@@ -4,7 +4,7 @@ Nov 13, 2026 · @Mateus Nogueira
 
 Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele só **sugere** (aparece como "pode considerar"). Assim fica claro o mínimo para entregar e o que dá pontos extras.
 
-**Situação em 14/11/2026:** ✅ feito e verificado · ⏳ falta ou é parcial (a nota diz onde está). A frente A (dados e banco) está pronta; no front, D1–D6 já cobrem área e período, calendário, indicadores, janela recente, sazonalidade, ranking e downloads (falta ligar na API real em D7); na API, faltam os endpoints em código ([api.md](api.md)).
+**Situação em 14/11/2026:** ✅ feito e verificado · ⏳ falta ou é parcial (a nota diz onde está). A frente A (dados e banco) está pronta; no front, D1–D7 já cobrem área e período, camada de focos recentes no mapa, calendário, indicadores, janela recente, sazonalidade, ranking, downloads e integração/proxy com a API; na API, o serviço histórico já está implementado e faltam as rotas HTTP ([api.md](api.md)).
 
 ## 1. Requisitos obrigatórios
 
@@ -32,23 +32,23 @@ Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele
 
 ## 2. Requisitos desejáveis (diferenciais)
 
-- [ ] **RD01:** **Mapa interativo** em que o usuário desenha a área de interesse (polígono ou retângulo). ⏳ **parcial:** front pronto em `frontend/src/controls/` (Leaflet `preferCanvas` + Leaflet-Geoman; desenho vira GeoJSON Polygon e passa na jornada J2 com API simulada); falta ligar na API real (D7).
-- [ ] **RD02:** Opção de **digitar latitude e longitude**, como alternativa ao desenho no mapa. ⏳ **parcial:** contrato no [api.md](api.md) (`point` com raio) e **front pronto** em `frontend/src/controls/` (campos lat/lon/raio de 1 a 200 km); falta a API.
-- [ ] **RD03:** **Rampa de cores** no calendário, para mostrar as diferenças entre meses como um heatmap. ⏳ decidido: escala logarítmica ([arquitetura.md](arquitetura.md)); falta o front.
-- [ ] **RD04:** Cores **acessíveis**, legíveis para quem tem daltonismo (por exemplo, viridis ou cividis). ⏳ decidido: cividis ([arquitetura.md](arquitetura.md)); falta o front.
+- [ ] **RD01:** **Mapa interativo** em que o usuário desenha a área de interesse (polígono ou retângulo). ⏳ **parcial:** **front pronto** em `frontend/src/controls/` (Leaflet `preferCanvas` + Leaflet-Geoman; desenho vira GeoJSON Polygon e passa na jornada J2); falta expor a rota HTTP na API.
+- [ ] **RD02:** Opção de **digitar latitude e longitude**, como alternativa ao desenho no mapa. ⏳ **parcial:** contrato no [api.md](api.md) (`point` com raio) e **front pronto** em `frontend/src/controls/` (campos lat/lon/raio de 1 a 200 km); falta expor a rota HTTP na API.
+- [x] **RD03:** **Rampa de cores** no calendário, para mostrar as diferenças entre meses como um heatmap. ✅ escala logarítmica no calendário e nos hexágonos do mapa (`frontend/src/calendar/colorScale.ts`).
+- [x] **RD04:** Cores **acessíveis**, legíveis para quem tem daltonismo (por exemplo, viridis ou cividis). ✅ paleta `cividis` em escala logarítmica no calendário e nos hexágonos H3, hachura/borda nos meses estimados e incompletos, e diferenciação por raio e espessura/estilo de borda além da cor nos pontos de intensidade (`low`, `medium`, `high`) no mapa.
 - [ ] **RD05:** **Exportar um CSV** com os focos de calor encontrados na busca. ⏳ **parcial:** `detections.csv` no pacote de auditoria (`POST /api/v1/export`, até 500.000 focos) e **front pronto** em `frontend/src/export/` (chamada ao ZIP de auditoria, exportação local da série visível em CSV e aviso sobre o limite de 500.000 focos); `focos` vai para produção; falta a API.
-- [ ] **RD06:** **Indicadores principais** em destaque: ⏳ contrato no [api.md](api.md) (`indicators`); falta a API e o front.
+- [ ] **RD06:** **Indicadores principais** em destaque: ⏳ **parcial:** contrato no [api.md](api.md) (`indicators`) e **front pronto** em `frontend/src/summary/KeyIndicators.tsx`; falta expor a rota HTTP na API.
   - número total de focos detectados e registrados
   - anomalia em relação à média de vários anos
-- [ ] **RD07:** Interface pensada para o **público-alvo**: equipes de alerta precoce, resposta a emergências, cientistas, gestores de terras e bombeiros. Precisa ser rápida de ler e de usar. ⏳ janela recente e camada de focos recentes no contrato; dados e índice prontos (19 ms); falta a API e o front.
+- [ ] **RD07:** Interface pensada para o **público-alvo**: equipes de alerta precoce, resposta a emergências, cientistas, gestores de terras e bombeiros. Precisa ser rápida de ler e de usar. ⏳ **parcial:** janela recente (`RecentPanel.tsx`) e camada de focos recentes no mapa (`GET /api/v1/detections/recent` em `AreaMap.tsx`, com janelas de `24 h`, `72 h` e `7 days`, hexágonos em `cividis` log e pontos por classe de intensidade `low`/`medium`/`high` sem exibir FRP em MW) prontas no front; dados e índice prontos no banco (19 ms); falta expor a rota HTTP na API.
 
 ## 3. Requisitos não funcionais (implícitos no texto)
 
-- [ ] **RNF01:** Ser uma **aplicação web**, acessada pelo navegador. ⏳ falta a API, o front e o deploy.
+- [ ] **RNF01:** Ser uma **aplicação web**, acessada pelo navegador. ⏳ **parcial:** front completo (`frontend/`) com proxy para a API (`vite.config.ts`); falta expor as rotas HTTP da API e fazer o deploy público.
 - [x] **RNF02:** **Fonte de dados:** o texto sugere o **NASA FIRMS** (Earthdata), que fornece os dados do MODIS e do VIIRS. ✅ NASA FIRMS: resumos anuais por país (SP) e API (SP e NRT).
 - [ ] **RNF03:** **Atualização contínua.** O calendário precisa estar "atualizado", então os dados novos devem entrar periodicamente. ⏳ **parcial:** job NRT a cada 3 h pronto e testado (`job_nrt.py` + `Dockerfile`); falta rodar na VPS.
 - [x] **RNF04:** **Desempenho.** São mais de 20 anos de focos no mundo inteiro, então as consultas por área e período precisam ser rápidas. Isso pede pré-agregação e indexação espacial. ✅ pré-agregação (`agregados`, `agregados_diarios`) e índice espacial H3: calendário de 100 × 100 km em 2–9 ms, Amazônia inteira em ~0,8 s, focos recentes em 19 ms (medido no banco de teste).
-- [ ] **RNF05:** **Usabilidade e acessibilidade**, porque o usuário pode estar numa situação de emergência. ⏳ **parcial:** controles de área/período com labels, `aria-describedby`, alertas em `role="alert"`, calendário em `cividis` com hachura/borda, navegação por teclado e downloads acessíveis no front (D2–D6); falta a integração final com a API (D7).
+- [x] **RNF05:** **Usabilidade e acessibilidade**, porque o usuário pode estar numa situação de emergência. ✅ controles de área/período e camada de focos recentes com labels, `aria-pressed`, `aria-describedby`, alertas em `role="alert"`, calendário em `cividis` com hachura/borda, pontos diferenciados por raio e borda além da cor, navegação por teclado e downloads acessíveis no front (D1–D7, validado nas 18 jornadas E2E J1–J9 em desktop e celular).
 
 ### Definidos pela equipe
 

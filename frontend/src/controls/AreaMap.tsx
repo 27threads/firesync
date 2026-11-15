@@ -1,8 +1,21 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import type * as LTypes from 'leaflet';
-import type { GeoJsonPolygon, PointArea } from '../api/types';
+import { fetchRecentDetections } from '../api/client';
+import type {
+  GeoJsonPolygon,
+  PointArea,
+  RecentDetectionsResponse,
+  RecentHours,
+} from '../api/types';
 import { bboxToPolygon, closePolygonRing, DEFAULT_MAP_BBOX } from './areaPeriodModel';
 import { loadLeafletWithGeoman, type LeafletModule } from './leafletLoader';
+import {
+  computeHexagonDomain,
+  formatHexagonTooltip,
+  formatPointTooltip,
+  styleForHexagon,
+  styleForIntensityPoint,
+} from './recentDetectionsModel';
 
 export type BasemapId = 'carto-dark' | 'nasa-gibs';
 type DrawMode = 'rectangle' | 'polygon' | null;
@@ -71,16 +84,65 @@ function renderPolygonSelection(L: LeafletModule, group: LTypes.LayerGroup, geom
   }).addTo(group);
 }
 
+function renderRecentDetections(
+  L: LeafletModule,
+  group: LTypes.LayerGroup,
+  data: RecentDetectionsResponse | null,
+  visible: boolean,
+): void {
+  group.clearLayers();
+  if (!visible || !data || data.features.length === 0) return;
+
+  if (data.mode === 'hexagons') {
+    const domain = computeHexagonDomain(data.features);
+    for (const feature of data.features) {
+      const ring = feature.geometry.coordinates[0];
+      if (!ring || ring.length < 3) continue;
+      const latLngs: [number, number][] = ring.map(([lon, lat]) => [lat, lon]);
+      const style = styleForHexagon(feature.properties.detections, domain);
+      L.polygon(latLngs, {
+        ...style,
+        pmIgnore: true,
+      })
+        .bindTooltip(formatHexagonTooltip(feature.properties))
+        .addTo(group);
+    }
+    return;
+  }
+
+  for (const feature of data.features) {
+    const [lon, lat] = feature.geometry.coordinates;
+    const style = styleForIntensityPoint(feature.properties.intensity);
+    L.circleMarker([lat, lon], {
+      radius: style.radius,
+      weight: style.weight,
+      color: style.color,
+      fillColor: style.fillColor,
+      fillOpacity: style.fillOpacity,
+      dashArray: style.dashArray,
+      pmIgnore: true,
+    })
+      .bindTooltip(formatPointTooltip(feature.properties))
+      .addTo(group);
+  }
+}
+
 export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const leafletRef = useRef<LeafletModule | null>(null);
   const mapRef = useRef<LTypes.Map | null>(null);
   const baseGroupRef = useRef<LTypes.LayerGroup | null>(null);
+  const detectionsGroupRef = useRef<LTypes.LayerGroup | null>(null);
   const selectionGroupRef = useRef<LTypes.LayerGroup | null>(null);
   const currentBboxRef = useRef<[number, number, number, number]>(DEFAULT_MAP_BBOX);
+  const currentZoomRef = useRef<number>(4);
   const drawModeRef = useRef<DrawMode>(null);
   const basemapRef = useRef<BasemapId>('carto-dark');
+  const showHotSpotsRef = useRef<boolean>(true);
+  const hotSpotsHoursRef = useRef<RecentHours>(24);
+  const detectionsAbortRef = useRef<AbortController | null>(null);
+  const moveDebounceRef = useRef<number | null>(null);
   const onSelectPolygonRef = useRef(onSelectPolygon);
   const suppressClickOnceRef = useRef(false);
   const initPromiseRef = useRef<Promise<void> | null>(null);
@@ -92,10 +154,35 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
   const [polygonPoints, setPolygonPoints] = useState<[number, number][]>([]);
   const [dragBox, setDragBox] = useState<DragBox | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [showHotSpots, setShowHotSpots] = useState<boolean>(true);
+  const [hotSpotsHours, setHotSpotsHours] = useState<RecentHours>(24);
+  const [recentDetections, setRecentDetections] = useState<RecentDetectionsResponse | null>(null);
 
   onSelectPolygonRef.current = onSelectPolygon;
   drawModeRef.current = drawMode;
   basemapRef.current = basemap;
+  showHotSpotsRef.current = showHotSpots;
+  hotSpotsHoursRef.current = hotSpotsHours;
+
+  const requestRecentDetections = useCallback(
+    async (bbox: [number, number, number, number], hours: RecentHours, zoom: number) => {
+      detectionsAbortRef.current?.abort();
+      const controller = new AbortController();
+      detectionsAbortRef.current = controller;
+
+      try {
+        const result = await fetchRecentDetections(
+          { bbox, hours, zoom: Math.round(zoom) },
+          controller.signal,
+        );
+        if (controller.signal.aborted) return;
+        setRecentDetections(result);
+      } catch {
+        // In demo/offline mode or when the API is unavailable, do not break the map.
+      }
+    },
+    [],
+  );
 
   const syncDrawModeToMap = useCallback((mode: DrawMode) => {
     const map = mapRef.current;
@@ -139,10 +226,39 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
           ],
           { padding: [16, 16], animate: false },
         );
+        currentZoomRef.current = Math.round(map.getZoom() || 4);
 
         const baseGroup = L.layerGroup().addTo(map);
+        const detectionsGroup = L.layerGroup().addTo(map);
         const selectionGroup = L.layerGroup().addTo(map);
         applyBasemapLayers(L, baseGroup, basemapRef.current);
+
+        const updateBoundsAndFetch = () => {
+          const bounds = map.getBounds();
+          const nextBbox: [number, number, number, number] = [
+            Number(Math.max(-180, bounds.getWest()).toFixed(4)),
+            Number(Math.max(-90, bounds.getSouth()).toFixed(4)),
+            Number(Math.min(180, bounds.getEast()).toFixed(4)),
+            Number(Math.min(90, bounds.getNorth()).toFixed(4)),
+          ];
+          currentBboxRef.current = nextBbox;
+          currentZoomRef.current = Math.round(map.getZoom() || 4);
+
+          if (!showHotSpotsRef.current) return;
+          if (moveDebounceRef.current !== null) {
+            window.clearTimeout(moveDebounceRef.current);
+          }
+          moveDebounceRef.current = window.setTimeout(() => {
+            void requestRecentDetections(
+              currentBboxRef.current,
+              hotSpotsHoursRef.current,
+              currentZoomRef.current,
+            );
+          }, 150);
+        };
+
+        map.on('moveend', updateBoundsAndFetch);
+        map.on('zoomend', updateBoundsAndFetch);
 
         map.on('pm:create', (event) => {
           const createdLayer = event.layer as LTypes.Polygon;
@@ -180,6 +296,7 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
         leafletRef.current = L;
         mapRef.current = map;
         baseGroupRef.current = baseGroup;
+        detectionsGroupRef.current = detectionsGroup;
         selectionGroupRef.current = selectionGroup;
         if (lastDrawnPolygonRef.current) {
           renderPolygonSelection(L, selectionGroup, lastDrawnPolygonRef.current);
@@ -195,7 +312,7 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
     })();
 
     return initPromiseRef.current;
-  }, [syncDrawModeToMap]);
+  }, [requestRecentDetections, syncDrawModeToMap]);
 
   useEffect(() => {
     const el = viewportRef.current;
@@ -219,12 +336,38 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
 
   useEffect(() => {
     return () => {
+      detectionsAbortRef.current?.abort();
+      if (moveDebounceRef.current !== null) {
+        window.clearTimeout(moveDebounceRef.current);
+      }
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!showHotSpots) {
+      detectionsAbortRef.current?.abort();
+      if (detectionsGroupRef.current) {
+        detectionsGroupRef.current.clearLayers();
+      }
+      return;
+    }
+    void requestRecentDetections(currentBboxRef.current, hotSpotsHours, currentZoomRef.current);
+  }, [showHotSpots, hotSpotsHours, focusBbox, requestRecentDetections]);
+
+  useEffect(() => {
+    if (leafletRef.current && detectionsGroupRef.current) {
+      renderRecentDetections(
+        leafletRef.current,
+        detectionsGroupRef.current,
+        recentDetections,
+        showHotSpots,
+      );
+    }
+  }, [recentDetections, showHotSpots, mapReady]);
 
   useEffect(() => {
     if (leafletRef.current && baseGroupRef.current) {
@@ -468,6 +611,27 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
             </button>
           )}
         </div>
+        <div className="area-map__detections-controls" role="group" aria-label="Recent hot spots layer">
+          <button
+            type="button"
+            className={`map-btn${showHotSpots ? ' map-btn--active' : ''}`}
+            aria-pressed={showHotSpots}
+            onClick={() => setShowHotSpots((prev) => !prev)}
+          >
+            Recent hot spots
+          </button>
+          <select
+            aria-label="Recent hot spots window"
+            className="map-select"
+            value={String(hotSpotsHours)}
+            disabled={!showHotSpots}
+            onChange={(e) => setHotSpotsHours(Number(e.target.value) as RecentHours)}
+          >
+            <option value="24">Last 24 h</option>
+            <option value="72">Last 72 h</option>
+            <option value="168">Last 7 days (168 h)</option>
+          </select>
+        </div>
         <div className="area-map__layers" role="group" aria-label="Base map layer">
           <button
             type="button"
@@ -525,6 +689,34 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
           </div>
         )}
       </div>
+
+      {showHotSpots && (
+        <div className="area-map__legend" aria-label="Recent hot spots legend">
+          <span className="area-map__legend-count">
+            {recentDetections !== null
+              ? `${recentDetections.total_detections.toLocaleString('en-US')} hot spots in view`
+              : `Recent hot spots (${hotSpotsHours === 168 ? 'last 7 days' : `last ${hotSpotsHours} h`})`}
+          </span>
+          <span className="area-map__legend-items">
+            <span className="area-map__legend-item">
+              <span className="map-swatch map-swatch--hex" aria-hidden="true" />
+              H3 hexagons (cividis log)
+            </span>
+            <span className="area-map__legend-item">
+              <span className="map-swatch map-swatch--low" aria-hidden="true" />
+              Low
+            </span>
+            <span className="area-map__legend-item">
+              <span className="map-swatch map-swatch--medium" aria-hidden="true" />
+              Medium
+            </span>
+            <span className="area-map__legend-item">
+              <span className="map-swatch map-swatch--high" aria-hidden="true" />
+              High intensity
+            </span>
+          </span>
+        </div>
+      )}
     </div>
   );
 }

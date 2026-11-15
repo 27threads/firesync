@@ -159,3 +159,71 @@ export interface CalendarResponse {
 }
 
 export type CalendarApiResult = CalendarResponse | NoCoverageResponse;
+
+export type IntensityClass = 'low' | 'medium' | 'high';
+export type DetectionConfidence = 'low' | 'nominal' | 'high';
+export type RecentHours = 24 | 72 | 168;
+export type RecentDetectionsMode = 'auto' | 'hexagons' | 'points';
+
+export interface RecentDetectionsParams {
+  bbox: [number, number, number, number];
+  hours?: RecentHours;
+  zoom: number;
+  mode?: RecentDetectionsMode;
+}
+
+export interface RecentHexagonProperties {
+  h3: string;
+  detections: number;
+  n_low: number;
+  n_medium: number;
+  n_high: number;
+}
+
+export interface RecentHexagonFeature {
+  type: 'Feature';
+  geometry: GeoJsonPolygon;
+  properties: RecentHexagonProperties;
+}
+
+export interface GeoJsonPoint {
+  type: 'Point';
+  coordinates: [number, number];
+}
+
+export interface RecentPointProperties {
+  satellite: string;
+  acquired_utc: string;
+  confidence: DetectionConfidence;
+  intensity: IntensityClass;
+  daynight: 'D' | 'N';
+}
+
+export interface RecentPointFeature {
+  type: 'Feature';
+  geometry: GeoJsonPoint;
+  properties: RecentPointProperties;
+}
+
+export interface RecentDetectionsHexagonsResponse {
+  type: 'FeatureCollection';
+  mode: 'hexagons';
+  h3_resolution: number;
+  hours: RecentHours;
+  updated_at: string;
+  total_detections: number;
+  features: RecentHexagonFeature[];
+}
+
+export interface RecentDetectionsPointsResponse {
+  type: 'FeatureCollection';
+  mode: 'points';
+  hours: RecentHours;
+  updated_at: string;
+  total_detections: number;
+  features: RecentPointFeature[];
+}
+
+export type RecentDetectionsResponse =
+  | RecentDetectionsHexagonsResponse
+  | RecentDetectionsPointsResponse;
