@@ -50,6 +50,8 @@ export default function OrbitalScene({ playing, progress, onSurfaceReady, onGlob
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableZoom = false;
     controls.enablePan = false;
+    controls.enableRotate = !window.matchMedia('(pointer: coarse)').matches;
+    renderer.domElement.style.touchAction = 'pan-y';
     controls.enableDamping = true;
     controls.minPolarAngle = 0.5;
     controls.maxPolarAngle = 2.6;

@@ -34,6 +34,11 @@ O proxy existente encaminha `/api` para a API. `VITE_API_URL` permite uma API em
 | `RATE_LIMIT_EXPORT` | `2` | Pedidos de exportação por IP na janela |
 | `RATE_LIMIT_WINDOW` | `60` | Duração da janela móvel, em segundos |
 | `RESPONSE_CACHE_SIZE` | `128` | Máximo de respostas no LRU |
+| `ASSISTANT_PROVIDERS` | vazio (assistente desligado) | Provedores do `POST /ask` em ordem de fallback, no formato OpenAI chat completions: `base_url|chave|modelo[|reasoning_effort]`, separados por vírgula. O 4º campo só vai quando preenchido: modelos que raciocinam (Qwen, Gemini) gastam o `max_tokens` pensando sem ele (testado: `none` na Cerebras, Groq e OpenRouter; `low` no Gemini). Segredo: só no `.env` da VPS. Valor inválido desliga só o assistente (erro no log), a API sobe normal |
+| `ASSISTANT_DAILY_LIMIT` | `500` | Pedidos do assistente que chegam a um provedor por dia (UTC), somando todos os IPs. Por processo; zera ao reiniciar |
+| `ASSISTANT_TIMEOUT_S` | `20` | Tempo máximo de cada chamada a um provedor |
+| `ASSISTANT_BUDGET_S` | `60` | Tempo máximo da pergunta inteira, somando rodadas e provedores. Fica abaixo dos ~100 s que o Cloudflare Tunnel espera |
+| `RATE_LIMIT_ASK` | `5` | Pedidos do assistente por IP na janela |
 | `ALERT_RULES_PATH` | `config/alert_rules.json` do checkout | Versão, limites do alerta e da classe de intensidade |
 
 Rate limit e cache são locais a cada processo. Para conservar o limite global configurado, rode um worker; o segundo limite no proxy pertence ao deploy C7. O IP vem da conexão ASGI: cabeçalhos encaminhados só devem ser confiados pelo Uvicorn quando vierem do proxy configurado. `429` inclui `Retry-After` em segundos. Os logs do Uvicorn incluem endpoint, status, duração e número de células.

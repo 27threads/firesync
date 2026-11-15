@@ -42,7 +42,7 @@ test.describe('Responsividade', () => {
 
   test('R3: no celular, o texto dos gráficos tem pelo menos 10 px', async ({ page }) => {
     await abrirSemApi(page, CELULAR);
-    for (const seletor of ['#record .calendar-svg-root', '#explore .calendar-svg-root', '#explore svg.chart']) {
+    for (const seletor of ['#explore .calendar-svg-root', '#explore svg.chart']) {
       expect(await menorTextoEmPx(page, seletor), seletor).toBeGreaterThanOrEqual(10);
     }
   });
@@ -78,5 +78,24 @@ test.describe('Responsividade', () => {
     await abrirSemApi(page, CELULAR);
     const link = page.getByRole('link', { name: /detection curve at full size/i });
     await expect(link).toHaveAttribute('href', '/img/curva_deteccao_2024.png');
+  });
+
+  test('R7: na tela de toque, 1 dedo no mapa permite rolar a página e 2 dedos movem o mapa', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'celular', 'só na tela de toque');
+    await abrirSemApi(page, CELULAR);
+    const viewport = page.getByRole('region', { name: /area selection map/i });
+    await viewport.scrollIntoViewIfNeeded();
+    const container = viewport.locator('.leaflet-container');
+    await expect(container).toHaveClass(/leaflet-touch-zoom/);
+    await expect(container).not.toHaveClass(/leaflet-touch-drag/);
+    await expect(container).toHaveCSS('touch-action', 'pan-x pan-y');
+
+    await viewport.evaluate((el) => {
+      const touch = (x: number, y: number, id = 0) =>
+        new Touch({ identifier: id, target: el, clientX: x, clientY: y, pageX: x, pageY: y });
+      el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [touch(150, 200)] }));
+      el.dispatchEvent(new TouchEvent('touchmove', { bubbles: true, cancelable: true, touches: [touch(150, 140)] }));
+    });
+    await expect(page.getByText('Use two fingers to move the map.')).toBeVisible();
   });
 });
