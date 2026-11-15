@@ -1,9 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { MONTH_NAMES } from './calendar/calendarModel';
+import { AssistantBubble } from './assistant/AssistantBubble';
 import { SelectionPanel } from './controls/SelectionPanel';
 import { buildExampleStory } from './discovery/exampleStory';
-import { HeroCalendar } from './hero/HeroCalendar';
 import { prefersReducedMotion } from './hero/heroIntro';
 import { HistoryPanel } from './history/HistoryPanel';
 import { IndicatorRow } from './summary/IndicatorRow';
@@ -17,6 +16,9 @@ function monthLabel(key: string): string {
   return `${MONTH_NAMES[m - 1]} ${y}`;
 }
 
+// Off unless the build sets VITE_ENABLE_ASSISTANT=true, so the page ships the same without the assistant (RFC 0004).
+const ASSISTANT_ENABLED = import.meta.env.VITE_ENABLE_ASSISTANT === 'true';
+
 function scrollToExplore() {
   document.getElementById('explore')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
 }
@@ -26,7 +28,6 @@ export function App() {
   const ex = useExplorer();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [storyIndex, setStoryIndex] = useState(0);
-  const heroHost = typeof document !== 'undefined' ? document.getElementById('hero-viz') : null;
 
   const shownData = ex.shown?.data ?? null;
   const story = useMemo(() => (shownData ? buildExampleStory(shownData) : null), [shownData]);
@@ -47,9 +48,9 @@ export function App() {
     [ex],
   );
 
-  const selectArea: typeof ex.selectArea = (area) => {
+  const selectArea: typeof ex.selectArea = (area, period) => {
     setSelectedKey(null);
-    ex.selectArea(area);
+    ex.selectArea(area, period);
   };
 
   // Mesma condição do resumo: sem erro e sem área fora da cobertura.
@@ -64,14 +65,8 @@ export function App() {
 
   return (
     <>
-      {heroHost &&
-        createPortal(
-          <HeroCalendar months={ex.hero.data.months} areaLabel={ex.hero.label} isDemo={ex.hero.isDemo} onOpenExample={openExample} />,
-          heroHost,
-        )}
-
-      <div className="workspace">
-        <div className="selection-bar">
+    <div className="workspace">
+      <div className="selection-bar">
           <h2 id="explore-title" className="selection-bar__title">
             Explore an area
           </h2>
@@ -141,6 +136,15 @@ export function App() {
           request={ex.request}
         />
       </div>
+
+      {ASSISTANT_ENABLED && (
+        <AssistantBubble
+          onShowCalendar={(action) => {
+            selectArea(action.area, action.start && action.end ? { start: action.start, end: action.end } : undefined);
+            scrollToExplore();
+          }}
+        />
+      )}
     </>
   );
 }

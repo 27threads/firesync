@@ -19,7 +19,8 @@ export function playHeroIntro(svg: SVGSVGElement, overlay: SVGSVGElement, strip:
   const total = real.length;
   if (total === 0) return () => undefined;
 
-  const rowOf = (el: Element) => Number((el.parentElement?.dataset.key ?? '0').slice(0, 4)) - firstYear;
+  const rowOf = (el: Element) =>
+    Number((el.getAttribute('data-key') ?? el.parentElement?.getAttribute('data-key') ?? '0').slice(0, 4)) - firstYear;
   const stripBox = (el: Element) => stripGeometry(Number((el as SVGSVGElement).dataset.stripI), total, strip);
   const decor = svg.querySelectorAll('[data-decor="axis"], [data-decor="notes"]');
   const switchPath = svg.querySelector<SVGPathElement>('[data-decor="switch"]');
@@ -65,7 +66,7 @@ export function playHeroIntro(svg: SVGSVGElement, overlay: SVGSVGElement, strip:
   }
 
   const finish = () => tl.progress(1);
-  const host = svg.closest('.hero') ?? svg;
+  const host = svg.closest('.hero, .ws-history') ?? svg;
   host.addEventListener('pointerdown', finish, { once: true });
   host.addEventListener('keydown', finish, { once: true });
 

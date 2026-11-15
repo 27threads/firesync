@@ -27,6 +27,8 @@ services:
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?set FRONTEND_ORIGIN in .env}
       CLIENT_IP_HEADER: CF-Connecting-IP   # o túnel sobrescreve esse header; sem túnel, apague
       RISK_MAX_AGE_DAYS: ${RISK_MAX_AGE_DAYS:-2}   # notas de risco mais velhas que isso somem do mapa
+      ASSISTANT_PROVIDERS: ${ASSISTANT_PROVIDERS:-}   # vazio = assistente desligado (RFC 0004)
+      ASSISTANT_DAILY_LIMIT: ${ASSISTANT_DAILY_LIMIT:-500}
     depends_on:
       db:
         condition: service_healthy

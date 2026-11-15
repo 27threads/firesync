@@ -34,7 +34,7 @@ function offline() {
 beforeEach(() => {
   // Como o Playwright, o teste não deixa a primeira região carregar sozinha.
   Object.defineProperty(navigator, 'webdriver', { value: true, configurable: true });
-  document.body.innerHTML = '<div id="hero-viz"></div>';
+  document.body.innerHTML = '';
 });
 
 afterEach(() => {
@@ -72,12 +72,14 @@ describe('App', () => {
     expect(screen.getByRole('combobox', { name: /region/i }).closest('details')).toBeNull();
   });
 
-  it('draws the opening preview with the same months, outside the calendar grid', async () => {
+  it('includes the MODIS-to-VIIRS strip overlay inside the main calendar without duplicating the calendar grid', async () => {
     offline();
     render(<App />);
-    const hero = document.getElementById('hero-viz')!;
-    expect(within(hero).getByRole('img', { name: /preview of the fire history/i })).toBeInTheDocument();
-    expect(within(hero).queryByRole('grid')).toBeNull();
+    const grids = await screen.findAllByRole('grid', { name: /fire calendar/i });
+    expect(grids).toHaveLength(1);
+    const history = document.getElementById('history')!;
+    expect(history).toHaveTextContent('MODIS Aqua');
+    expect(history).toHaveTextContent('287 months in one record');
   });
 
   it('shows the API message and no calendar when the area is outside coverage', async () => {

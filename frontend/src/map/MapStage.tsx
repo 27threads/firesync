@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type TouchEvent as ReactTouchEvent,
+} from 'react';
 import type * as LTypes from 'leaflet';
 import { fetchRecentDetections } from '../api/client';
 import type {
@@ -172,6 +179,8 @@ export function MapStage({ shape, onSelectPolygon, startOnArrival = false }: Map
   const suppressClickOnceRef = useRef(false);
   const initPromiseRef = useRef<Promise<void> | null>(null);
   const dragStartRef = useRef<{ clientX: number; clientY: number } | null>(null);
+  const oneFingerStartRef = useRef<{ clientX: number; clientY: number } | null>(null);
+  const twoFingerTimerRef = useRef<number | null>(null);
   const shapeRef = useRef<MapShape>(shape);
   const pendingFocusRef = useRef<[number, number] | null>(null);
 
@@ -179,6 +188,7 @@ export function MapStage({ shape, onSelectPolygon, startOnArrival = false }: Map
   const [drawMode, setDrawMode] = useState<DrawMode>(null);
   const [polygonPoints, setPolygonPoints] = useState<[number, number][]>([]);
   const [dragBox, setDragBox] = useState<DragBox | null>(null);
+  const [twoFingerHint, setTwoFingerHint] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const [showHotSpots, setShowHotSpots] = useState<boolean>(true);
   const [hotSpotsHours, setHotSpotsHours] = useState<RecentHours>(24);
@@ -218,12 +228,17 @@ export function MapStage({ shape, onSelectPolygon, startOnArrival = false }: Map
     map.pm.disableDraw();
     if (mode === 'rectangle') {
       map.dragging.disable();
+      map.touchZoom.disable();
       map.pm.enableDraw('Rectangle', { snappable: false });
     } else if (mode === 'polygon') {
       map.dragging.disable();
+      map.touchZoom.disable();
       map.pm.enableDraw('Polygon', { snappable: true });
-    } else if (!isCoarsePointer()) {
-      map.dragging.enable();
+    } else {
+      map.touchZoom.enable();
+      if (!isCoarsePointer()) {
+        map.dragging.enable();
+      }
     }
   }, []);
 
@@ -238,11 +253,13 @@ export function MapStage({ shape, onSelectPolygon, startOnArrival = false }: Map
         if (!canvasHostRef.current || mapRef.current) return;
 
         const coarse = isCoarsePointer();
+        // No celular (pointer: coarse), 1 dedo rola a página (dragging desligado, touch-action: pan-x pan-y)
+        // e 2 dedos movem e dão zoom no mapa (touchZoom ligado).
         const map = L.map(canvasHostRef.current, {
           preferCanvas: true,
           scrollWheelZoom: false,
           dragging: !coarse,
-          touchZoom: !coarse,
+          touchZoom: true,
           pmIgnore: false,
         });
 
@@ -305,6 +322,7 @@ export function MapStage({ shape, onSelectPolygon, startOnArrival = false }: Map
             setDrawMode(null);
             setPolygonPoints([]);
             map.pm.disableDraw();
+            map.touchZoom.enable();
             if (!isCoarsePointer()) map.dragging.enable();
             onSelectPolygonRef.current(geometry);
           }
@@ -367,6 +385,9 @@ export function MapStage({ shape, onSelectPolygon, startOnArrival = false }: Map
       seqRef.current += 1; // respostas que chegarem depois de desmontar são ignoradas
       if (moveDebounceRef.current !== null) {
         window.clearTimeout(moveDebounceRef.current);
+      }
+      if (twoFingerTimerRef.current !== null) {
+        window.clearTimeout(twoFingerTimerRef.current);
       }
       if (mapRef.current) {
         mapRef.current.remove();
@@ -518,6 +539,97 @@ export function MapStage({ shape, onSelectPolygon, startOnArrival = false }: Map
     [finishRectangleDrag],
   );
 
+  const handleTouchStart = useCallback(
+    (event: ReactTouchEvent<HTMLDivElement>) => {
+      if (drawModeRef.current === 'rectangle' && event.touches.length === 1) {
+        const firstTouch = event.touches[0];
+        if (!firstTouch) return;
+        const start = { clientX: firstTouch.clientX, clientY: firstTouch.clientY };
+        dragStartRef.current = start;
+        let lastPoint = start;
+
+        const computeBox = (cx: number, cy: number): DragBox | null => {
+          const rect = viewportRef.current?.getBoundingClientRect();
+          if (!rect) return null;
+          return {
+            left: Math.min(start.clientX, cx) - rect.left,
+            top: Math.min(start.clientY, cy) - rect.top,
+            width: Math.abs(cx - start.clientX),
+            height: Math.abs(cy - start.clientY),
+          };
+        };
+
+        const onWindowTouchMove = (moveEvent: TouchEvent) => {
+          const t = moveEvent.touches[0];
+          if (!t) return;
+          lastPoint = { clientX: t.clientX, clientY: t.clientY };
+          if (Math.hypot(t.clientX - start.clientX, t.clientY - start.clientY) >= 5) {
+            setDragBox(computeBox(t.clientX, t.clientY));
+          }
+        };
+
+        const onWindowTouchEnd = () => {
+          window.removeEventListener('touchmove', onWindowTouchMove);
+          window.removeEventListener('touchend', onWindowTouchEnd);
+          window.removeEventListener('touchcancel', onWindowTouchEnd);
+          setDragBox(null);
+          dragStartRef.current = null;
+          if (Math.hypot(lastPoint.clientX - start.clientX, lastPoint.clientY - start.clientY) >= 5) {
+            finishRectangleDrag(start.clientX, start.clientY, lastPoint.clientX, lastPoint.clientY);
+          }
+        };
+
+        window.addEventListener('touchmove', onWindowTouchMove);
+        window.addEventListener('touchend', onWindowTouchEnd);
+        window.addEventListener('touchcancel', onWindowTouchEnd);
+        return;
+      }
+
+      if (drawModeRef.current !== null || event.touches.length >= 2) {
+        oneFingerStartRef.current = null;
+        if (twoFingerTimerRef.current !== null) {
+          window.clearTimeout(twoFingerTimerRef.current);
+          twoFingerTimerRef.current = null;
+        }
+        setTwoFingerHint(false);
+        return;
+      }
+
+      const touch = event.touches[0];
+      if (touch) {
+        oneFingerStartRef.current = { clientX: touch.clientX, clientY: touch.clientY };
+      }
+    },
+    [finishRectangleDrag],
+  );
+
+  const handleTouchMove = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    if (drawModeRef.current !== null || event.touches.length >= 2) {
+      oneFingerStartRef.current = null;
+      if (twoFingerTimerRef.current !== null) {
+        window.clearTimeout(twoFingerTimerRef.current);
+        twoFingerTimerRef.current = null;
+      }
+      setTwoFingerHint(false);
+      return;
+    }
+
+    const start = oneFingerStartRef.current;
+    const touch = event.touches[0];
+    if (!start || !touch) return;
+
+    if (Math.hypot(touch.clientX - start.clientX, touch.clientY - start.clientY) >= 8) {
+      setTwoFingerHint(true);
+      if (twoFingerTimerRef.current !== null) {
+        window.clearTimeout(twoFingerTimerRef.current);
+      }
+      twoFingerTimerRef.current = window.setTimeout(() => {
+        setTwoFingerHint(false);
+        twoFingerTimerRef.current = null;
+      }, 1800);
+    }
+  }, []);
+
   const handleViewportClickCapture = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
     if (suppressClickOnceRef.current) {
       suppressClickOnceRef.current = false;
@@ -562,6 +674,7 @@ export function MapStage({ shape, onSelectPolygon, startOnArrival = false }: Map
     const nextMode = drawMode === mode ? null : mode;
     // Ao entrar no modo de desenho, o mapa precisa estar na tela para receber o arrasto.
     if (nextMode) viewportRef.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' as ScrollBehavior });
+    setTwoFingerHint(false);
     setDrawMode(nextMode);
     setPolygonPoints([]);
     syncDrawModeToMap(nextMode);
@@ -585,7 +698,9 @@ export function MapStage({ shape, onSelectPolygon, startOnArrival = false }: Map
       ? 'Drag across the map to draw a rectangle.'
       : drawMode === 'polygon'
         ? `Click to add points (${polygonPoints.length} so far), then finish the polygon.`
-        : null;
+        : twoFingerHint
+          ? 'Use two fingers to move the map.'
+          : null;
 
   const windowLabel = hotSpotsHours === 168 ? 'last 7 days' : `last ${hotSpotsHours} h`;
 
@@ -652,6 +767,8 @@ export function MapStage({ shape, onSelectPolygon, startOnArrival = false }: Map
         aria-label="Area selection map"
         className={`map-stage__viewport${drawMode ? ' map-stage__viewport--drawing' : ''}`}
         onMouseDownCapture={handleMouseDownCapture}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onClickCapture={handleViewportClickCapture}
         onClick={handleViewportClick}
         onDoubleClick={() => {

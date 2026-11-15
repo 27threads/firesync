@@ -248,15 +248,17 @@ export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function 
                 preserveAspectRatio="none"
                 overflow="visible"
                 className="cal-cellbox"
+                data-key={cell.key}
                 data-strip-i={index >= 0 ? index : undefined}
+                style={interactive ? { pointerEvents: 'none' } : undefined}
               >
                 <rect className={className} width={w} height={h} fill={fill} />
                 {cell.state === 'zero' && <line className="cal-zero-mark" x1={w / 2 - 4} x2={w / 2 + 4} y1={h / 2} y2={h / 2} />}
                 {cell.estimated && cell.state !== 'no_data' && <rect width={w} height={h} fill={`url(#${hatchId})`} />}
                 {cell.incomplete && <rect className="cal-incomplete" x={1.25} y={1.25} width={w - 2.5} height={h - 2.5} />}
                 {cell.provisional && <circle className="cal-provisional" cx={w - 4.5} cy={4.5} r={2.4} />}
-                <rect className="cal-hover" x={0.75} y={0.75} width={w - 1.5} height={h - 1.5} />
-                <rect className="cal-focus" x={1.25} y={1.25} width={w - 2.5} height={h - 2.5} />
+                {!interactive && <rect className="cal-hover" x={0.75} y={0.75} width={w - 1.5} height={h - 1.5} />}
+                {!interactive && <rect className="cal-focus" x={1.25} y={1.25} width={w - 2.5} height={h - 2.5} />}
               </svg>
             );
 
@@ -276,25 +278,29 @@ export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function 
             }
 
             return (
-              <g
-                key={cell.key}
-                className="cal-gridcell"
-                role="gridcell"
-                data-key={cell.key}
-                aria-label={cell.label}
-                aria-selected={cell.key === selectedKey}
-                tabIndex={cell.key === activeKey ? 0 : -1}
-                onPointerEnter={(e) => hover(e, cell)}
-                onPointerLeave={() => hover(null, null)}
-                onFocus={(e) => {
-                  onFocusKeyChange?.(cell.key);
-                  onHover?.(cell, (e.currentTarget as SVGGElement).getBoundingClientRect());
-                }}
-                onBlur={() => onHover?.(null, null)}
-                onClick={() => onSelect?.(cell)}
-                onKeyDown={(e) => handleKeyDown(e, cell)}
-              >
+              <g key={cell.key}>
                 {content}
+                <g
+                  className="cal-gridcell"
+                  role="gridcell"
+                  data-key={cell.key}
+                  aria-label={cell.label}
+                  aria-selected={cell.key === selectedKey}
+                  tabIndex={cell.key === activeKey ? 0 : -1}
+                  onPointerEnter={(e) => hover(e, cell)}
+                  onPointerLeave={() => hover(null, null)}
+                  onFocus={(e) => {
+                    onFocusKeyChange?.(cell.key);
+                    onHover?.(cell, (e.currentTarget as SVGGElement).getBoundingClientRect());
+                  }}
+                  onBlur={() => onHover?.(null, null)}
+                  onClick={() => onSelect?.(cell)}
+                  onKeyDown={(e) => handleKeyDown(e, cell)}
+                >
+                  <rect x={box.x} y={box.y} width={w} height={h} fill="transparent" />
+                  <rect className="cal-hover" x={box.x + 0.75} y={box.y + 0.75} width={w - 1.5} height={h - 1.5} />
+                  <rect className="cal-focus" x={box.x + 1.25} y={box.y + 1.25} width={w - 2.5} height={h - 2.5} />
+                </g>
               </g>
             );
           })}

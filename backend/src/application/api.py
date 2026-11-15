@@ -1,3 +1,5 @@
+import json
+
 from backend.application.calendar import CalendarService
 from backend.domain.calculations.recent import recent_result
 from backend.domain.models.area import Area
@@ -25,3 +27,9 @@ def calculate_calendar(reader, area, start, end, today, rules):
         result['recent'] = recent_result(**reader.recent(snapshot), rules=rules)
         result['indicators']['last_7_days_vs_typical_pct'] = result['recent']['last_7_days']['difference_pct']
     return snapshot, result
+
+
+def calendar_cache_key(payload, today, meta):
+    """One key for the /calendar route and the assistant, so both share computed calendars."""
+    return ('calendar', json.dumps(payload, sort_keys=True, allow_nan=False) + today.isoformat(),
+            meta['updated_at'], meta['data_version'])
