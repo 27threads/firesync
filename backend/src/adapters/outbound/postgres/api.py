@@ -77,6 +77,7 @@ class PostgresApiRepository:
         self.factor_versions = OrderedDict()
         self.factor_lock = Lock()
         self.cell_levels = CellLevelCache()
+        self.cell_history = CellLevelCache()      # reference years of each cell, once per day
 
     @contextmanager
     def read(self):
@@ -211,15 +212,25 @@ class PostgresApiReader(PostgresHistoryRepository):
         return {'cell_levels': levels, 'cell_daily': None, 'data_through': through, 'coverage_start': VIIRS_START}
 
     def _compute_levels(self, parents, through):
+        """Levels of the cells. The reference years change once a day and are kept per day; the current window, which
+        grows with each NRT round, is read at each data version. Same input to `cell_alerts` as one single query."""
+        ranges = history_ranges(through, self.repository.rules)
+        past = self.repository.cell_history.levels(
+            (through, self.repository.rules['version']), sorted(parents), lambda missing: self._query_daily(missing, ranges[:-1]))
+        recent = self._query_daily(parents, ranges[-1:])
+        cell_daily = {parent: {**past[parent], **recent[parent]} for parent in parents}
+        return cell_alerts(through, cell_daily, self.repository.rules, VIIRS_START)
+
+    def _query_daily(self, parents, ranges):
+        """{resolution 4 cell: {day: VIIRS detections}} for the date ranges, from the daily counts of its children."""
+        cell_daily = {parent: {} for parent in parents}
         child_to_parent = {h3.str_to_int(child): parent for parent in parents
                            for child in h3.cell_to_children(parent, DATABASE_RESOLUTION)}
-        ranges = history_ranges(through, self.repository.rules)
-        between = ' OR '.join('data BETWEEN %s AND %s' for _ in ranges)
+        between = ' OR '.join('data BETWEEN %s AND %s' for _ in ranges) or 'FALSE'  # no range: no rows
         self.cursor.execute(f"""SELECT h3, data AS day, sum(focos_brutos)::bigint AS detections FROM agregados_diarios
             WHERE h3=ANY(%s::bigint[]) AND ({between}) AND {satellite_sql('data', 'date')} GROUP BY h3, data""",
                             (list(child_to_parent), *[day for pair in ranges for day in pair]))
-        cell_daily = {parent: {} for parent in parents}
         for row in self.cursor.fetchall():
             daily = cell_daily[child_to_parent[row['h3']]]
             daily[row['day']] = daily.get(row['day'], 0) + row['detections']
-        return cell_alerts(through, cell_daily, self.repository.rules, VIIRS_START)
+        return cell_daily

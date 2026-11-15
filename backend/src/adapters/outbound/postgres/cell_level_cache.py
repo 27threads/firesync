@@ -9,6 +9,7 @@ from threading import Lock
 class CellLevelCache:
     def __init__(self, versions=2):
         self.versions, self.entries, self.lock = versions, OrderedDict(), Lock()
+        self.compute_lock = Lock()
 
     def levels(self, version, cells, compute):
         """{cell: level} for `cells`; `compute(missing_cells)` runs only for the cells this version has not seen."""
@@ -19,8 +20,14 @@ class CellLevelCache:
                 self.entries.popitem(last=False)
             missing = [cell for cell in cells if cell not in store]
         if missing:
-            computed = compute(missing)       # outside the lock: it queries the database
-            with self.lock:
-                store.update(computed)
+            # One computation at a time: a second request with a cold cache waits for the first and finds the cells
+            # ready, instead of repeating the same query on another connection of the small pool.
+            with self.compute_lock:
+                with self.lock:
+                    missing = [cell for cell in cells if cell not in store]
+                if missing:
+                    computed = compute(missing)       # outside the cache lock: it queries the database
+                    with self.lock:
+                        store.update(computed)
         with self.lock:
             return {cell: store[cell] for cell in cells}
