@@ -68,7 +68,8 @@ O gabarito começa **no dia seguinte ao último dia usado pelo nível**. Nenhum 
 
 - A `v1` só é escolhida entre as regras com **ganho positivo** sobre a ingênua (na mesma frequência de alerta), e o ganho tem que ser positivo **no total e na maioria dos anos** (pelo menos 7 dos 12).
 - **Complemento da frente B (Weberson, 15/11/2026):** não há um tamanho mínimo fixo. O ganho tem de ser positivo também **no total de cada variação do gabarito** (P80, P95, mínimo de 5 e mínimo de 20 detecções), porque o ganho medido é frágil e as semanas se sobrepõem. Com esse critério, a `v1` usa o **piso contínuo** de 10 detecções ([RFC 0001](rfcs/0001-backtest-alerta.md), "Perguntas respondidas pela frente B").
-- **Se nenhuma regra tiver ganho positivo** (ou ele der perto de zero), a tela **não** mostra acerto. Mostra só a frequência de cada nível e o limite declarado: *"Rule v1 flags Critical in X% of weeks (2013–2024). It did not beat a simple persistence rule at anticipating high-detection weeks, so we show it as a context indicator, not a forecast."* A regra continua útil para dizer "está acima do normal", mas não é vendida como previsão.
+- **Condição para a tela mostrar acerto:** a `v1` passa no critério completo, ou seja, ganho > 0 no total, em pelo menos 7 dos 12 anos no gabarito principal e no total de cada uma das quatro variações. É a situação "aprovada" no `relatorio.txt`. Regra sem a sensibilidade calculada não conta como aprovada.
+- **Se a `v1` reprovar em qualquer parte do critério**, a tela **não** mostra acerto. Mostra só a frequência de cada nível e o limite declarado, que vale qualquer que seja a parte que reprovou: *"Rule v1 flags Critical in X% of weeks (2013–2024). It did not consistently beat a simple persistence rule at anticipating high-detection weeks (overall, in most years and under each alternative definition of a high-detection week), so we show it as a context indicator, not a forecast."* A regra continua útil para dizer "está acima do normal", mas não é vendida como previsão.
 
 **Saída:** `relatorios/alerta/backtest.csv` (uma linha por regra testada) e `relatorios/alerta/por_bioma.csv`.
 
@@ -126,7 +127,7 @@ Nenhuma data entra sem a fonte ao lado. O próprio banco ajuda a conferir o pico
 | Frente | Tarefa | Esforço |
 | --- | --- | --- |
 | **A** | Script `data-pipeline/validacao/backtest_alerta.py`: só lê o banco, roda a solução A e o nível semana a semana dos eventos da B. Autoteste com dados inventados. Montar o `eventos_conhecidos.csv` com as fontes | ~2 h + ~1 h da lista |
-| **B** | Fixar o ganho mínimo antes da rodada. Escolher a regra pela tabela (frequência, acerto e ganho sobre a ingênua) e publicar a `v1` no `alert_rules.json`. A escolha dos limites é da equipe (regra do Space Apps) | — |
+| **B** | Fixar a regra de decisão: a primeira parte antes da rodada e o complemento depois dela, declarado como posterior ("Regra de decisão", acima). Escolher a regra pela tabela (frequência, acerto e ganho sobre a ingênua) e publicar a `v1` no `alert_rules.json`. A escolha dos limites é da equipe (regra do Space Apps) | — |
 | **C** | Ler a `v1` do `alert_rules.json` (já previsto) e pôr a versão no pacote de auditoria | — |
 | **D** | Mostrar o texto fixo da tela ("Texto da tela", acima, ou a versão sem ganho) e um evento da B na tela de Método | — |
 
