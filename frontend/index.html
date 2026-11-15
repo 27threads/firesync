@@ -125,6 +125,25 @@
             </div>
           </figure>
 
+          <figure class="method__diagram method__figure" aria-labelledby="curve-title">
+            <figcaption>
+              <h3 id="curve-title">Why the two satellites disagree</h3>
+              <p>
+                When VIIRS detects a fire, how often does MODIS also detect it? MODIS misses most weak fires (under 2 MW:
+                seen 15 to 18% of the time) and sees most strong ones (25 MW or more: 71 to 87%). Because VIIRS sees many
+                more small fires, the two raw counts cannot be compared directly, so firesync converts MODIS to the VIIRS
+                scale before building the calendar.
+              </p>
+              <p>
+                Based on 2024 data, in areas where MODIS was observing, with up to 90 minutes between the two passes. It
+                explains the gap and is not used to compute the calendar. It probably understates how much MODIS misses,
+                because areas where MODIS saw no fire at all are left out.
+              </p>
+            </figcaption>
+            <img src="/img/curva_deteccao_2024.png" width="910" height="546" loading="lazy"
+              alt="Line chart: the chance that MODIS also detects a fire seen by VIIRS rises with fire power, by day from 15% under 2 MW to 71% at 25 MW or more, and by night from 18% to 87%." />
+          </figure>
+
           <div class="method__points">
             <article>
               <h3>Why the sensors need harmonizing</h3>
@@ -132,6 +151,17 @@
                 VIIRS pixels are smaller than MODIS pixels, so VIIRS records many more detections over the same fires.
                 Joining the raw counts would make 2012 look like a jump in fire activity. firesync converts the MODIS
                 Aqua record to the VIIRS scale with factors calibrated in the years both sensors flew.
+              </p>
+            </article>
+            <article>
+              <h3>Checked against INPE</h3>
+              <p>
+                Compared with the independent fire series of INPE (Programa Queimadas), the harmonized series rises and
+                falls in the same years in all six biomes, with a monthly correlation of 0.94 to 0.99. The 2012 satellite
+                switch creates no artificial jump in the Amazon (−0.6%), nor in the Cerrado, Caatinga and Pantanal (up to
+                about 7%). In the Atlantic Forest (−12.7%), the ratio to INPE drifts gradually across the whole series,
+                including after 2012, when no conversion is applied. In the Pampa (+12.3%), the result depends on years
+                with very few fires.
               </p>
             </article>
             <article>
@@ -203,6 +233,13 @@
                 The reported percentage will mean the share of Critical alerts followed by unusually high detections,
                 alongside the difference from the persistence rule. It is not the share of all high-detection periods
                 caught by the alert.
+              </p>
+              <h4>Why a simple rule and not a trained model</h4>
+              <p>
+                We also trained a machine-learning model (gradient boosting) on 13 years of fire history plus rainfall,
+                temperature, humidity, wind and El Niño data, tested year by year on years it had not seen (2017 to
+                2023). With the same number of alerts, it was right only 0.9 percentage points more often than rule v1,
+                and the weather and El Niño data did not improve it. We kept the simpler rule, which anyone can check.
               </p>
               <h4>Whole-biome results</h4>
               <p>
