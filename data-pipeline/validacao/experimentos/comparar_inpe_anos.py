@@ -83,7 +83,7 @@ def metricas(score, y, ok, pico):
             "top10_fora": y[~pico][t[~pico]].mean() if (~pico).any() else np.nan}
 
 
-linhas, juntar, anos_lr = [], {"y": [], "g": [], "nosso": [], "inpe_pct": [], "inpe": []}, []
+linhas = []
 for ano in ANOS:
     print(f"== {ano}: treinando com dados até {ano - 1}-12-31", flush=True)
     modelo = rc.treinar(df, date(ano - 1, 12, 31))
