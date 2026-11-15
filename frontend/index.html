@@ -3,124 +3,261 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>firesync · 20+ years of fire detections on one scale</title>
-    <meta name="description" content="Monthly fire calendar for any area in Brazil since 2003, joining MODIS and VIIRS hot spot detections from NASA FIRMS on a single VIIRS scale." />
-    <meta property="og:title" content="firesync" />
-    <meta property="og:description" content="Monthly fire calendar since 2003, MODIS and VIIRS on a single scale. Data: NASA FIRMS." />
-    <meta name="theme-color" content="#0b1020" />
+    <title>firesync · Two satellites. One fire history.</title>
+    <meta name="description" content="A harmonized record of MODIS and VIIRS fire detections since 2003. See whether recent fire activity is typical for a place and season. Data: NASA FIRMS." />
+    <meta property="og:title" content="firesync · Two satellites. One fire history." />
+    <meta property="og:description" content="MODIS and VIIRS fire detections on one comparable scale since 2003, with recent activity compared to what is typical. Data: NASA FIRMS." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="theme-color" content="#111315" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body>
-    <a class="skip-link" href="#tool">Skip to the tool</a>
-    <header class="site-header">
-      <span class="brand">firesync</span>
-      <p class="credit">Fire detections: <a href="https://firms.modaps.eosdis.nasa.gov/">NASA FIRMS</a> (MODIS C6.1, VIIRS C2)</p>
+    <a class="skip-link" href="#explore">Skip to the explorer</a>
+
+    <header class="masthead">
+      <a class="brand" href="#top" aria-label="firesync, back to top">
+        <svg class="brand__mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="4" height="4" /><rect x="7" y="4" width="4" height="4" /><rect x="12" y="4" width="4" height="4" /><rect x="17" y="4" width="4" height="4" /><rect x="2" y="9" width="4" height="4" /><rect x="7" y="9" width="4" height="4" /><rect x="12" y="9" width="4" height="4" /><rect x="17" y="9" width="4" height="4" /><rect x="2" y="14" width="4" height="4" /><rect x="7" y="14" width="4" height="4" /></svg>
+        firesync
+      </a>
+      <nav class="masthead__nav" aria-label="Main">
+        <a href="#explore">Explore</a>
+        <a href="#method">Method</a>
+        <a href="#credits">Data</a>
+      </nav>
+      <p class="masthead__credit">Data: <a href="https://firms.modaps.eosdis.nasa.gov/" rel="noopener">NASA FIRMS</a></p>
     </header>
 
     <main>
-      <section class="intro" aria-labelledby="intro-title">
-        <h1 id="intro-title">Is this fire season worse than usual here?</h1>
-        <p>
-          firesync shows how many fire detections an area had in each month since January 2003.
-          It joins the MODIS record (2003 onward) and the VIIRS record (2012 onward) on a single VIIRS scale,
-          so a change in the calendar is a change on the ground, not a change of satellite.
-        </p>
+      <section class="hero" id="top" aria-labelledby="hero-title">
+        <div class="hero__copy">
+          <h1 id="hero-title" class="hero__title">Two satellites. <span>One fire history.</span></h1>
+          <p class="hero__lede">
+            Explore a harmonized record of fire detections since 2003. See how recent activity compares with what is
+            typical for a place and season.
+          </p>
+          <div class="hero__actions">
+            <a class="btn btn--primary" href="#explore" data-explore-link>Explore an area</a>
+            <a class="btn btn--ghost" href="#method">How it works</a>
+          </div>
+          <dl class="hero__facts">
+            <div><dt>Record</dt><dd>Jan 2003 onward, monthly</dd></div>
+            <div><dt>Sensors</dt><dd>MODIS Aqua, then VIIRS</dd></div>
+            <div><dt>Source</dt><dd><a href="https://firms.modaps.eosdis.nasa.gov/" rel="noopener">NASA FIRMS</a> · MODIS C6.1, VIIRS C2</dd></div>
+          </dl>
+        </div>
+        <div class="hero__viz" id="hero-viz">
+          <noscript>
+            <p class="hero__noscript">The interactive fire calendar needs JavaScript. The method and data sources below are readable without it.</p>
+          </noscript>
+        </div>
       </section>
 
-      <section id="tool" class="tool">
+      <section id="explore" class="explore" aria-labelledby="explore-title">
         <div id="tool-root"></div>
-        <noscript><p>The interactive tool needs JavaScript. The method and data sources below are readable without it.</p></noscript>
+        <noscript><p class="explore__noscript">The explorer needs JavaScript. The method and data sources below are readable without it.</p></noscript>
       </section>
 
-      <section id="method" class="prose" aria-labelledby="method-title">
-        <h2 id="method-title">Method</h2>
-        <p>
-          The calendar counts satellite fire detections (hot spots), not individual fires. Only detections with
-          nominal or high confidence over vegetation fires are kept.
-        </p>
-        <h3>One scale for two sensors</h3>
-        <p>
-          VIIRS sees many more hot spots than MODIS over the same area. To put both on the VIIRS scale, we compare
-          MODIS Aqua and VIIRS S-NPP in the years both were flying (2012 to 2024). For every biome, month of the
-          year and day or night overpass we compute a conversion factor, one per calibration year.
-        </p>
-        <ul>
-          <li>January 2003 to January 2012: estimated from MODIS Aqua × factor, shown with an uncertainty range.</li>
-          <li>February 2012 to October 2026: observed by VIIRS S-NPP.</li>
-          <li>November 2026 onward: observed by VIIRS NOAA-20.</li>
-        </ul>
-        <h3>Uncertainty</h3>
-        <p>
-          Each estimated month shows the median across the calibration years and a range from the 5th to the 95th
-          percentile. In a leave-one-year-out test, the observed value fell inside this range in 68% to 80% of the
-          months, depending on the biome.
-        </p>
-        <h3>How the alert is assessed</h3>
-        <p>
-          Normal, Attention and Critical describe recent detection activity compared with the usual level for
-          that time of year. The alert compares the last 7 days with a seasonal reference drawn from the same
-          dates, within 15 days, in other years.
-        </p>
-        <p>
-          The retrospective test evaluates weekly alerts from 2013 to 2024, then checks the following 14 days.
-          A high-detection outcome means at least 10 VIIRS detections and a total above the seasonal 90th
-          percentile. The comparison is a simple persistence rule: high activity this week continues into the
-          next period. Both rules are compared at the same alert frequency.
-        </p>
-        <h4>Local-area results</h4>
-        <p>
-          The test groups detections into H3 resolution 4 cells. Results describe these test cells on average;
-          they do not establish performance for each area drawn on the map. Final figures are pending selection
-          and evaluation of rule v1.
-        </p>
-        <p>
-          The reported percentage will mean the share of Critical alerts followed by unusually high detections,
-          alongside the difference from the persistence rule. It is not the share of all high-detection periods
-          caught by the alert.
-        </p>
-        <h4>Whole-biome results</h4>
-        <p>
-          Local-area performance does not carry over to a whole biome. Biome results will report how often
-          each alert level occurs, without a predictive success percentage. Final frequencies are pending the
-          evaluation of rule v1.
-        </p>
-        <h4>Historical example: Pantanal, 2020</h4>
-        <p>
-          The Pantanal case compares alert levels with the date of the Mato Grosso do Sul emergency decree
-          (<a href="https://www.semadesc.ms.gov.br/?p=108045">Decree 080/2020, official state source</a>).
-          The final lead time will be reported with the selected rule. An alert before a decree indicates
-          elevated activity before the official response; it does not show that the alert predicted a fire
-          before it started. This case is an illustration, not statistical evidence.
-        </p>
-        <h3>Limits</h3>
-        <p>
-          The alert and its test outcome use the same VIIRS sensor. The test measures subsequent satellite
-          detections, not burned area. Comparison with NASA MCD64A1 burned-area data remains a next step.
-          The seasonal reference excludes the evaluated year but includes later years, so this is a
-          retrospective assessment, not a historical forecast using only information available at the time.
-        </p>
-        <p>
-          firesync describes the past and the present; it does not forecast fire. Months with a satellite outage are
-          marked as missing data, which is different from a month with zero detections.
-        </p>
+      <section id="method" class="method" aria-labelledby="method-title">
+        <div class="method__inner">
+          <header class="method__head">
+            <h2 id="method-title">Method</h2>
+            <p class="method__intro">
+              firesync counts satellite fire detections, the hot spots recorded by NASA FIRMS. It puts two generations
+              of sensors on one scale, so a change in the calendar reflects a change on the ground and not a change of
+              satellite.
+            </p>
+          </header>
+
+          <figure class="method__diagram" aria-labelledby="diagram-title">
+            <figcaption>
+              <h3 id="diagram-title">How harmonization works</h3>
+              <p>A conceptual timeline of the sources. It shows which sensor feeds each period, not measured values.</p>
+            </figcaption>
+            <div class="method__diagram-scroll">
+              <svg viewBox="0 0 960 312" role="img" aria-label="MODIS Aqua feeds the series from January 2003 to January 2012 through a conversion factor calibrated in the 2012 to 2024 overlap with VIIRS S-NPP. VIIRS S-NPP is observed from February 2012 to October 2026, and VIIRS NOAA-20 from November 2026 onward.">
+                <defs>
+                  <pattern id="dia-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                    <line x1="0" y1="0" x2="0" y2="6" class="dia-hatch-line" />
+                  </pattern>
+                </defs>
+                <g class="dia-axis">
+                  <line x1="170" y1="286" x2="930" y2="286" />
+                  <g><line x1="170" y1="282" x2="170" y2="290" /><text x="170" y="304">2003</text></g>
+                  <g><line x1="322" y1="282" x2="322" y2="290" /><text x="322" y="304">2008</text></g>
+                  <g><line x1="443.6" y1="282" x2="443.6" y2="290" /><text x="443.6" y="304">2012</text></g>
+                  <g><line x1="565.2" y1="282" x2="565.2" y2="290" /><text x="565.2" y="304">2016</text></g>
+                  <g><line x1="686.8" y1="282" x2="686.8" y2="290" /><text x="686.8" y="304">2020</text></g>
+                  <g><line x1="808.4" y1="282" x2="808.4" y2="290" /><text x="808.4" y="304">2024</text></g>
+                </g>
+
+                <rect class="dia-calibration" x="443.6" y="30" width="395.2" height="96" />
+                <text class="dia-note" x="452" y="24">Overlap 2012–2024: one factor per biome, month and day or night, for each year</text>
+
+                <text class="dia-lane-label" x="0" y="58">MODIS Aqua</text>
+                <text class="dia-lane-sub" x="0" y="74">C6.1 · 1 km pixels</text>
+                <rect class="dia-lane dia-lane--used" x="170" y="50" width="276" height="14" />
+                <rect class="dia-lane dia-lane--ref" x="446" y="54" width="393" height="6" />
+
+                <text class="dia-lane-label" x="0" y="104">VIIRS S-NPP</text>
+                <text class="dia-lane-sub" x="0" y="120">C2 · 375 m pixels</text>
+                <rect class="dia-lane dia-lane--used" x="446" y="96" width="449" height="14" />
+
+                <text class="dia-lane-label" x="0" y="150">VIIRS NOAA-20</text>
+                <text class="dia-lane-sub" x="0" y="166">C2 · 375 m pixels</text>
+                <rect class="dia-lane dia-lane--used" x="895" y="142" width="35" height="14" />
+
+                <path class="dia-flow" d="M300 64 C300 140 300 170 300 214" />
+                <path class="dia-flow" d="M670 110 C670 150 670 180 670 214" />
+                <path class="dia-flow" d="M912 156 C912 180 912 196 912 214" />
+                <text class="dia-note" x="308" y="150">× factor</text>
+
+                <text class="dia-lane-label dia-lane-label--out" x="0" y="232">firesync series</text>
+                <text class="dia-lane-sub" x="0" y="248">VIIRS scale, monthly</text>
+                <rect class="dia-out dia-out--estimated" x="170" y="218" width="276" height="22" />
+                <rect class="dia-out dia-out--observed" x="446" y="218" width="484" height="22" />
+                <line class="dia-switch" x1="446" y1="210" x2="446" y2="248" />
+                <text class="dia-note" x="170" y="262">Estimated: median of 13 calibration</text>
+                <text class="dia-note" x="170" y="276">scenarios, with a P5–P95 range</text>
+                <text class="dia-note" x="454" y="264">Observed by VIIRS, no conversion</text>
+                <text class="dia-note dia-note--strong" x="454" y="206">Feb 2012</text>
+              </svg>
+            </div>
+          </figure>
+
+          <div class="method__points">
+            <article>
+              <h3>Why the sensors need harmonizing</h3>
+              <p>
+                VIIRS pixels are smaller than MODIS pixels, so VIIRS records many more detections over the same fires.
+                Joining the raw counts would make 2012 look like a jump in fire activity. firesync converts the MODIS
+                Aqua record to the VIIRS scale with factors calibrated in the years both sensors flew.
+              </p>
+            </article>
+            <article>
+              <h3>Estimated and observed</h3>
+              <p>
+                January 2003 to January 2012 is estimated from MODIS Aqua and marked with hatching. From February 2012
+                the record is observed by VIIRS: S-NPP until October 2026, NOAA-20 from November 2026.
+              </p>
+            </article>
+            <article>
+              <h3>The uncertainty range</h3>
+              <p>
+                Each estimated month shows the median across the calibration years and the 5th to 95th percentile of
+                those scenarios. In a leave-one-year-out test, the observed value fell inside this range in 68% to 80%
+                of the months, depending on the biome. Observed VIIRS months carry no conversion range.
+              </p>
+            </article>
+            <article>
+              <h3>Detections are not fires</h3>
+              <p>
+                A large fire covers many pixels and produces many detections. Only nominal and high-confidence
+                detections of vegetation fires are counted. A month with a satellite outage is marked as missing data,
+                which is different from a month with zero detections.
+              </p>
+            </article>
+            <article>
+              <h3>Context, not forecast</h3>
+              <p>
+                The typical range for recent days is the spread (P25 to P75) of the same dates, within 15 days, in other
+                VIIRS years. It describes natural year-to-year variation. firesync describes the past and the present;
+                it does not forecast fire.
+              </p>
+            </article>
+          </div>
+
+          <details class="method__notes">
+            <summary>Full method notes</summary>
+            <div class="prose">
+              <h3>One scale for two sensors</h3>
+              <p>
+                VIIRS sees many more hot spots than MODIS over the same area. To put both on the VIIRS scale, we compare
+                MODIS Aqua and VIIRS S-NPP in the years both were flying (2012 to 2024). For every biome, month of the
+                year and day or night overpass we compute a conversion factor, one per calibration year.
+              </p>
+              <ul>
+                <li>January 2003 to January 2012: estimated from MODIS Aqua × factor, shown with an uncertainty range.</li>
+                <li>February 2012 to October 2026: observed by VIIRS S-NPP.</li>
+                <li>November 2026 onward: observed by VIIRS NOAA-20.</li>
+              </ul>
+              <h3>How the alert is assessed</h3>
+              <p>
+                Normal, Attention and Critical describe recent detection activity compared with the usual level for
+                that time of year. The alert compares the last 7 days with a seasonal reference drawn from the same
+                dates, within 15 days, in other years.
+              </p>
+              <p>
+                The retrospective test evaluates weekly alerts from 2013 to 2024, then checks the following 14 days.
+                A high-detection outcome means at least 10 VIIRS detections and a total above the seasonal 90th
+                percentile. The comparison is a simple persistence rule: high activity this week continues into the
+                next period. Both rules are compared at the same alert frequency.
+              </p>
+              <h4>Local-area results</h4>
+              <p>
+                The test groups detections into H3 resolution 4 cells. Results describe these test cells on average;
+                they do not establish performance for each area drawn on the map. Final figures are pending selection
+                and evaluation of rule v1.
+              </p>
+              <p>
+                The reported percentage will mean the share of Critical alerts followed by unusually high detections,
+                alongside the difference from the persistence rule. It is not the share of all high-detection periods
+                caught by the alert.
+              </p>
+              <h4>Whole-biome results</h4>
+              <p>
+                Local-area performance does not carry over to a whole biome. Biome results will report how often
+                each alert level occurs, without a predictive success percentage. Final frequencies are pending the
+                evaluation of rule v1.
+              </p>
+              <h4>Historical example: Pantanal, 2020</h4>
+              <p>
+                The Pantanal case compares alert levels with the date of the Mato Grosso do Sul emergency decree
+                (<a href="https://www.semadesc.ms.gov.br/?p=108045" rel="noopener">Decree 080/2020, official state source</a>).
+                The final lead time will be reported with the selected rule. An alert before a decree indicates
+                elevated activity before the official response; it does not show that the alert predicted a fire
+                before it started. This case is an illustration, not statistical evidence.
+              </p>
+              <h3>Limits</h3>
+              <p>
+                The conversion assumes the ratio between the sensors in 2003 to 2011 was similar to the calibration
+                years. This cannot be tested, because there is no VIIRS before 2012; the range measures variation
+                between years, not this risk.
+              </p>
+              <p>
+                The alert and its test outcome use the same VIIRS sensor. The test measures subsequent satellite
+                detections, not burned area. Comparison with NASA MCD64A1 burned-area data remains a next step.
+                The seasonal reference excludes the evaluated year but includes later years, so this is a
+                retrospective assessment, not a historical forecast using only information available at the time.
+              </p>
+              <p>
+                The intensity class (low, medium, high) helps prioritize where to look, but it does not replace field
+                information, wind or the advance of the fire front.
+              </p>
+            </div>
+          </details>
+        </div>
       </section>
 
-      <section id="credits" class="prose" aria-labelledby="credits-title">
-        <h2 id="credits-title">Data &amp; credits</h2>
-        <ul>
-          <li>Fire detections: <a href="https://firms.modaps.eosdis.nasa.gov/" rel="noopener">NASA FIRMS</a>, MODIS C6.1 (Aqua) and VIIRS C2 (S-NPP, NOAA-20).</li>
-          <li>Biome boundaries: IBGE, Biomas do Brasil 1:250,000.</li>
-          <li>Reference series for validation: INPE, Programa Queimadas.</li>
-          <li>Historical alert example: Government of Mato Grosso do Sul, <a href="https://www.semadesc.ms.gov.br/?p=108045" rel="noopener">Decree 080/2020</a>, environmental emergency in the Pantanal (24 July 2020).</li>
-          <li>Base map imagery and tiles: <a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs" rel="noopener">NASA EOSDIS GIBS</a> (Blue Marble Next Generation, Reference Features), <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a> contributors, and <a href="https://carto.com/attributions" rel="noopener">CARTO</a> Dark Matter.</li>
-          <li>Interface libraries: React, Vite, D3, Leaflet, and Leaflet-Geoman.</li>
-          <li>Built for the NASA Space Apps Challenge 2026, challenge "MODIS and VIIRS Hot Spots". Parts of the code were written with AI assistance (Claude Code); the full list is in the project repository.</li>
-        </ul>
+      <section id="credits" class="credits" aria-labelledby="credits-title">
+        <div class="credits__inner">
+          <h2 id="credits-title">Data &amp; credits</h2>
+          <ul>
+            <li>Fire detections: <a href="https://firms.modaps.eosdis.nasa.gov/" rel="noopener">NASA FIRMS</a>, MODIS C6.1 (Aqua) and VIIRS C2 (S-NPP, NOAA-20).</li>
+            <li>Biome boundaries: IBGE, Biomas do Brasil 1:250,000.</li>
+            <li>Reference series for validation: INPE, Programa Queimadas.</li>
+            <li>Historical alert example: Government of Mato Grosso do Sul, <a href="https://www.semadesc.ms.gov.br/?p=108045" rel="noopener">Decree 080/2020</a>, environmental emergency in the Pantanal (24 July 2020).</li>
+            <li>Base maps: <a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs" rel="noopener">NASA EOSDIS GIBS</a> (VIIRS Black Marble, Blue Marble Next Generation, Coastlines), with coastline data from <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a> contributors.</li>
+            <li>Color scale: cividis (Nuñez, Anderton and Renslow, 2018), through d3-scale-chromatic.</li>
+            <li>Interface libraries: React, Vite, D3, GSAP, Leaflet, and Leaflet-Geoman. Typeface: Archivo (SIL Open Font License), through Fontsource.</li>
+            <li>Built for the NASA Space Apps Challenge 2026, challenge "MODIS and VIIRS Hot Spots". Parts of the code were written with AI assistance (Claude Code); the full list is in the project repository.</li>
+          </ul>
+        </div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <p>Data: <a href="https://firms.modaps.eosdis.nasa.gov/">NASA FIRMS</a>. We acknowledge the use of data and imagery from LANCE FIRMS operated by NASA's Earth Science Data and Information System (ESDIS).</p>
+      <p>Data: <a href="https://firms.modaps.eosdis.nasa.gov/" rel="noopener">NASA FIRMS</a>. We acknowledge the use of data and imagery from LANCE FIRMS operated by NASA's Earth Science Data and Information System (ESDIS).</p>
     </footer>
     <script type="module" src="/src/main.tsx"></script>
   </body>

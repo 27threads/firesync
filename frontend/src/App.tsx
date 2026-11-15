@@ -1,214 +1,133 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import example from '../../docs/api-exemplo.json';
-import { ApiClientError, fetchCalendar, fetchHealth, fetchRegions } from './api/client';
-import type { AreaInput, CalendarApiResult, CalendarRequest, CalendarResponse, RegionOption } from './api/types';
-import { FireCalendar } from './calendar/FireCalendar';
-import { AreaPeriodControls } from './controls/AreaPeriodControls';
-import { buildCalendarRequest, DEFAULT_END_MONTH, DEFAULT_START_MONTH, isDataStale } from './controls/areaPeriodModel';
-import { ExportPanel } from './export/ExportPanel';
-import { KeyIndicators } from './summary/KeyIndicators';
-import { RecentPanel } from './summary/RecentPanel';
-import { SeasonalPattern } from './summary/SeasonalPattern';
-import { YearRanking } from './summary/YearRanking';
+import { useCallback, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { MONTH_NAMES } from './calendar/calendarModel';
+import { SelectionPanel } from './controls/SelectionPanel';
+import { buildExampleStory } from './discovery/exampleStory';
+import { HeroCalendar } from './hero/HeroCalendar';
+import { prefersReducedMotion } from './hero/heroIntro';
+import { HistoryPanel } from './history/HistoryPanel';
+import { MapStage } from './map/MapStage';
+import { useExplorer } from './state/useExplorer';
+import { Summary } from './summary/Summary';
 
-const exampleData = example as unknown as CalendarResponse;
-const CONTRACT_ERROR_CODES = new Set([
-  'invalid_geometry',
-  'area_too_large',
-  'invalid_period',
-  'region_not_found',
-  'rate_limited',
-  'internal_error',
-]);
-
-function isNoCoverage(result: CalendarApiResult): boolean {
-  return result.coverage?.status === 'none' || !('months' in result);
+function monthLabel(key: string): string {
+  const [y, m] = key.split('-').map(Number);
+  return `${MONTH_NAMES[m - 1]} ${y}`;
 }
 
-// Ordem da tela (docs/ux-telas.md): primeiro o agora, depois a história, por último o detalhe.
+function scrollToExplore() {
+  document.getElementById('explore')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+}
+
+// Três momentos ligados: entender (abertura), descobrir (exemplo guiado) e investigar (área própria).
 export function App() {
-  const [regions, setRegions] = useState<RegionOption[]>([]);
-  const [lastMonth, setLastMonth] = useState<string>(exampleData.meta.last_month || DEFAULT_END_MONTH);
-  const [activeArea, setActiveArea] = useState<AreaInput | null>(null);
-  const [activeRequest, setActiveRequest] = useState<CalendarRequest>(() =>
-    buildCalendarRequest({ type: 'region', region_id: 1 }, { start: DEFAULT_START_MONTH, end: exampleData.meta.last_month || DEFAULT_END_MONTH }),
-  );
-  const [apiResult, setApiResult] = useState<CalendarApiResult | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [requestError, setRequestError] = useState<string | null>(null);
-  const [apiUnavailableFallback, setApiUnavailableFallback] = useState<boolean>(false);
-  const requestAbortRef = useRef<AbortController | null>(null);
-  const userInteractedRef = useRef<boolean>(false);
-  const autoLoadTimerRef = useRef<number | null>(null);
+  const ex = useExplorer();
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [storyIndex, setStoryIndex] = useState(0);
+  const heroHost = typeof document !== 'undefined' ? document.getElementById('hero-viz') : null;
 
-  const cancelInitialAutoLoad = useCallback(() => {
-    userInteractedRef.current = true;
-    if (autoLoadTimerRef.current !== null) {
-      window.clearTimeout(autoLoadTimerRef.current);
-      autoLoadTimerRef.current = null;
-    }
-  }, []);
+  const shownData = ex.shown?.data ?? null;
+  const story = useMemo(() => (shownData ? buildExampleStory(shownData) : null), [shownData]);
+  const step = ex.selection.isExample && story ? story[storyIndex] : null;
 
-  useEffect(() => {
-    const controller = new AbortController();
+  const months = shownData?.months ?? [];
+  const periodLabel = months.length ? `${monthLabel(months[0].month)} – ${monthLabel(months[months.length - 1].month)}` : `${ex.period.start} – ${ex.period.end}`;
+  const showingDemoForOtherArea = ex.result.kind === 'api_unavailable' && !ex.selection.isExample;
+  const areaLabel = ex.shown?.isDemo ? 'Example area, Amazônia biome (demo data)' : ex.selection.label;
 
-    void Promise.allSettled([fetchHealth(controller.signal), fetchRegions(controller.signal)]).then(
-      ([healthRes, regionsRes]) => {
-        if (controller.signal.aborted) return;
-        let resolvedLastMonth = exampleData.meta.last_month || DEFAULT_END_MONTH;
-        if (healthRes.status === 'fulfilled' && healthRes.value.last_month) {
-          resolvedLastMonth = healthRes.value.last_month;
-          setLastMonth(resolvedLastMonth);
-        }
-        if (regionsRes.status === 'fulfilled') {
-          setRegions(regionsRes.value);
-          const isAutomatedWebDriver = typeof navigator !== 'undefined' && navigator.webdriver === true;
-          if (regionsRes.value.length > 0 && !userInteractedRef.current && !isAutomatedWebDriver) {
-            const firstRegion = regionsRes.value[0];
-            autoLoadTimerRef.current = window.setTimeout(async () => {
-              if (controller.signal.aborted || userInteractedRef.current) return;
-              const initialReq = buildCalendarRequest(
-                { type: 'region', region_id: firstRegion.region_id },
-                { start: DEFAULT_START_MONTH, end: resolvedLastMonth },
-              );
-              try {
-                const response = await fetchCalendar(initialReq, controller.signal);
-                if (controller.signal.aborted || userInteractedRef.current) return;
-                if (!isNoCoverage(response)) {
-                  setActiveArea(initialReq.area);
-                  setActiveRequest(initialReq);
-                  setApiResult(response);
-                  setApiUnavailableFallback(false);
-                }
-              } catch {
-                if (controller.signal.aborted || userInteractedRef.current) return;
-                setApiUnavailableFallback(true);
-              }
-            }, 80);
-          }
-        } else if (healthRes.status === 'rejected') {
-          setApiUnavailableFallback(true);
-        }
-      },
-    );
-
-    return () => {
-      controller.abort();
-      if (autoLoadTimerRef.current !== null) {
-        window.clearTimeout(autoLoadTimerRef.current);
-      }
-      requestAbortRef.current?.abort();
-    };
-  }, []);
-
-  const handleSubmitRequest = useCallback(
-    async (request: CalendarRequest) => {
-      cancelInitialAutoLoad();
-      requestAbortRef.current?.abort();
-      const controller = new AbortController();
-      requestAbortRef.current = controller;
-
-      setActiveArea(request.area);
-      setActiveRequest(request);
-      setIsLoading(true);
-      setRequestError(null);
-      setApiUnavailableFallback(false);
-
-      try {
-        const response = await fetchCalendar(request, controller.signal);
-        if (controller.signal.aborted) return;
-        setApiResult(response);
-        setIsLoading(false);
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        setIsLoading(false);
-        if (err instanceof ApiClientError && (err.status === 429 || CONTRACT_ERROR_CODES.has(err.code))) {
-          setRequestError(err.message);
-          return;
-        }
-        // Sem API no ar, mantém o JSON de exemplo em modo demo.
-        setApiUnavailableFallback(true);
-      }
+  const openExample = useCallback(
+    (monthKey: string | null) => {
+      ex.showExample();
+      setStoryIndex(0);
+      setSelectedKey(monthKey);
+      scrollToExplore();
     },
-    [cancelInitialAutoLoad],
+    [ex],
   );
 
-  const isDemo = apiResult === null;
-  const noCoverage = apiResult !== null && isNoCoverage(apiResult);
-  const data = !isDemo && !noCoverage ? (apiResult as CalendarResponse) : exampleData;
-  const includesEstimatedYears = data.years.some((y) => y.complete && y.source !== 'observed_viirs');
-  const stale = !isDemo && !requestError && isDataStale(apiResult.meta.updated_at);
+  const selectArea: typeof ex.selectArea = (area) => {
+    setSelectedKey(null);
+    ex.selectArea(area);
+  };
+
+  let statusChip = <span className="chip chip--live">NASA FIRMS data</span>;
+  if (ex.result.kind === 'loading') statusChip = <span className="chip chip--muted">Loading…</span>;
+  else if (showingDemoForOtherArea) statusChip = <span className="chip chip--demo">Demo data, not this area</span>;
+  else if (ex.shown?.isDemo) statusChip = <span className="chip chip--demo">Demo data</span>;
+  else if (ex.result.kind === 'no_coverage') statusChip = <span className="chip chip--muted">Outside coverage</span>;
+  else if (ex.result.kind === 'error' || ex.result.kind === 'rate_limited') statusChip = <span className="chip chip--muted">Not loaded</span>;
 
   return (
-    <section
-      className="tool-panel"
-      aria-labelledby="tool-title"
-      onPointerDownCapture={cancelInitialAutoLoad}
-      onMouseDownCapture={cancelInitialAutoLoad}
-      onKeyDownCapture={cancelInitialAutoLoad}
-      onFocusCapture={cancelInitialAutoLoad}
-      onChangeCapture={cancelInitialAutoLoad}
-    >
-      <h2 id="tool-title">Explore an area</h2>
-      <p>Choose an area and a period to see its monthly fire calendar since 2003.</p>
+    <>
+      {heroHost &&
+        createPortal(
+          <HeroCalendar months={ex.hero.data.months} areaLabel={ex.hero.label} isDemo={ex.hero.isDemo} onOpenExample={openExample} />,
+          heroHost,
+        )}
 
-      <AreaPeriodControls
-        regions={regions}
-        lastMonth={lastMonth}
-        activeArea={activeArea}
-        onSubmitRequest={handleSubmitRequest}
-      />
+      <div className="workspace">
+        <div className="selection-bar">
+          <h2 id="explore-title" className="selection-bar__title">
+            Explore an area
+          </h2>
+          <dl className="selection-bar__fields">
+            <div>
+              <dt>Area</dt>
+              <dd>{ex.selection.label}</dd>
+            </div>
+            <div>
+              <dt>Period</dt>
+              <dd>{periodLabel}</dd>
+            </div>
+          </dl>
+          <div className="selection-bar__status">{statusChip}</div>
+        </div>
 
-      {isLoading && (
-        <p className="tool-status" role="status" aria-live="polite">
-          Loading fire calendar…
-        </p>
-      )}
-
-      {requestError && (
-        <p className="tool-alert" role="alert">
-          {requestError}
-        </p>
-      )}
-
-      {!requestError && stale && (
-        <p className="tool-alert" role="alert">
-          Data may be out of date (more than 6 hours old).
-        </p>
-      )}
-
-      {isDemo && !requestError && (
-        <p className="example-notice" role="note">
-          {apiUnavailableFallback
-            ? 'API unavailable — showing example data for an area in the Amazon (demo mode).'
-            : 'Showing example data for an area in the Amazon (demo mode). Select a region, draw on the map, or enter coordinates.'}
-        </p>
-      )}
-
-      {noCoverage ? (
-        <>
-          <p className="coverage-notice" role="status">
-            {apiResult.coverage?.message ?? 'No data for this area yet.'}
+        {showingDemoForOtherArea && (
+          <p className="dark-notice" role="status">
+            <strong>API unavailable.</strong> Your area is outlined on the map, but the figures below belong to the demo example.
           </p>
-          <ExportPanel data={data} request={activeRequest} isDemo={isDemo} disabled={true} />
-        </>
-      ) : (
-        <>
-          {!isDemo && apiResult.coverage?.status === 'partial' && apiResult.coverage.message && (
-            <p className="coverage-notice" role="note">
-              {apiResult.coverage.message}
-            </p>
-          )}
-          <KeyIndicators data={data} />
-          <RecentPanel recent={data.recent} updatedAt={data.meta.updated_at} />
-          <FireCalendar months={data.months} />
-          <div className="history-grid">
-            <SeasonalPattern seasonality={data.seasonality} includesEstimatedYears={includesEstimatedYears} />
-            <YearRanking years={data.years} />
+        )}
+
+        <div className="ws-top">
+          <div className="ws-map">
+            <SelectionPanel
+              regions={ex.regions}
+              apiStatus={ex.apiStatus}
+              selection={ex.selection}
+              period={ex.period}
+              lastMonth={ex.lastMonth}
+              onSelectArea={selectArea}
+              onSetPeriod={ex.setPeriod}
+              onShowExample={() => openExample(null)}
+            />
+            <MapStage shape={ex.selection.shape} onSelectPolygon={(geometry) => selectArea({ type: 'geojson', geometry })} />
           </div>
-          <ExportPanel data={data} request={activeRequest} isDemo={isDemo} disabled={false} />
-        </>
-      )}
-    </section>
+          <Summary
+            shown={ex.shown}
+            result={ex.result}
+            stale={ex.stale}
+            selectionIsExample={ex.selection.isExample}
+            periodIgnoredInDemo={ex.periodIgnoredInDemo}
+            story={story}
+            storyIndex={storyIndex}
+            onStoryIndex={setStoryIndex}
+            onRetry={ex.retry}
+          />
+        </div>
+
+        <HistoryPanel
+          shown={ex.shown}
+          result={ex.result}
+          selectedKey={selectedKey}
+          onSelectKey={setSelectedKey}
+          highlightMonthIndex={step?.monthIndex ?? null}
+          highlightYear={step?.year ?? null}
+          areaLabel={areaLabel}
+          periodLabel={periodLabel}
+          request={ex.request}
+        />
+      </div>
+    </>
   );
 }

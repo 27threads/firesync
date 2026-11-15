@@ -40,7 +40,6 @@ describe('index.html (static page shell)', () => {
       'Decree 080/2020',
       'NASA EOSDIS GIBS',
       'OpenStreetMap',
-      'CARTO',
       'Leaflet',
       'Leaflet-Geoman',
     ]) {

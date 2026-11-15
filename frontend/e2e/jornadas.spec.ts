@@ -101,7 +101,7 @@ test.describe('Jornadas do usuário', () => {
     await page.goto('/');
     await page.getByRole('combobox', { name: /region/i }).selectOption({ label: 'Amazônia' });
     const download = page.waitForEvent('download');
-    await page.getByRole('button', { name: /download|export/i }).click();
+    await page.getByRole('button', { name: /audit package/i }).click();
     expect((await download).suggestedFilename()).toMatch(/^firesync-\d{4}-\d{2}-\d{2}\.zip$/);
   });
 
