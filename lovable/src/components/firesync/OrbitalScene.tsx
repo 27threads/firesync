@@ -2,10 +2,10 @@ import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import terraAsset from '@/assets/satellites/terra.glb.asset.json';
-import suomiAsset from '@/assets/satellites/suomi-npp-uncompressed.glb.asset.json';
-import earthAsset from '@/assets/earth-surface.jpg.asset.json';
-import fastEarthAsset from '@/assets/earth-fast.jpg.asset.json';
+import aquaUrl from '@/assets/satellites/aqua.glb?url';
+import suomiUrl from '@/assets/satellites/suomi-npp.glb?url';
+import earthUrl from '@/assets/earth-surface.jpg?url';
+import fastEarthUrl from '@/assets/earth-fast.jpg?url';
 import { SPACECRAFT_LABELS } from '@/lib/opening-copy';
 import { advanceGlobeRotation, BLUE_MARBLE_TILES, mercatorLatitude, smoothPhase, surfaceCameraDistance, SURFACE_VIEW, tilePosition } from '@/lib/globe-transition';
 
@@ -163,7 +163,7 @@ export default function OrbitalScene({ playing, progress, onSurfaceReady, onGlob
     const earthLoaded = new Promise<void>(resolve => { releaseSpacecraft = resolve; });
     let detailedTexture: THREE.Texture | undefined;
     const textureLoader = new THREE.TextureLoader();
-    const texture = textureLoader.load(fastEarthAsset.url, loaded => {
+    const texture = textureLoader.load(fastEarthUrl, loaded => {
       if (disposed) { loaded.dispose(); return; }
       loaded.colorSpace = THREE.SRGBColorSpace;
       surface.map = loaded;
@@ -172,7 +172,7 @@ export default function OrbitalScene({ playing, progress, onSurfaceReady, onGlob
       globeReady.current?.();
       releaseSpacecraft?.();
       void loadAlignedImagery();
-      detailedTexture = textureLoader.load(earthAsset.url, detailed => {
+      detailedTexture = textureLoader.load(earthUrl, detailed => {
         if (disposed) { detailed.dispose(); return; }
         detailed.colorSpace = THREE.SRGBColorSpace;
         surface.map = detailed;
@@ -209,10 +209,10 @@ export default function OrbitalScene({ playing, progress, onSurfaceReady, onGlob
       label.append(sensorName, spacecraftName);
       label.hidden = true;
       element.appendChild(label);
-      const asset = i === 0 ? terraAsset : suomiAsset;
+      const modelUrl = i === 0 ? aquaUrl : suomiUrl;
       void earthLoaded.then(() => {
       if (disposed) return;
-      loader.load(asset.url, gltf => {
+      loader.load(modelUrl, gltf => {
         const model = gltf.scene;
         if (disposed) { disposeModel(model); return; }
         const bounds = new THREE.Box3().setFromObject(model);
@@ -342,5 +342,5 @@ export default function OrbitalScene({ playing, progress, onSurfaceReady, onGlob
       renderer.domElement.remove();
     };
   }, []);
-  return <div className="orbital-canvas" ref={host}>{unavailable && <div className="orbital-fallback"><img src={earthAsset.url} alt="Earth surface" /><span>Interactive globe unavailable on this device</span></div>}</div>;
+  return <div className="orbital-canvas" ref={host}>{unavailable && <div className="orbital-fallback"><img src={earthUrl} alt="Earth surface" /><span>Interactive globe unavailable on this device</span></div>}</div>;
 }
