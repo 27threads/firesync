@@ -296,14 +296,43 @@ Sempre GeoJSON, que o Leaflet desenha direto, sem precisar da biblioteca H3 no f
   "features": [
     { "type": "Feature",
       "geometry": { "type": "Polygon", "coordinates": [[[-60.31, -3.05], [-60.22, -2.97], [-60.11, -3.01], [-60.10, -3.12], [-60.19, -3.20], [-60.30, -3.16], [-60.31, -3.05]]] },
-      "properties": { "h3": "85a8100ffffffff", "detections": 37, "n_low": 21, "n_medium": 12, "n_high": 4 } }
-  ]
+      "properties": { "h3": "85a8100ffffffff", "detections": 37, "n_low": 21, "n_medium": 12, "n_high": 4,
+                      "alert_cell": "84a8101ffffffff", "alert_level": "critical" } }
+  ],
+  "alerts": {
+    "data_through": "2026-11-14",
+    "alert_rules_version": "1.1",
+    "unit": "H3 resolution 4 cell (about 1,770 km2)",
+    "horizon_days": 14,
+    "overall_share": 0.042,
+    "priority": [
+      { "h3": "84a8101ffffffff", "alert_level": "critical", "detections_7d": 46, "typical_median": 7,
+        "share_followed_by_high": 0.266, "center": [-60.2, -3.1] }
+    ]
+  }
 }
 ```
 
 - `h3` vai como **texto**, nunca como número (ver "H3 IDs").
 - O front pinta os hexágonos com a mesma paleta do calendário (cividis em escala log).
 - `n_low`, `n_medium` e `n_high` são a contagem por classe de intensidade, e somam `detections`.
+- **`alert_cell` e `alert_level` (RFC 0003):** o nível de urgência (`normal`, `attention`, `critical`) da célula H3 de **resolução 4** que contém o hexágono, pela mesma regra `v1` do `recent`, aplicada à contagem diária da própria célula. A resolução 4 é a unidade em que a `v1` foi testada no backtest, por isso o nível é sempre o dela, mesmo quando o mapa mostra hexágonos menores (zoom 5 a 7). `null` quando a célula não tem histórico.
+
+**`alerts` (os dois modos, RFC 0003):** onde olhar primeiro, entre as células de resolução 4 com fogo recente na área visível.
+
+| Campo | Significado |
+| --- | --- |
+| `data_through` | Último dia das contagens diárias usado no nível |
+| `alert_rules_version` | Versão do `alert_rules.json` |
+| `unit`, `horizon_days`, `overall_share` | Do bloco `historical_outcome` do `alert_rules.json`: a unidade testada, o horizonte (14 dias) e a parte média das semanas seguida de muito fogo (4,2%) |
+| `priority` | Células em **Crítico**, depois em **Atenção**, cada grupo da maior para a menor razão entre a semana e o normal. Normal fica de fora |
+| `priority[].share_followed_by_high` | Com que frequência esse nível foi seguido de detecções incomumente altas nos 14 dias seguintes, no backtest de 2013 a 2024: Normal 2,6%, Atenção 10,7%, Crítico 26,6%. **É uma frequência do passado, não uma previsão** |
+| `priority[].center` | `[lon, lat]` do centro da célula, para o front levar o mapa até ela |
+
+Regras do nível no mapa:
+- Os dias sem linha em `agregados_diarios` contam como zero, como no backtest. Diferente do `recent`, o mapa não exclui as janelas com dia indisponível. Janelas que começam antes do VIIRS (fevereiro de 2012) não entram.
+- **Limite de desempenho:** com mais de 4.000 células de resolução 4 com fogo na área visível, o bloco `alerts` e os campos de alerta não vêm (o mapa continua igual). Na série de 2012 a 2024, a pior semana do Brasil inteiro teve 3.069 células com fogo (P95 de 2.770, mediana de 1.378), então o limite cobre até o pico da temporada. **O tempo da consulta no pico ainda não foi medido no banco**; o resultado fica em cache até o próximo foco sair da janela.
+- As taxas são do backtest na série dos arquivos públicos do FIRMS, que reproduz o banco (ganho de +6,1 contra +6,0 do PR #85).
 
 **`points`:**
 
@@ -317,9 +346,12 @@ Sempre GeoJSON, que o Leaflet desenha direto, sem precisar da biblioteca H3 no f
   "features": [
     { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-60.21, -3.12] },
       "properties": { "satellite": "N20", "acquired_utc": "2026-11-14T05:42:00Z", "confidence": "nominal", "intensity": "medium", "daynight": "N" } }
-  ]
+  ],
+  "alerts": { "data_through": "2026-11-14", "alert_rules_version": "1.1", "priority": [] }
 }
 ```
+
+No modo `points`, o bloco `alerts` vem igual ao do modo `hexagons` (o exemplo acima está resumido).
 
 ### Regras
 

@@ -18,7 +18,8 @@ from backend.domain.calculations.map_features import ALERT_RESOLUTION
 POINT_LIMIT = 50_000
 DATABASE_RESOLUTION = 6
 # Above this many resolution 4 cells with recent fire in view, the map skips alert levels instead of slowing down.
-MAX_ALERT_CELLS = 3_000
+# The worst 7-day week of 2012-2024 had 3,069 cells with fire in Brazil (P95 2,770, median 1,378).
+MAX_ALERT_CELLS = 4_000
 VALID_DETECTION = "confianca IN ('nominal','alta') AND (tipo = 0 OR tipo IS NULL) AND frp > 0"
 VIIRS_START = SATELLITE_SWITCHES[0][0]
 
