@@ -46,6 +46,32 @@ Antes de confiar no resultado, conferimos o processamento. A área queimada na A
 - Quando o modelo **não** avisa ("menor" ou "médio"), 97,5% das vezes não queimou.
 - Dos lugares que queimaram, **69% estavam avisados** ("alto" ou "muito alto").
 
+## Para quem vai agir: quanto do fogo cabe em poucas células
+
+Uma equipe não cobre o mapa inteiro. A pergunta prática é: se ela ficar só nas células de nota mais alta a cada semana, quanto da área queimada estava ali? (Análise exploratória, depois do critério; Amazônia, 2021 a 2024.)
+
+| Células cobertas por semana | Área coberta | Parte da área queimada que caiu ali | Ao acaso |
+| --- | --- | --- | --- |
+| 1% (21 células) | ~38 mil km² | 15% | 1% |
+| 2% (43 células) | ~75 mil km² | 23% | 2% |
+| 5% (106 células) | ~188 mil km² | **40%** | 5% |
+| 10% (213 células) | ~377 mil km² | 58% | 10% |
+| 20% (426 células) | ~753 mil km² | 77% | 20% |
+
+Escolhendo pela nota, 5% das células pegam 40% da área queimada, **8 vezes mais** que escolhendo ao acaso.
+
+**Isso não é redução de queimada.** O teste mede onde o fogo esteve, e não quanto fogo uma ação evitaria. Uma redução só pode ser estimada como cenário: **redução = parte da área queimada coberta × parte do fogo que a equipe evita ali**. Por exemplo, cobrindo 5% das células e evitando metade do fogo ali, seriam 20% menos área queimada; evitando 10%, seriam 4%. A segunda parte nunca foi medida para o firesync, então esses números são hipotéticos e não entram no site nem no pitch como resultado.
+
+## Outras janelas de tempo
+
+A nota foi feita para os 14 dias seguintes. Usando a **mesma nota** contra a área queimada em outras janelas (AUC contra 1 km² ou mais queimado; exploratório):
+
+| Janela | 3 dias | 7 dias | **14 dias** | 30 dias | 60 dias | 90 dias |
+| --- | --- | --- | --- | --- | --- | --- |
+| AUC | 0,909 | 0,902 | **0,898** | 0,890 | 0,870 | 0,846 |
+
+A nota funciona bem em prazos curtos e perde força devagar com o tempo, mas continua acima de 0,80 até 90 dias. Quanto mais longe, mais pesa o que o modelo não vê (seca, desmatamento novo, tempo). Um modelo treinado para 30 ou 90 dias não foi testado.
+
 ## Os lugares que queimaram sem aviso
 
 23% das queimadas caíram na faixa "menor". Olhando um por um:
