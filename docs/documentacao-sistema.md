@@ -161,7 +161,7 @@ As responsabilidades e pendências ficam em [tarefas](tarefas.md). A documentaç
 
 ## 12. Anexo técnico: ambiente de desenvolvimento
 
-Pré-requisitos: Python 3.12, Node.js 20 (versão da CI), npm e PostGIS; Docker é utilizado nos testes com banco. Na raiz:
+Pré-requisitos: Python 3.12, Node.js 20 (versão da CI), npm e PostGIS; Docker é utilizado nos testes com banco. Execute os comandos na raiz do repositório. No Linux/macOS:
 
 ```bash
 python -m venv .venv
@@ -172,7 +172,24 @@ npm --prefix frontend ci
 python -m uvicorn backend.adapters.inbound.http.app:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
-Em outro terminal: `cd frontend` e `VITE_DEV_API_PROXY=http://127.0.0.1:8000 npm run dev`. Para verificar: `python -m pytest backend/tests -q`, `npm --prefix frontend test` e `npm --prefix frontend run build`. Testes de integração exigem `TEST_DATABASE_URL` apontando para banco descartável; o teste HTTP ao vivo exige `API_URL`.
+No Windows (PowerShell), após criar o ambiente com `python -m venv .venv`, ative-o com `.venv\Scripts\Activate.ps1`; os comandos de instalação e inicialização da API são os mesmos. Configure `DATABASE_URL` antes de iniciar a API (`export DATABASE_URL=...` no Bash ou `$env:DATABASE_URL = '...'` no PowerShell), sem versionar credenciais.
+
+Em outro terminal, inicie o front:
+
+```bash
+cd frontend
+VITE_DEV_API_PROXY=http://127.0.0.1:8000 npm run dev
+```
+
+No PowerShell:
+
+```powershell
+cd frontend
+$env:VITE_DEV_API_PROXY = 'http://127.0.0.1:8000'
+npm run dev
+```
+
+Para verificar: `python -m pytest backend/tests -q`, `npm --prefix frontend test` e `npm --prefix frontend run build`. Testes de integração exigem `TEST_DATABASE_URL` apontando para banco descartável; o teste HTTP ao vivo exige `API_URL`.
 
 O gerador `backend/scripts/demo_data.py` é exclusivo de banco vazio e descartável com nome terminado em `_test` ou `_demo`. Instalação do pipeline, carga sintética e Playwright: [backend](../backend/README.md), [pipeline](../data-pipeline/README.md) e [testes](testes.md).
 
