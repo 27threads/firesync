@@ -31,6 +31,14 @@ Saídas na pasta:
     prova_cruzada.csv    fator do modelo (VIIRS por foco do MODIS) contra o fator por contagens
     relatorio_modelo_a.txt  resumo, com a janela usada
     curva_deteccao.png   (se o matplotlib estiver instalado) a curva para a tela de Método
+
+Etapa B, corte no tempo (um ano de cada vez, para caber na memória): treina em alguns anos e mede em anos que o modelo
+nunca viu, e mostra a curva de cada ano (a deriva do Aqua aparece aí):
+    python harmonizacao/modelo_a.py --pasta firms/ --treino 2019 2020 2021 --teste 2022 2023 2024 --janela 90
+        --biomas Biomas_250mil.zip --saida pasta [--cache pares/]
+    A pasta tem modis_{ano}_Brazil.csv e viirs-snpp_{ano}_Brazil.csv (os arquivos anuais por país do FIRMS). O --cache
+    guarda os pares de cada ano e a janela usada, e a segunda rodada não relê os CSV.
+    medidas_por_ano.csv, calibracao_por_ano.csv, curva_por_ano.csv (e .png), totais_por_ano.csv, relatorio_temporal.txt
 """
 import argparse
 import sys
@@ -275,6 +283,135 @@ def executar(aqua_bruto, snpp_bruto, biomas, janela=JANELA_MINUTOS, semente=SEME
             "grupos": snpp[["grupo"]], "relatorio": relatorio}
 
 
+# ---------------------------------------------------------------- etapa B: corte no tempo, ano a ano
+
+COLUNAS_OLHADAS = ["acq_date", "daynight", "frp", "bright_ti4", "high_conf", "mes", "bioma", "modis_scan_mediano", "viu",
+                   "olhando"]
+
+
+def preparar_ano(aqua_bruto, snpp_bruto, biomas, janela=JANELA_MINUTOS):
+    """Um ano inteiro: limpa, atribui o bioma e forma os pares. Guarda só os fogos olhados e os totais do ano.
+
+    É o que cabe na memória: cada ano é processado sozinho (o resto do código só precisa dos fogos olhados).
+    """
+    aqua = preparar(atribuir_bioma(limpar_aqua(aqua_bruto), biomas))
+    snpp = preparar(atribuir_bioma(limpar_snpp(snpp_bruto), biomas))
+    if snpp.empty:
+        raise ValueError("sem fogos do S-NPP depois da limpeza")
+    snpp = parear(snpp, aqua, janela)
+    olhados = snpp.loc[snpp["olhando"], COLUNAS_OLHADAS].reset_index(drop=True)
+    olhados["acq_date"] = olhados["acq_date"].astype(str)
+    ano = int(snpp["acq_date"].astype(str).str[:4].mode().iloc[0])
+    totais = {"ano": ano, "snpp": int(len(snpp)), "aqua": int(len(aqua)), "olhando": int(len(olhados)),
+              "viram": int(olhados["viu"].sum()), "janela": int(janela)}
+    return {"olhados": olhados, "totais": totais}
+
+
+def _base_do_ano(pares, anos):
+    d = pd.concat([pares[a]["olhados"] for a in anos], ignore_index=True)
+    return d.assign(periodo=d["daynight"], faixa=faixa_frp(d["frp"]))
+
+
+def executar_temporal(pares, anos_treino, anos_teste, biomas, semente=SEMENTE, minimo_tabela=30):
+    """Treina nos anos de treino e mede em cada ano de teste, que o modelo nunca viu (corte no tempo).
+
+    pares: {ano: resultado de preparar_ano}. Devolve DataFrames (medidas, calibracao, curva_por_ano, totais_por_ano)
+    e o texto do relatório. Mostra se a curva e o modelo valem em anos novos, ou se a deriva do Aqua atrapalha.
+    """
+    if set(anos_treino) & set(anos_teste):
+        raise ValueError(f"anos em treino e teste ao mesmo tempo: {sorted(set(anos_treino) & set(anos_teste))}")
+    faltam = sorted((set(anos_treino) | set(anos_teste)) - set(pares))
+    if faltam:
+        raise ValueError(f"sem dados para os anos {faltam}")
+    treino = _base_do_ano(pares, sorted(anos_treino))
+    lista_biomas = sorted(biomas["bioma"].dropna().unique())
+    tabela = ajustar_tabela(treino, minimo_tabela)
+    boosting = ajustar_boosting(treino, lista_biomas, semente)
+    medidas, calib = [], []
+    for ano in sorted(anos_teste):
+        teste = _base_do_ano(pares, [ano])
+        if teste.empty:
+            raise ValueError(f"sem dados: o ano {ano} não tem fogos em áreas que o MODIS olhava")
+        previsoes = {"referencia": pd.Series(float(treino["viu"].mean()), index=teste.index),
+                     "tabela": prever_tabela(tabela, teste), "boosting": prever_boosting(boosting, teste, lista_biomas)}
+        for nome, p in previsoes.items():
+            medidas.append({"ano": ano, "modelo": nome, "n": int(len(teste)), **medir(teste["viu"], p)})
+            if nome != "referencia":
+                calib.append(calibracao(teste["viu"], p, nome).assign(ano=ano))
+    curvas = []
+    for ano in sorted(set(anos_treino) | set(anos_teste)):
+        base = _base_do_ano(pares, [ano])
+        por_bioma = base.groupby(["bioma", "periodo", "faixa"], observed=True)["viu"].agg(taxa_viu="mean", n="size").reset_index()
+        todos = base.groupby(["periodo", "faixa"], observed=True)["viu"].agg(taxa_viu="mean", n="size").reset_index().assign(bioma="todos")
+        curvas.append(pd.concat([todos, por_bioma], ignore_index=True).assign(ano=ano))
+    curva_por_ano = pd.concat(curvas, ignore_index=True)[["ano", "bioma", "periodo", "faixa", "taxa_viu", "n"]]
+    totais = pd.DataFrame([{**pares[a]["totais"], "papel": "treino" if a in anos_treino else "teste"}
+                           for a in sorted(set(anos_treino) | set(anos_teste))])
+    medidas = pd.DataFrame(medidas)
+    janelas = sorted(totais["janela"].unique())
+    relatorio = "\n".join([
+        "Modelo A, etapa B (RFC 0002): corte no tempo. O modelo treina nos anos de treino e é medido em anos que nunca viu",
+        f"treino: {sorted(anos_treino)} | teste: {sorted(anos_teste)} | janela de horário: {', '.join(map(str, janelas))} minutos"
+        f" | área olhada: {OLHANDO_KM:.0f} km",
+        f"fogos olhados no treino: {len(treino):,} | vistos pelo MODIS: {treino['viu'].mean():.1%}",
+        "", "Totais por ano (snpp e aqua: fogos limpos; olhando: fogos em áreas que o MODIS olhava; viram: os que ele viu)",
+        totais.to_string(index=False),
+        "", "Medidas por ano de teste (AUC: 1 é perfeito, 0,5 é sorteio; Brier: menor é melhor;"
+        " taxa prevista contra observada mostra se a deriva do Aqua desalinha o modelo)",
+        medidas.round(4).to_string(index=False)])
+    return {"medidas": medidas, "calibracao": pd.concat(calib, ignore_index=True), "curva_por_ano": curva_por_ano,
+            "totais_por_ano": totais, "relatorio": relatorio}
+
+
+def grafico_por_ano(curva_por_ano, saida):
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return "matplotlib não instalado: gráfico por ano não gerado (a curva está no CSV)."
+    todos = curva_por_ano[curva_por_ano["bioma"] == "todos"]
+    fig, eixos = plt.subplots(1, 2, figsize=(11, 4.2), sharey=True)
+    for eixo, (periodo, titulo) in zip(eixos, (("D", "Day"), ("N", "Night"))):
+        for ano, g in todos[todos["periodo"] == periodo].groupby("ano"):
+            g = g.set_index("faixa").reindex(ROTULOS_FAIXA)
+            eixo.plot(ROTULOS_FAIXA, g["taxa_viu"] * 100, marker="o", label=str(ano))
+        eixo.set_title(titulo)
+        eixo.set_xlabel("Fire radiative power of the VIIRS detection (MW)")
+        eixo.set_ylim(0, 100)
+    eixos[0].set_ylabel("Chance that MODIS also sees the fire (%)")
+    com_curvas = next((e for e in eixos if e.get_legend_handles_labels()[0]), None)
+    if com_curvas is not None:
+        com_curvas.legend(frameon=False, title="Year")
+    fig.tight_layout()
+    fig.savefig(saida / "curva_por_ano.png", dpi=130)
+    plt.close(fig)
+    return "Gráfico: curva_por_ano.png"
+
+
+def pares_do_ano(pasta, ano, biomas, janela, cache=None):
+    """Lê os CSV do ano (modis_{ano}_Brazil.csv e viirs-snpp_{ano}_Brazil.csv) e forma os pares, ou lê o cache."""
+    import json
+
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    arquivo = Path(cache) / f"pares_{ano}_j{janela}.parquet" if cache else None
+    if arquivo is not None and arquivo.exists():
+        tabela = pq.read_table(arquivo)
+        return {"olhados": tabela.to_pandas(), "totais": json.loads(tabela.schema.metadata[b"totais"])}
+    tipos = {"acq_time": str, "version": str, "confidence": str}
+    pasta = Path(pasta)
+    r = preparar_ano(pd.read_csv(pasta / f"modis_{ano}_Brazil.csv", dtype=tipos),
+                     pd.read_csv(pasta / f"viirs-snpp_{ano}_Brazil.csv", dtype=tipos), biomas, janela)
+    if arquivo is not None:
+        arquivo.parent.mkdir(parents=True, exist_ok=True)
+        tabela = pa.Table.from_pandas(r["olhados"], preserve_index=False)
+        pq.write_table(tabela.replace_schema_metadata({**(tabela.schema.metadata or {}), b"totais": json.dumps(r["totais"]).encode()}),
+                       arquivo)
+    return r
+
+
 def grafico(curva, saida):
     try:
         import matplotlib
@@ -300,18 +437,38 @@ def grafico(curva, saida):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--modis", required=True, help="CSV do Archive Download (MODIS: Terra e Aqua juntos)")
-    ap.add_argument("--viirs", required=True, help="CSV do Archive Download (VIIRS S-NPP)")
+    ap.add_argument("--modis", help="CSV do Archive Download (MODIS: Terra e Aqua juntos)")
+    ap.add_argument("--viirs", help="CSV do Archive Download (VIIRS S-NPP)")
     ap.add_argument("--biomas", required=True, help="Biomas do IBGE (zip ou GeoJSON, com a coluna CD_Bioma)")
     ap.add_argument("--saida", required=True)
     ap.add_argument("--janela", type=int, default=JANELA_MINUTOS)
     ap.add_argument("--semente", type=int, default=SEMENTE)
     ap.add_argument("--bloco-res", type=int, default=BLOCO_H3)
+    ap.add_argument("--pasta", help="etapa B: pasta com modis_{ano}_Brazil.csv e viirs-snpp_{ano}_Brazil.csv, um por ano")
+    ap.add_argument("--treino", type=int, nargs="+", help="etapa B: anos de treino")
+    ap.add_argument("--teste", type=int, nargs="+", help="etapa B: anos de teste (nunca vistos no treino)")
+    ap.add_argument("--cache", help="etapa B: pasta onde guardar os pares de cada ano, para não refazer")
     a = ap.parse_args()
 
-    tipos = {"acq_time": str, "version": str, "confidence": str}
     saida = Path(a.saida)
     saida.mkdir(parents=True, exist_ok=True)
+    if a.pasta:
+        if not a.treino or not a.teste:
+            ap.error("--pasta pede --treino e --teste")
+        biomas = preparar_biomas(gpd.read_file(a.biomas))
+        pares = {ano: pares_do_ano(a.pasta, ano, biomas, a.janela, a.cache) for ano in sorted(set(a.treino) | set(a.teste))}
+        r = executar_temporal(pares, a.treino, a.teste, biomas, a.semente)
+        r["medidas"].to_csv(saida / "medidas_por_ano.csv", index=False)
+        r["calibracao"].to_csv(saida / "calibracao_por_ano.csv", index=False)
+        r["curva_por_ano"].to_csv(saida / "curva_por_ano.csv", index=False)
+        r["totais_por_ano"].to_csv(saida / "totais_por_ano.csv", index=False)
+        texto = r["relatorio"] + "\n\n" + grafico_por_ano(r["curva_por_ano"], saida)
+        (saida / "relatorio_temporal.txt").write_text(texto, encoding="utf-8")
+        print(texto)
+        return
+    if not a.modis or not a.viirs:
+        ap.error("sem --pasta, --modis e --viirs são obrigatórios")
+    tipos = {"acq_time": str, "version": str, "confidence": str}
     r = executar(pd.read_csv(a.modis, dtype=tipos), pd.read_csv(a.viirs, dtype=tipos),
                  preparar_biomas(gpd.read_file(a.biomas)), a.janela, a.semente, a.bloco_res)
     r["curva"].to_csv(saida / "curva_deteccao.csv", index=False)

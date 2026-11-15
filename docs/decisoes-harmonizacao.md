@@ -239,6 +239,28 @@ Quando o gradient boosting diz 11%, o MODIS viu 11,5% desses fogos; quando diz 4
 
 **O que pode ser dito:** a curva é válida para áreas que o MODIS estava olhando; a prova cruzada, como foi definida, **compara unidades diferentes**, então ela não confirma nem desmente o fator por contagens. O que valida o fator é a validação deixando um ano de fora (seção 4). Para virar um teste de verdade, ela precisaria converter "fogos do VIIRS cobertos" em "fogos do MODIS" pelo número médio de fogos do VIIRS por pixel do MODIS, e comparar na mesma população de fogos (melhoria possível, não feita).
 
+### Resultado da etapa B (15/11/2026): corte no tempo, treino em 2019 a 2021 e teste em 2022 a 2024
+
+O modelo treina em anos em que o Aqua ainda estava na órbita original (2019 a 2021) e é medido em três anos que ele nunca viu (2022 a 2024), com os arquivos anuais públicos do FIRMS (Brasil, S-NPP e Aqua), sem o banco. A janela de horário é de 90 minutos em todos os anos, para comparar na mesma régua. Cada ano leva cerca de 20 segundos (`modelo_a.py --pasta ... --treino 2019 2020 2021 --teste 2022 2023 2024 --janela 90`).
+
+| Ano de teste | Fogos olhados | AUC (boosting) | AUC (tabela) | MODIS viu (observado) | Chance prevista pelo boosting |
+| --- | --- | --- | --- | --- | --- |
+| 2022 | 764.567 | 0,733 | 0,685 | 39,7% | 41,0% |
+| 2023 | 656.786 | 0,717 | 0,681 | 39,1% | 40,2% |
+| 2024 | 983.350 | 0,746 | 0,699 | 43,9% | 43,7% |
+
+- **O modelo vale em anos que nunca viu.** O AUC do boosting fica entre 0,72 e 0,75, igual ao da etapa A (0,753, com corte no espaço), e a tabela entre 0,68 e 0,70 (0,708 na etapa A). Os dois ficam bem acima da referência de taxa única (0,5).
+- **A deriva do Aqua não o desalinha.** A chance prevista fica a no máximo 1,3 ponto percentual da observada nos três anos (1,3 em 2022, 1,1 em 2023 e −0,2 em 2024).
+- **A curva de detecção quase não muda de ano para ano** ([`curva_por_ano_2019_2024.png`](img/modelo/curva_por_ano_2019_2024.png), dados em [`curva_por_ano_2019_2024.csv`](img/modelo/curva_por_ano_2019_2024.csv)). De dia, o MODIS vê de 12% a 15% dos fogos abaixo de 2 MW e de 60% a 71% dos de 25 MW ou mais. De noite, de 18% a 23% e de 83% a 92%. As curvas de 2022 e 2023 ficam de 3 a 5 pontos abaixo das de 2019 a 2021 de dia, e a de 2024 fica acima (71% em 25 MW ou mais, o mesmo número da etapa A). Isso é compatível com a deriva, mas **não separa** a sensibilidade do sensor da mudança do fogo na hora entre as passagens: os 90 minutos continuam misturando as duas coisas.
+- **Medidas completas:** [`medidas_etapa_b_2022_2024.csv`](img/modelo/medidas_etapa_b_2022_2024.csv).
+
+**Sanidade com a janela original de 10 minutos** (Aqua na órbita original, treino em 2019 e 2020, teste em 2021): o resultado é o mesmo. O boosting tem AUC de 0,752 e a tabela, 0,716, e a chance prevista (47,2%) fica a 0,8 ponto percentual da observada (48,0%). Duas diferenças aparecem e devem ser lidas juntas:
+
+- **A janela de 10 minutos só mantém 15% dos fogos do S-NPP** (175 mil a 202 mil por ano, contra 62% com 90 minutos), uma amostra especial de bordas de faixa onde as duas passagens se sobrepõem.
+- **O nível da curva depende da janela, e a forma não.** De dia, para fogos de 25 MW ou mais, o MODIS vê 73% a 74% com 10 minutos e 65% com 90 minutos (os mesmos três anos). Com 90 minutos, o fogo tem mais tempo para mudar entre as passagens, e a chance de ver cai. Por isso os números da curva (71% em 2024) valem **para a janela de 90 minutos** e não devem ser lidos como a sensibilidade pura do sensor.
+
+**O que a etapa B diz para a tela de Método:** a curva de detecção não é um acaso de 2024. Ela se repete, com variações pequenas, em seis anos seguidos, e o modelo treinado no passado a reproduz nos anos seguintes. O limite declarado continua: o viés da regra dos 50 km e a janela de 90 minutos.
+
 ## 6. Limites a declarar no método
 
 - O fator é por bioma, mês e dia/noite. Não corrige por potência do fogo.
