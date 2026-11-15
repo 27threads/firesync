@@ -143,6 +143,21 @@ def test_prova_cruzada_recupera_o_fator_conhecido():
     assert prova["razao_modelo_contagens"].iloc[0] == pytest.approx(1.0)
 
 
+def test_prova_cruzada_conta_o_total_do_viirs_pelas_mesmas_chaves():
+    """Bug da revisão do PR 53: o total do VIIRS (com os fogos fora da área olhada) vinha do ano inteiro nas linhas
+    mensais e não entrava em nenhuma conta. Aqui há fogos fora da área olhada e dois meses com totais diferentes."""
+    olhados = pd.DataFrame({"bioma": ["X"] * 300, "periodo": ["D"] * 300, "mes": [8] * 200 + [9] * 100, "p": [0.5] * 300})
+    todos = pd.DataFrame({"bioma": ["X"] * 700, "periodo": ["D"] * 700, "mes": [8] * 400 + [9] * 300})
+    aqua = pd.DataFrame({"bioma": ["X"] * 150, "periodo": ["D"] * 150, "mes": [8] * 100 + [9] * 50})
+    mensal = m.prova_cruzada(olhados, aqua, "p", ["bioma", "periodo", "mes"], todos).set_index("mes")
+    assert mensal.loc[8, "n_viirs_total"] == 400 and mensal.loc[9, "n_viirs_total"] == 300   # o total é do mês
+    assert mensal.loc[8, "fator_contagens"] == pytest.approx(2.0)            # só os olhados: 200 / 100
+    assert mensal.loc[8, "fator_contagens_total"] == pytest.approx(4.0)      # todos os fogos do VIIRS: 400 / 100
+    assert mensal.loc[9, "fator_contagens_total"] == pytest.approx(6.0)      # 300 / 50
+    anual = m.prova_cruzada(olhados, aqua, "p", ["bioma", "periodo"], todos)
+    assert anual["n_viirs_total"].iloc[0] == 700 and anual["fator_contagens_total"].iloc[0] == pytest.approx(700 / 150)
+
+
 def test_limpeza_usa_as_regras_da_frente_a():
     """Terra sai, type diferente de 0 sai, FRP zero sai e confiança baixa sai (as mesmas regras do pipeline.py)."""
     def linha(sat, tipo, frp, conf):
