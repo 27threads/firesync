@@ -56,7 +56,7 @@ firesync/
 └── infra/                 deploy na VPS: docker-compose com Cloudflare Tunnel, .env.example (frente C)
 ```
 
-Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/` tem as cinco rotas HTTP, histórico, janela recente, camada de focos, ZIP auditável e testes unitários, HTTP, PostGIS e E2E com dados sintéticos. `frontend/` já traz o esqueleto (D1), a seleção de área, período e camada de focos recentes no mapa (D2–D3, RD07), o calendário (D4), os indicadores/gráficos (D5), os downloads e pacote de auditoria (D6), o proxy e integração com a API (D7) e os testes E2E em `frontend/e2e/`. `infra/` ainda não tem arquivos de deploy. `data-pipeline/data/` tem os quatro ZIPs de teste:
+Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/` tem as cinco rotas HTTP, histórico, janela recente, camada de focos, ZIP auditável e testes unitários, HTTP, PostGIS e E2E com dados sintéticos. `frontend/` já traz o esqueleto (D1), a seleção de área, período e camada de focos recentes no mapa (D2–D3, RD07), o calendário (D4), os indicadores/gráficos (D5), os downloads e pacote de auditoria (D6), o proxy e integração com a API (D7) e os testes E2E em `frontend/e2e/`. `infra/` tem o compose da VPS (banco, API, jobs NRT e de risco e túnel) e o `.env.example`. `data-pipeline/data/` tem os quatro ZIPs de teste:
 
 | Arquivo | Conteúdo |
 | --- | --- |
@@ -148,6 +148,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | Mapa base padrão NASA GIBS (`frontend/src/map/MapStage.tsx`, `MapStage.test.tsx`) | Claude Code (Claude Opus 5.5) | Revisão das fontes de dados do projeto e troca do padrão em TDD. A equipe revisa no PR |
 | Deploy (`infra/docker-compose.yml`, `infra/.env.example`, `backend/Dockerfile`, `.dockerignore`, `frontend/wrangler.jsonc`, `frontend/public/_headers`, `docs/deploy.md`) e IP real no rate limit atrás do Cloudflare (`app.py`, testes) | Claude Code (Claude Opus 5.5) | Configuração escrita a partir da decisão de pôr o front no Cloudflare e a API atrás do túnel; o bug do rate limit foi reproduzido num teste antes da correção. A equipe revisa no PR |
 | Job de risco no deploy (`data-pipeline/Dockerfile`, serviço `job-risco` e `RISK_MAX_AGE_DAYS` em `infra/docker-compose.yml` e `infra/.env.example`, `docs/deploy.md`) | Claude Code (Claude Opus 5.5) | Configuração escrita a partir da issue #96 e testada rodando o job na imagem contra um Postgres descartável. A equipe revisa no PR |
+| Carga do banco na VPS e status da C7 (`docs/tarefas.md`, `docs/deploy.md`, `README.md`; issue #98) | Claude Code (Claude Opus 5.5) | Roteiro de carga, acesso temporário para o dump e conferência guiados pela IA, executados e conferidos pela equipe na VPS; documentos atualizados com os endereços no ar |
 | Resultados da frente B na tela de Método (`frontend/index.html`, `frontend/public/img/`, `src/index-html.test.ts`) | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Textos em inglês escritos a partir de `docs/decisoes-harmonizacao.md` e do RFC 0003, com os números copiados dos documentos, e testes antes do texto. A equipe revisa no PR |
 
 ## Dados e créditos

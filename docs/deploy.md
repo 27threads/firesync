@@ -2,11 +2,11 @@
 
 Nov 15, 2026 · frente C · decisão 12 de [arquitetura.md](arquitetura.md)
 
-O front fica no Cloudflare. Banco, API, job NRT e job de risco ficam na VPS, com `docker compose`. A VPS não abre nenhuma porta para a internet: o único caminho de fora para dentro é o Cloudflare Tunnel até a API.
+O front fica no Cloudflare. Banco, API, job NRT e job de risco ficam na VPS, com `docker compose`. No ar desde 15/11/2026: front em <https://firesync.nogranlabs.com.br> e API em <https://firesync-api.nogranlabs.com.br>. A VPS não abre nenhuma porta para a internet: o único caminho de fora para dentro é o Cloudflare Tunnel até a API.
 
 ```
-navegador ──> Cloudflare (front estático, firesync-prd.<conta>.workers.dev)
-navegador ──> Cloudflare (api.<domínio>) ──túnel──> VPS: api ──> db
+navegador ──> Cloudflare (front estático, firesync.nogranlabs.com.br)
+navegador ──> Cloudflare (firesync-api.nogranlabs.com.br) ──túnel──> VPS: api ──> db
                                                     VPS: job-nrt ──> FIRMS
                                                     VPS: job-risco ──> db (risco_celulas)
 ```
@@ -25,7 +25,7 @@ Em **Workers & Pages → firesync-prd → Settings → Build**:
 | Build command | `npm run build` (o Cloudflare já roda `npm ci` antes) |
 | Deploy command | `npx wrangler deploy` |
 | Build watch paths | `frontend/*` e `docs/api-exemplo.json` (o `App.tsx` importa esse JSON) |
-| Build variable | `VITE_API_URL=https://api.<domínio>` |
+| Build variable | `VITE_API_URL=https://firesync-api.nogranlabs.com.br` |
 
 - O `VITE_API_URL` é uma variável de **build**, não de runtime: ela entra no JavaScript na hora do `vite build`. Mudou o valor, faça um novo deploy.
 - Toda variável `VITE_` fica pública no JavaScript. Segredo nunca vai em `VITE_`.
@@ -35,8 +35,8 @@ Em **Workers & Pages → firesync-prd → Settings → Build**:
 
 Tudo em [`infra/docker-compose.yml`](../infra/docker-compose.yml). Nenhum serviço tem `ports:`.
 
-1. Copie `infra/.env.example` para `infra/.env` e preencha. O `.env` nunca vai para o git.
-2. No Cloudflare, em **Zero Trust → Networks → Tunnels**, crie um túnel, copie o token para `CLOUDFLARE_TUNNEL_TOKEN` e adicione o public hostname `api.<domínio>` → `http://api:8000`.
+1. Copie `infra/.env.example` para `infra/.env` (ao lado do compose, que só lê o `.env` da própria pasta) e preencha. O `.env` nunca vai para o git.
+2. No Cloudflare, em **Zero Trust → Networks → Tunnels**, crie um túnel, copie o token para `CLOUDFLARE_TUNNEL_TOKEN` e adicione o public hostname `firesync-api.nogranlabs.com.br` → `http://api:8000`. O hostname leva `firesync` porque o domínio atende outros projetos: um nome genérico como `api.` disputa o registro DNS com eles. Já o serviço fica `http://api:8000`, porque `api` é o nome do serviço na rede do compose e só os containers do firesync estão nela.
 3. `FRONTEND_ORIGIN` é a origem exata do front, sem barra no fim. É a única que o CORS aceita.
 4. **Na primeira vez**, siga o roteiro de carga do [banco.md](banco.md#carga-na-vps-roteiro), que sobe só o `db`, restaura o dump e cria o usuário `firesync_api`. Com a API e o job no ar, o `pg_restore --clean` disputaria o banco com as conexões, o job rodaria no banco vazio e a API, que confere os metadados ao subir, ficaria reiniciando.
 5. Depois da carga, na VPS, a partir de `infra/`: `docker compose up -d --build`.
