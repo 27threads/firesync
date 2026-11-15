@@ -133,10 +133,49 @@ São duas datas escolhidas para ilustrar, e não uma medição. Na segunda, as f
 - O job precisa do banco com `agregados_diarios` e de um servidor onde rodar. Sem a VPS, as notas podem ser calculadas no banco local e levadas no dump.
 - A frequência de uma faixa é uma média do passado, e não uma previsão para aquele lugar.
 
+## Validação com área queimada da NASA (issue #107)
+
+O modelo prevê detecções do VIIRS a partir de detecções do VIIRS. Para ver se as faixas acompanham o fogo de verdade, e não só o próprio gabarito, comparamos com uma medida independente: a **área queimada do MCD64A1 v061 da NASA** (MODIS, 500 m, banda "Burn Date" com o dia da queima), que mapeia a cicatriz pela mudança de reflectância, com outro sensor e outro método. O MapBiomas Fogo, a primeira opção, estava com o download suspenso.
+
+**Critério fixado antes de rodar (15/11/2026).** Unidade: célula H3 res 4 num domingo `t` de 2021 a 2024, na Amazônia (bioma 1 do IBGE, pelo centro da célula). Modelo: o de `risco_celulas.py`, treinado só com os anos anteriores ao de `t` (um treino por ano), com a série do banco. Área queimada: soma dos pixels com "Burn Date" em `t+1..t+14`, a mesma janela do alvo do modelo.
+
+1. Em **todos** os anos, a área queimada média cai de faixa em faixa (muito alto > alto > médio > menor).
+2. AUC da nota contra "1 km² ou mais queimado nos 14 dias seguintes" de pelo menos **0,80**. Sensibilidade: 0,5 e 5 km².
+
+**Resultado: os dois critérios passaram.** 2.128 células, 207 domingos, 440.496 células-domingo. Antes de confiar no número, conferimos o processamento: a área queimada total na Amazônia deu 25,3 mil km² (2021), 40,7 mil (2022), 38,1 mil (2023) e 85,4 mil (2024, o ano da seca); a banda "Burn Date" usa 0 (não queimou), -1 (sem dado), -2 (água) e 1..366; as células são as mesmas do banco (mãe da res 6 em res 4).
+
+| Ano | Muito alto | Alto | Médio | Menor | Ordem |
+| --- | --- | --- | --- | --- | --- |
+| 2021 | 2,91 | 0,95 | 0,69 | 0,10 | mantida |
+| 2022 | 5,12 | 1,41 | 0,77 | 0,12 | mantida |
+| 2023 | 4,27 | 1,19 | 0,84 | 0,15 | mantida |
+| 2024 | 10,68 | 2,01 | 1,28 | 0,20 | mantida |
+| Todos | **5,84** | **1,38** | **0,89** | **0,14** | mantida |
+
+Área queimada média (km²) por célula nos 14 dias seguintes, por faixa do modelo. Na faixa "muito alto" queima, em média, cerca de 40 vezes mais que na "menor".
+
+| Limiar de área queimada | Células-domingo acima | AUC (todos) | 2021 | 2022 | 2023 | 2024 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0,5 km² | 8,2% | 0,896 | 0,879 | 0,899 | 0,901 | 0,901 |
+| **1 km²** | 6,9% | **0,898** | 0,880 | 0,901 | 0,902 | 0,904 |
+| 5 km² | 3,1% | 0,906 | 0,893 | 0,909 | 0,898 | 0,916 |
+
+**O alvo do modelo e a área queimada.** Das células-domingo com fogo relevante (10 ou mais detecções em 14 dias), 36,9% tiveram 1 km² ou mais queimado, contra 2,2% das sem fogo relevante. Das que tiveram área queimada, 73,1% tinham fogo relevante. As duas medidas andam juntas, mas não são a mesma coisa: muita detecção sem cicatriz mapeada (nuvem, fumaça, queima pequena ou em área já queimada) e alguma cicatriz sem detecção.
+
+**Limites e vieses**
+- Só a Amazônia e só 2021 a 2024. Os outros biomas não foram testados.
+- Nuvem e fumaça mascaram a área queimada (pixels -1), e queimas menores que ~25 ha quase não aparecem em 500 m: a área medida é um piso.
+- A data de queima do MCD64A1 tem incerteza de alguns dias; uma queima perto da borda da janela pode cair na semana vizinha.
+- Domingos seguidos têm janelas que se sobrepõem, então as células-domingo não são independentes, e a área média por faixa é puxada pela temporada (ago a out).
+- O bioma é o do centro da célula; células na divisa entram inteiras. 35 células da Amazônia com área queimada (27,9 km² em 4 anos) não têm nenhuma detecção na série e ficam de fora.
+- O produto sai com meses de atraso: valida o passado, não a nota de hoje.
+
+**Como refazer** (dentro de `data-pipeline/`, com `pip install pyhdf` e `EARTHDATA_TOKEN` no `.env`): `python validacao/area_queimada.py baixar` (576 HDF, 2,4 GB, fora do git), `processar` e `avaliar`, que grava `relatorios/area_queimada/relatorio.txt`.
+
 ## Limites
 
 - Escala de célula H3 res 4, avaliação semanal, horizonte de 14 dias. Em escala mais fina ou horizonte mais longo, o resultado pode ser outro.
-- O gabarito mede detecções do VIIRS, não área queimada.
+- O gabarito do treino mede detecções do VIIRS, não área queimada. A comparação com a área queimada da NASA foi feita só na Amazônia ([seção acima](#validação-com-área-queimada-da-nasa-issue-107)).
 - O clima do NASA POWER tem grade de 0,5° × 0,625° (cerca de 55 km), maior que a célula.
 
 ## Próximo passo (depois da submissão)

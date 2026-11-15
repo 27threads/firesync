@@ -44,7 +44,7 @@ Em **todas as fases**, o projeto recebe nota de 1 a 5 em cada um dos 5 critério
 | **Impact** | Resolve um problema importante, com alcance grande | Equipes de alerta e resposta a incêndios sabem se o fogo de agora é normal para o lugar e a época. Amazônia e Pantanal, com desenho pronto para o mundo |
 | **Creativity** | Abordagem original, que melhora de forma relevante o que já existe | Série única MODIS + VIIRS com **faixa de incerteza** à mostra, "normal da época" com janela de ±15 dias, alerta com regra versionada e **pacote de auditoria** |
 | **Validity** | Base científica, tecnicamente viável, pronto para o mundo real, **fácil de usar** | Calibração validada ano a ano, comparação com o INPE, teste retroativo do alerta com ganho sobre uma regra ingênua ([validacao-alerta.md](validacao-alerta.md)), cobertura da faixa medida (não prometida), interface simples para quem está sob pressão |
-| **Relevance** | Responde diretamente ao desafio, com os **dados da NASA no centro** da solução, não como enfeite | O produto inteiro é feito do NASA FIRMS (MODIS C6.1 e VIIRS C2). Possível reforço: área queimada MCD64A1 na validação |
+| **Relevance** | Responde diretamente ao desafio, com os **dados da NASA no centro** da solução, não como enfeite | O produto inteiro é feito do NASA FIRMS (MODIS C6.1 e VIIRS C2). A área queimada MCD64A1 da NASA valida o modelo de risco ([RFC 0003](rfcs/0003-modelo-risco.md)) |
 | **Presentation** | História clara e envolvente, apresentação organizada. **Vale tanto quanto os outros** | Vídeo de 30 s com o site funcionando ([pitch.md](pitch.md)) e página do projeto bem escrita. O guia pede atenção igual a este critério |
 
 O guia avisa que muitas equipes capricham nos quatro primeiros e descuidam da apresentação. Não podemos ser uma delas.
@@ -72,7 +72,7 @@ O guia avisa que muitas equipes capricham nos quatro primeiros e descuidam da ap
 - [ ] A página do projeto explica a dificuldade: dois sensores, resoluções diferentes, 6× mais detecções no VIIRS, e como isso vira uma série só
 - [ ] Os dados da NASA citados com nome e versão (FIRMS, MODIS C6.1, VIIRS C2) na tela, na página e no campo "NASA Data"
 - [ ] O pacote de auditoria funcionando: qualquer um refaz os números
-- [ ] Se der tempo: um segundo dado da NASA (área queimada MCD64A1, issue #9)
+- [x] Um segundo dado da NASA: área queimada MCD64A1 na validação do modelo de risco ([RFC 0003](rfcs/0003-modelo-risco.md), issue #107)
 
 ### Best Use of Science
 
