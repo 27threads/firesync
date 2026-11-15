@@ -4,7 +4,6 @@ import { gridGeometry, type GridSpec } from './calendarLayout';
 import { buildCalendar, MONTH_NAMES, type CalendarCell } from './calendarModel';
 import { makeColorScale } from './colorScale';
 
-export type CalendarTheme = 'dark' | 'light';
 
 // Largura total = margem dos anos + 12 colunas + coluna de notas à direita.
 export interface CalendarGeometry {
@@ -24,7 +23,6 @@ export const FULL_GEOMETRY: CalendarGeometry = {
 
 interface CalendarSvgProps {
   months: CalendarMonth[];
-  theme: CalendarTheme;
   geometry: CalendarGeometry;
   label: string;
   interactive: boolean; // true: grade navegável por teclado (role="grid")
@@ -60,7 +58,6 @@ function colX(spec: GridSpec, col: number): number {
 export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function CalendarSvg(
   {
     months,
-    theme,
     geometry,
     label,
     interactive,
@@ -157,7 +154,7 @@ export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function 
   return (
     <svg
       ref={ref}
-      className={`calendar-svg-root theme-${theme}`}
+      className="calendar-svg-root"
       viewBox={`0 0 ${geometry.width} ${height}`}
       role={interactive ? 'grid' : 'img'}
       aria-label={label}
@@ -171,8 +168,8 @@ export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function 
           <line className="cal-hatch-b" x1="1.6" y1="0" x2="1.6" y2="5" />
         </pattern>
         <pattern id={noDataId} width="6" height="6" patternUnits="userSpaceOnUse">
-          <rect width="6" height="6" fill={theme === 'dark' ? '#1d2227' : '#eceeef'} />
-          <path d="M0 0L6 6M6 0L0 6" stroke={theme === 'dark' ? '#5b646e' : '#9aa1a8'} strokeWidth="0.8" />
+          <rect width="6" height="6" fill="#eceeef" />
+          <path d="M0 0L6 6M6 0L0 6" stroke="#9aa1a8" strokeWidth="0.8" />
         </pattern>
       </defs>
 

@@ -7,6 +7,7 @@ import { buildExampleStory } from './discovery/exampleStory';
 import { HeroCalendar } from './hero/HeroCalendar';
 import { prefersReducedMotion } from './hero/heroIntro';
 import { HistoryPanel } from './history/HistoryPanel';
+import { IndicatorRow } from './summary/IndicatorRow';
 import { MapStage } from './map/MapStage';
 import { useExplorer } from './state/useExplorer';
 import { Summary } from './summary/Summary';
@@ -93,6 +94,8 @@ export function App() {
           </p>
         )}
 
+        {ex.shown && <IndicatorRow indicators={ex.shown.data.indicators} isDemo={ex.shown.isDemo} />}
+
         <div className="ws-top">
           <div className="ws-map">
             <SelectionPanel
@@ -105,7 +108,11 @@ export function App() {
               onSetPeriod={ex.setPeriod}
               onShowExample={() => openExample(null)}
             />
-            <MapStage shape={ex.selection.shape} onSelectPolygon={(geometry) => selectArea({ type: 'geojson', geometry })} />
+            <MapStage
+              shape={ex.selection.shape}
+              startOnArrival={ex.selection.isExample}
+              onSelectPolygon={(geometry) => selectArea({ type: 'geojson', geometry })}
+            />
           </div>
           <Summary
             shown={ex.shown}

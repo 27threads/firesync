@@ -1,0 +1,109 @@
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { chapterAt, journeyProgress } from './globeTransition';
+import { prefersReducedMotion } from './heroIntro';
+import { OPENING_AUDIENCE, OPENING_CHAPTERS, OPENING_DATA_CREDIT } from './openingCopy';
+
+const OrbitalScene = lazy(() => import('./OrbitalScene'));
+
+// Ponto do scroll em que cada capítulo do texto aparece (o mesmo corte de chapterAt).
+const CHAPTER_STOPS = [0, 0.3, 0.7];
+
+function goToExplorer() {
+  document.getElementById('explore')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+}
+
+// Abertura: o globo com o Aqua (MODIS) e o Suomi NPP (VIIRS) em órbita desce até o Brasil conforme o scroll.
+export function OrbitalOpening() {
+  const section = useRef<HTMLElement>(null);
+  const progress = useRef(0);
+  const [chapter, setChapter] = useState(0);
+  const [playing, setPlaying] = useState(() => !prefersReducedMotion());
+
+  useEffect(() => {
+    const element = section.current;
+    if (!element) return;
+    let frame = 0;
+    let previous = performance.now();
+    const update = () => {
+      const target = journeyProgress(element.getBoundingClientRect().top, element.offsetHeight, window.innerHeight);
+      const now = performance.now();
+      const delta = Math.min((now - previous) / 1000, 0.05);
+      previous = now;
+      const value = prefersReducedMotion() ? target : progress.current + (target - progress.current) * (1 - Math.exp(-delta * 9));
+      progress.current = Math.abs(target - value) < 0.001 ? target : value;
+      element.style.setProperty('--journey-progress', progress.current.toFixed(3));
+      // Com movimento reduzido a seção não rola: o capítulo muda só pelos botões.
+      if (!prefersReducedMotion()) setChapter(chapterAt(progress.current));
+      frame = requestAnimationFrame(update);
+    };
+    update();
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const showChapter = (index: number) => {
+    const element = section.current;
+    if (!element) return;
+    if (prefersReducedMotion()) {
+      setChapter(index);
+      return;
+    }
+    const distance = Math.max(1, element.offsetHeight - window.innerHeight);
+    const top = window.scrollY + element.getBoundingClientRect().top + distance * (CHAPTER_STOPS[index] ?? 0);
+    window.scrollTo({ top, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  };
+
+  const content = OPENING_CHAPTERS[chapter] ?? OPENING_CHAPTERS[0];
+
+  return (
+    <section ref={section} className="opening" aria-labelledby="opening-title">
+      <div className="opening__sticky">
+        <Suspense fallback={<div className="orbital-canvas" />}>
+          <OrbitalScene playing={playing} progress={progress} />
+        </Suspense>
+        <div className="opening__copy">
+          <p className="opening__kicker">{OPENING_AUDIENCE}</p>
+          <h1 id="opening-title" className="opening__brand">
+            firesync<span>.</span>
+          </h1>
+          <div className="opening__chapter" key={chapter} aria-live="polite">
+            <p className="opening__label">{content.label}</p>
+            <h2>
+              {content.title[0]}
+              <br />
+              {content.title[1]}
+            </h2>
+            <p>{content.copy}</p>
+          </div>
+          <button type="button" className="btn btn--primary" onClick={goToExplorer}>
+            Explore an area
+          </button>
+          <div className="opening__controls">
+            <button
+              type="button"
+              className="opening__play"
+              aria-label={playing ? 'Pause the globe' : 'Play the globe'}
+              aria-pressed={!playing}
+              onClick={() => setPlaying((value) => !value)}
+            >
+              {playing ? '❚❚' : '▶'}
+            </button>
+            {OPENING_CHAPTERS.map((item, index) => (
+              <button
+                key={item.label}
+                type="button"
+                className="opening__step"
+                aria-label={`Chapter ${index + 1}: ${item.label}`}
+                aria-pressed={index === chapter}
+                onClick={() => showChapter(index)}
+              >
+                <span />
+              </button>
+            ))}
+          </div>
+          <p className="opening__credit">{OPENING_DATA_CREDIT}</p>
+        </div>
+        <p className="opening__foot">Earth and spacecraft: NASA · Illustrative scale and orbits</p>
+      </div>
+    </section>
+  );
+}
