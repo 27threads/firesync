@@ -91,7 +91,7 @@ test.describe('Jornadas do usuário', () => {
     await page.getByLabel(/latitude/i).fill('-3.1');
     await page.getByLabel(/longitude/i).fill('-60.0');
     await page.getByLabel(/radius/i).fill('25');
-    await page.getByRole('button', { name: /search|show/i }).click();
+    await page.getByRole('button', { name: /search|show this area/i }).click();
     expect((await pedido).postDataJSON().area).toMatchObject({ type: 'point', lat: -3.1, lon: -60, radius_km: 25 });
   });
 
@@ -102,7 +102,7 @@ test.describe('Jornadas do usuário', () => {
     await page.goto('/');
     await page.getByLabel(/latitude/i).fill('48.8');
     await page.getByLabel(/longitude/i).fill('2.3');
-    await page.getByRole('button', { name: /search|show/i }).click();
+    await page.getByRole('button', { name: /search|show this area/i }).click();
     await expect(page.getByText(/Current coverage: Brazil/)).toBeVisible();
     await expect(page.getByRole('grid', { name: /fire calendar/i })).toHaveCount(0);
   });
