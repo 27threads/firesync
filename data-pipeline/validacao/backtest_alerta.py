@@ -40,6 +40,7 @@ PISOS_CONTINUOS = (False, True)  # piso só na mediana zero ou contínuo (issue 
 GABARITO = (90, 10)  # percentil do normal de 14 dias e mínimo de detecções
 SENSIBILIDADE = ((80, 10), (95, 10), (90, 5), (90, 20))
 ANOS_COM_GANHO_MIN = 7  # regra de decisão: ganho positivo no total e em pelo menos 7 dos 12 anos
+SORTEIOS, SEMENTE = 2000, 2026  # bootstrap por blocos de ano (intervalo de 95% do ganho)
 SEMANAS_ANTES_DO_EVENTO = 8
 
 # célula-mãe res 4 de uma res 6: resolução (bits 52-55) = 4 e dígitos 5 e 6 (bits 27-32) = 7 (sem célula)
@@ -152,6 +153,22 @@ def alerta_mesma_frequencia(score, f):
     return alerta.reshape(score.shape)
 
 
+def ganho_bootstrap(crit, ingenua, gab, anos, sorteios=SORTEIOS, semente=SEMENTE):
+    """Intervalo de 95% do ganho sorteando ANOS inteiros com reposição (bootstrap por blocos de ano).
+
+    Semanas seguidas têm gabaritos que se sobrepõem, então a semana não é independente; o ano é. Os alertas da
+    ingênua ficam os da amostra completa (não são recalculados a cada sorteio).
+    """
+    ys = np.unique(anos)
+    por_ano = np.array([[(crit & gab)[anos == y].sum(), crit[anos == y].sum(),
+                         (ingenua & gab)[anos == y].sum(), ingenua[anos == y].sum()] for y in ys], float)
+    soma = por_ano[np.random.default_rng(semente).integers(0, len(ys), (sorteios, len(ys)))].sum(axis=1)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        ganhos = soma[:, 0] / soma[:, 1] - soma[:, 2] / soma[:, 3]
+    baixo, alto = np.nanpercentile(ganhos, [2.5, 97.5]) if np.isfinite(ganhos).any() else (np.nan, np.nan)
+    return float(baixo), float(alto)
+
+
 def medidas(niv, gab, score, anos):
     """Medidas de uma regra (arrays semana x unidade). O ganho é sobre a ingênua na mesma frequência."""
     crit = niv == 2
@@ -160,12 +177,14 @@ def medidas(niv, gab, score, anos):
     ganho_ano = [taxa(gab[anos == y], crit[anos == y]) - taxa(gab[anos == y], ingenua[anos == y])
                  for y in np.unique(anos)]
     meses = niv.shape[0] * 7 / 30.4375
+    ic_baixo, ic_alto = ganho_bootstrap(crit, ingenua, gab, anos)
     return {"freq_normal": float((niv == 0).mean()), "freq_atencao": float((niv == 1).mean()),
             "freq_critico": float(crit.mean()), "prevalencia_gabarito": float(gab.mean()), "acerto": acerto, "cobertura": taxa(niv >= 1, gab),
             "cobertura_critico": taxa(crit, gab), "alarme_falso": 1 - acerto,
             "trocas_mes": float((niv[1:] != niv[:-1]).sum() / (niv.shape[1] * meses)),
             "acerto_ingenua": acerto_ing, "ganho": acerto - acerto_ing,
-            "anos_com_ganho_positivo": int(np.sum(np.array(ganho_ano) > 0))}
+            "anos_com_ganho_positivo": int(np.sum(np.array(ganho_ano) > 0)),
+            "ganho_ic95_baixo": ic_baixo, "ganho_ic95_alto": ic_alto}
 
 
 def regras(regra):
@@ -273,12 +292,14 @@ def relatorio(bt):
     atual = sit[sit["regra_atual"]]
     aprovadas = sit[sit["situacao"] == "aprovada"].sort_values("ganho", ascending=False)
     sem_sens = sit[sit["situacao"] == "sensibilidade não avaliada"].sort_values("ganho", ascending=False)
-    cols = ["regra", "freq_critico", "acerto", "acerto_ingenua", "ganho", "anos_com_ganho_positivo", "cobertura_critico"]
+    cols = ["regra", "freq_critico", "acerto", "acerto_ingenua", "ganho", "ganho_ic95_baixo", "ganho_ic95_alto",
+            "anos_com_ganho_positivo", "cobertura_critico"]
     variacoes = ", ".join(f"P{p} e mínimo {mn}" for p, mn in SENSIBILIDADE)
     return "\n".join([
         f"Backtest do alerta, {PRIMEIRO_DOMINGO} a {ULTIMO_DOMINGO} (domingos), unidades H3 res 4.",
         f"Gabarito: {JANELA_GABARITO} dias seguintes acima do P{GABARITO[0]} do normal e >= {GABARITO[1]} detecções.",
         "Ganho = acerto do Crítico - acerto da ingênua (persistência) com a MESMA frequência de alerta.",
+        f"Intervalo de 95% do ganho: bootstrap sorteando anos inteiros ({SORTEIOS} sorteios, semente {SEMENTE}).",
         "", "Regra atual do alert_rules.json:", atual[cols + ["situacao"]].to_string(index=False), "",
         f"Regras aprovadas: ganho > 0 no total e em >= {ANOS_COM_GANHO_MIN} dos 12 anos e ganho > 0 no total de cada "
         f"variação do gabarito ({variacoes}):",
