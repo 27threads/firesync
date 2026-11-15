@@ -2,10 +2,11 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CalendarMonth } from '../api/types';
 import { stripGeometry, type StripSpec } from '../calendar/calendarLayout';
 import { buildCalendar, MONTH_NAMES, type CalendarCell } from '../calendar/calendarModel';
-import { calendarHeight, CalendarSvg, gridBottomOf, gridWidth, HERO_GEOMETRY } from '../calendar/CalendarSvg';
+import { calendarHeight, CalendarSvg, gridBottomOf, gridWidth, HERO_GEOMETRY, HERO_NARROW_GEOMETRY } from '../calendar/CalendarSvg';
 import { Legend } from '../calendar/Legend';
 import { MonthTip } from '../calendar/MonthTip';
 import { Tooltip } from '../ui/Tooltip';
+import { NARROW_QUERY, useMediaQuery } from '../ui/useMediaQuery';
 import { playHeroIntro, prefersReducedMotion } from './heroIntro';
 
 interface HeroCalendarProps {
@@ -27,9 +28,10 @@ export function HeroCalendar({ months, areaLabel, isDemo, onOpenExample }: HeroC
   const [hover, setHover] = useState<{ cell: CalendarCell; anchor: DOMRect } | null>(null);
 
   const model = useMemo(() => buildCalendar(months), [months]);
-  const { grid, width } = HERO_GEOMETRY;
+  const geometry = useMediaQuery(NARROW_QUERY) ? HERO_NARROW_GEOMETRY : HERO_GEOMETRY;
+  const { grid, width } = geometry;
   const rows = model.years.length;
-  const height = calendarHeight(grid, rows);
+  const height = calendarHeight(geometry, rows);
   const gw = gridWidth(grid);
   const midY = grid.top + (gridBottomOf(grid, rows) - grid.top) / 2;
   const strip: StripSpec = { left: grid.left, top: midY - 32, width: gw, height: 64 };
@@ -98,7 +100,7 @@ export function HeroCalendar({ months, areaLabel, isDemo, onOpenExample }: HeroC
         <CalendarSvg
           ref={svgRef}
           months={months}
-          geometry={HERO_GEOMETRY}
+          geometry={geometry}
           interactive={false}
           label={`Preview of the fire history, ${period}: one row per year, one column per month. Months before February 2012 are estimated from MODIS; later months are observed by VIIRS.`}
           onHover={(cell, anchor) => setHover(cell && anchor ? { cell, anchor } : null)}

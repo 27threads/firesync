@@ -457,29 +457,29 @@ select {
   }
 }
 
-@media (max-width: 700px) {
-  .opening__copy {
-    top: 100px;
-  }
-  .opening__kicker {
-    display: none;
-  }
-  /* No celular o crédito cai em cima do globo: fundo claro para continuar legível. */
-  .opening__credit {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: var(--radius);
-    background: rgba(255, 255, 255, 0.88);
-  }
-  .opening__brand {
-    margin-top: 0;
-  }
-  .opening__chapter {
-    min-height: 0;
-  }
-  .opening__foot {
-    left: var(--gutter);
-  }
+/* Celular e tablet em pé: texto em cima, globo embaixo. O data-layout vem de openingLayout (globeTransition.ts),
+   a mesma regra que enquadra o globo na cena. */
+.opening[data-layout='stacked'] .opening__copy {
+  top: 100px;
+}
+.opening[data-layout='stacked'] .opening__kicker {
+  display: none;
+}
+/* O crédito cai em cima do globo: fundo claro para continuar legível. */
+.opening[data-layout='stacked'] .opening__credit {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.88);
+}
+.opening[data-layout='stacked'] .opening__brand {
+  margin-top: 0;
+}
+.opening[data-layout='stacked'] .opening__chapter {
+  min-height: 0;
+}
+.opening[data-layout='stacked'] .opening__foot {
+  left: var(--gutter);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1102,6 +1102,10 @@ select {
 
 .ctl-btn--primary:hover {
   background: #f3b452;
+}
+
+.ctl-btn[type='submit'] {
+  text-align: center;
 }
 
 .controls__hint {
@@ -1731,7 +1735,7 @@ select {
   overflow: visible;
 }
 
-.calendar-scroll .calendar-svg-root {
+.calendar-scroll .calendar-svg-root[data-layout='wide'] {
   min-width: 660px;
 }
 
@@ -2038,6 +2042,13 @@ select {
   background: #fff;
 }
 
+.method__figure-full {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
 .dia-axis line {
   stroke: var(--rule-strong);
 }
@@ -2199,6 +2210,20 @@ select {
 }
 
 /* ---------- Responsivo ---------- */
+
+/* Tela de toque: botões pequenos com pelo menos 44 px de área de toque. */
+@media (pointer: coarse) {
+  .opening__controls button,
+  .story__dot {
+    width: 44px;
+    height: 44px;
+  }
+  .leaflet-container.leaflet-touch .leaflet-bar a {
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+  }
+}
 
 @media (max-width: 1180px) {
   .ws-top {

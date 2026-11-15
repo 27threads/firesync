@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import type { CalendarRequest, CalendarResponse } from '../api/types';
 import { buildCalendar, type CalendarCell } from '../calendar/calendarModel';
-import { CalendarSvg, FULL_GEOMETRY } from '../calendar/CalendarSvg';
+import { CalendarSvg, FULL_GEOMETRY, FULL_NARROW_GEOMETRY } from '../calendar/CalendarSvg';
 import { Legend } from '../calendar/Legend';
 import { describeMonth } from '../calendar/monthDetail';
 import { MonthTip } from '../calendar/MonthTip';
 import { ExportBar } from '../export/ExportBar';
 import type { ResultState } from '../state/explorerModel';
 import { Tooltip } from '../ui/Tooltip';
+import { NARROW_QUERY, useMediaQuery } from '../ui/useMediaQuery';
 import { MonthPanel } from './MonthPanel';
 import { SeasonalChart } from './SeasonalChart';
 import { YearRanking } from './YearRanking';
@@ -98,6 +99,7 @@ export function HistoryPanel({
   const [asTable, setAsTable] = useState(false);
   const [hover, setHover] = useState<{ cell: CalendarCell; anchor: DOMRect } | null>(null);
   const [focusKey, setFocusKey] = useState<string | null>(null);
+  const narrow = useMediaQuery(NARROW_QUERY);
   const data = shown?.data ?? null;
   const model = useMemo(() => (data ? buildCalendar(data.months) : null), [data]);
   const selectedMonth = data && selectedKey ? data.months.find((m) => m.month === selectedKey) ?? null : null;
@@ -132,7 +134,7 @@ export function HistoryPanel({
                 <div className="calendar-scroll">
                   <CalendarSvg
                     months={data.months}
-                    geometry={FULL_GEOMETRY}
+                    geometry={narrow ? FULL_NARROW_GEOMETRY : FULL_GEOMETRY}
                     interactive
                     label={`Fire calendar, monthly detections, ${periodLabel}`}
                     selectedKey={selectedKey}
