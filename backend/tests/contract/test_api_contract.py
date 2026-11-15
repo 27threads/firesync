@@ -130,7 +130,7 @@ def test_points_over_limit_become_hexagons_without_truncation(client, repository
     assert sum(f['properties']['detections'] for f in data['features']) == 50_001
 
 
-def test_zip_reconstructs_result_and_contains_english_audit_rows(client):
+def test_zip_reconstructs_result_and_contains_english_audit_rows(client, alert_rules):
     response = client.post('/api/v1/export', json=REQUEST)
     assert response.status_code == 200
     assert response.headers['content-type'] == 'application/zip'
@@ -150,7 +150,7 @@ def test_zip_reconstructs_result_and_contains_english_audit_rows(client):
         assert metadata['percentile_method'] == 'linear'
         assert metadata['calibration_years'] == [2013, 2014]
         assert metadata['detections_omitted'] is False
-        assert metadata['alert_rules_version'] == '0.2'
+        assert metadata['alert_rules_version'] == alert_rules['version']
 
 
 def test_zip_omits_raw_rows_above_limit(client, repository):

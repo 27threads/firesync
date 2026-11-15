@@ -32,7 +32,7 @@ O proxy existente encaminha `/api` para a API. `VITE_API_URL` permite uma API em
 | `RATE_LIMIT_EXPORT` | `2` | Pedidos de exportação por IP na janela |
 | `RATE_LIMIT_WINDOW` | `60` | Duração da janela móvel, em segundos |
 | `RESPONSE_CACHE_SIZE` | `128` | Máximo de respostas no LRU |
-| `ALERT_RULES_PATH` | `config/alert_rules.json` do checkout | Versão e limites da classe de intensidade |
+| `ALERT_RULES_PATH` | `config/alert_rules.json` do checkout | Versão, limites do alerta e da classe de intensidade |
 
 Rate limit e cache são locais a cada processo. Para conservar o limite global configurado, rode um worker; o segundo limite no proxy pertence ao deploy C7. O IP vem da conexão ASGI: cabeçalhos encaminhados só devem ser confiados pelo Uvicorn quando vierem do proxy configurado. `429` inclui `Retry-After` em segundos. Os logs do Uvicorn incluem endpoint, status, duração e número de células.
 
@@ -74,7 +74,7 @@ ruff check .
 vulture data-pipeline backend/src backend/vulture_whitelist.py --exclude 'tests,test_*.py' --min-confidence 60
 ```
 
-Os testes PostGIS criam schemas exclusivos e removem apenas esses schemas. Sem `TEST_DATABASE_URL`, são pulados explicitamente. O caso volumoso cria 500.001 focos sintéticos para verificar os limites do mapa e do ZIP. Os cinco `xfail` restantes tratam do nível de alerta ainda em discussão, não dos endpoints desta entrega.
+Os testes PostGIS criam schemas exclusivos e removem apenas esses schemas. Sem `TEST_DATABASE_URL`, são pulados explicitamente. O caso volumoso cria 500.001 focos sintéticos para verificar os limites do mapa e do ZIP. O alerta da issue #59 está integrado ao `recent`, com piso contínuo, tendência de 3 dias e versão da regra; os testes do domínio e da rota HTTP estão ativos.
 
 Com uma API já no ar:
 
