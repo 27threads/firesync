@@ -15,3 +15,4 @@ class HistorySnapshot:
     periods: tuple[Mapping, ...]
     missing: frozenset[tuple[date, str]]
     provisional: frozenset[tuple[int, int, str]]
+    cells: tuple[str, ...] = ()

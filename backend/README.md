@@ -1,93 +1,108 @@
 # backend
 
-API que serve o calendário, a janela recente, a camada de focos e o pacote de auditoria para o front.
+API Python 3.12 + FastAPI que serve os cinco endpoints de [docs/api.md](../docs/api.md): health, regions, calendar, detections/recent e export. Frente C. A API só lê PostgreSQL/PostGIS; o pipeline continua responsável pelas cargas.
 
-- **Frente responsável:** C
-- **Contrato:** [docs/api.md](../docs/api.md). Mudar o contrato exige avisar a equipe antes.
-- **Lê do banco:** `config`, `regioes`, `celula_regiao`, `cobertura`, `fatores_harmonizacao`, `agregados`, `agregados_diarios`, `dias_sem_dados` e `focos` ([docs/banco.md](../docs/banco.md)).
-- **Lê da configuração:** [config/alert_rules.json](../config/alert_rules.json) (alerta e classe de intensidade).
-- **Não grava nada no banco.** Quem grava é o `data-pipeline/`.
+## Executar a API e o front
 
-Regras que valem aqui:
+Na raiz, instale o pacote no ambiente Python do projeto:
 
-- Endpoints, campos do JSON, códigos de erro e nomes no código em inglês. A tradução dos nomes do banco (em português) acontece num lugar só, na camada que lê o banco.
-- IDs H3 saem sempre como texto, nunca como número.
-- A resolução H3 vem da tabela `config`. A API não sobe se ela não bater com as células do banco.
-
-Implementação atual em **Python**. O estado da decisão da linguagem e do framework HTTP está no ponto 4 de [docs/arquitetura.md](../docs/arquitetura.md).
-
-## Estrutura
-
-O código fica diretamente em `backend/src/`. O `pyproject.toml` mapeia esse diretório para o pacote Python `backend`; por isso os imports continuam `backend.domain`, `backend.application`, `backend.ports` e `backend.adapters`, sem uma pasta física intermediária. Instale o pacote antes de usar; os testes ficam fora do código de produção. Domínio, repositório histórico PostgreSQL e serviço de calendário estão implementados; as pastas HTTP continuam reservadas para a entrega de integração.
-
-```text
-backend/
-├── src/
-│   ├── domain/
-│   │   ├── models/                 objetos e valores do domínio
-│   │   └── calculations/           funções puras de cálculo
-│   ├── application/                casos de uso e regras de negócio
-│   ├── ports/                      contratos de acesso aos dados
-│   └── adapters/
-│       ├── inbound/http/
-│       │   ├── routes/             entrada e saída HTTP (próxima entrega)
-│       │   └── schemas/            validação e serialização (próxima entrega)
-│       └── outbound/
-│           ├── postgres/           SQL e tradução dos nomes do banco
-│           └── config_file/        leitura da configuração (próxima entrega)
-├── tests/
-│   ├── unit/
-│   │   ├── domain/                 cálculos e objetos do domínio
-│   │   └── services/               regras com repositórios falsos
-│   ├── integration/repositories/   acesso real ao PostgreSQL/PostGIS
-│   ├── contract/api/               formatos públicos de pedidos e respostas
-│   ├── fixtures/                  dados pequenos para testes
-│   └── fakes/                     implementações falsas dos contratos
-└── data/                          espaço reservado para dados locais
-```
-
-Os serviços recebem os contratos de repositório por injeção de dependência. O domínio e os serviços permanecem independentes do framework HTTP e do driver SQL. As rotas delegam aos serviços; os repositórios concretos implementam os contratos e concentram o SQL. A configuração conecta as implementações aos serviços na inicialização.
-
-As regras de alerta continuam em `config/alert_rules.json` na raiz do repositório. Dados reais, segredos e exports gerados não devem ser commitados em `backend/data/`. Os dados pequenos e versionados dos testes ficam em `tests/fixtures/`.
-
-## Executar as partes 1–3
-
-Na raiz do repositório, com Python 3.12 ou superior:
-
-```bash
+```powershell
 python -m pip install -e './backend[test]'
-python -m pytest backend/tests/unit -q
-TEST_DATABASE_URL=postgresql://usuario@localhost/banco_descartavel python -m pytest backend/tests -q
+# DATABASE_URL deve estar configurada no ambiente, apontando para o banco carregado.
+python -m uvicorn backend.adapters.inbound.http.app:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
-Os testes de integração criam um schema exclusivo por teste, aplicam as migrations do pipeline e removem apenas esse schema ao terminar. Exigem PostgreSQL 16/PostGIS 3.4 e permissão para criar schemas; use um banco descartável. Sem `TEST_DATABASE_URL`, esses testes são explicitamente pulados. O job `backend` do workflow `.github/workflows/ci.yml` fornece um PostGIS local e executa todas as verificações sem acessar FIRMS ou IBGE.
+Em outro terminal:
 
-Uso do serviço em Python, com `DATABASE_URL` fornecida pelo ambiente:
-
-```python
-import os
-from psycopg_pool import ConnectionPool
-from backend.domain.models.area import Area
-from backend.adapters.outbound.postgres.history import PostgresHistoryRepository
-from backend.application.calendar import CalendarService
-
-with ConnectionPool(os.environ["DATABASE_URL"], min_size=1, max_size=4) as pool:
-    repository = PostgresHistoryRepository(pool)
-    calendar = CalendarService(repository)
-    result = calendar.calculate(Area("region", region_id=1), "2020-01", "2020-12")
+```powershell
+cd frontend
+npm ci
+$env:VITE_DEV_API_PROXY = 'http://127.0.0.1:8000'
+npm run dev
 ```
 
-O ID acima é ilustrativo: a região precisa existir no banco. O pool pertence à aplicação e deve ser fechado por ela. Cada chamada lê os metadados e os dados na mesma transação `REPEATABLE READ READ ONLY`, em UTC. O banco precisa ter as migrations aplicadas, células, cobertura, agregados, fatores quando houver contagens MODIS, e `config.data_version`/`config.atualizado_em` válidos (a segunda chave é traduzida para `meta.updated_at`). Uma falha não deixa a conexão em transação abortada.
+O proxy existente encaminha `/api` para a API. `VITE_API_URL` permite uma API em outra origem; nesse caso, configure `FRONTEND_ORIGIN` com a origem exata do front. A API valida os metadados e uma amostra H3 antes de aceitar pedidos. O banco deve ter as migrations de `data-pipeline/migrations/`, cobertura e versões válidas.
 
-### Políticas e limites desta entrega
+| Variável | Padrão | Uso |
+| --- | --- | --- |
+| `DATABASE_URL` | obrigatória | PostgreSQL com a carga, via psycopg 3 e pool |
+| `FRONTEND_ORIGIN` | `http://localhost:5173` | Única origem permitida pelo CORS |
+| `RATE_LIMIT_GENERAL` | `60` | Pedidos aceitos por IP na janela |
+| `RATE_LIMIT_CALENDAR` | `10` | Pedidos de calendário por IP na janela |
+| `RATE_LIMIT_EXPORT` | `2` | Pedidos de exportação por IP na janela |
+| `RATE_LIMIT_WINDOW` | `60` | Duração da janela móvel, em segundos |
+| `RESPONSE_CACHE_SIZE` | `128` | Máximo de respostas no LRU |
+| `ALERT_RULES_PATH` | `config/alert_rules.json` do checkout | Versão e limites da classe de intensidade |
 
-- A seleção aceita região, GeoJSON ou ponto com raio geodésico; usa H3 6 e limita a seleção a 250.000 células. As frações dos biomas e da cobertura usam a área real das células selecionadas.
-- O calendário mensal usa o satélite definido pela data. Contagens observadas não recebem fator. Os valores estimados e os totais anuais preservam os cenários até calcular a mediana e P5–P95 por interpolação linear.
-- A combinação dos cenários segue [a regra da harmonização](../docs/importacao-regioes.md#fórmula-do-calendário-para-refazer-a-partir-do-export-de-auditoria). Conjuntos disjuntos ou fatores ausentes para contagens positivas geram `CalendarError`.
-- As anomalias seguem a proposta atual de `docs/api.md`: anos completos disponíveis desde 2003, excluindo o próprio ano, independentemente do filtro de exibição. Essa regra ainda está em aberto para a equipe no contrato. Valores sem referência ou com denominador zero usam `None`; sazonalidade sem ano completo tem `n_years=0` e estatísticas `None`.
-- Os anos disponíveis para referência exigem cobertura temporal de todos os meses e de todos os biomas selecionados. Uma lacuna temporal no intervalo solicitado gera erro de dados, em vez de transformar ausência em zero. O formato HTTP desse erro pertence à parte 6.
-- `indicators.total_detections` segue a definição textual do contrato: soma dos valores centrais mensais. `years[].detections` é a mediana dos totais por cenário; essas duas contas podem diferir. A definição do indicador merece revisão da equipe se for necessário torná-las equivalentes.
-- `CalendarService` retorna somente a parte histórica: `meta`, `area`, `coverage`, `months`, `years`, `seasonality` e indicadores históricos. Fora da cobertura retorna apenas os três primeiros. **Não é ainda uma resposta completa do endpoint**: `recent` e `last_7_days_vs_typical_pct` serão compostos na parte 4; HTTP, cache, CORS e limites de requisição pertencem à parte 6.
-- O repositório lê agregados em lote e só consulta focos para identificar meses NRT, usando o filtro do índice parcial. Não há consulta SQL por mês. A validação foi feita com dados sintéticos; as metas de latência do contrato ainda precisam de benchmark com o histórico real.
+Rate limit e cache são locais a cada processo. Para conservar o limite global configurado, rode um worker; o segundo limite no proxy pertence ao deploy C7. O IP vem da conexão ASGI: cabeçalhos encaminhados só devem ser confiados pelo Uvicorn quando vierem do proxy configurado. `429` inclui `Retry-After` em segundos. Os logs do Uvicorn incluem endpoint, status, duração e número de células.
 
-Referências das bibliotecas: [Python](https://docs.python.org/3/), [H3](https://uber.github.io/h3-py/), [Shapely](https://shapely.readthedocs.io/), [pyproj](https://pyproj4.github.io/pyproj/), [Psycopg](https://www.psycopg.org/psycopg3/docs/), [pytest](https://docs.pytest.org/).
+## Organização e consistência
+
+O `pyproject.toml` mapeia `src/` para o pacote `backend`, sem diretório intermediário:
+
+- `domain/`: área, mês, H3, cenários, percentis, janelas e intensidade; funções puras.
+- `application/`: calendário histórico, composição da janela recente e documento de auditoria.
+- `ports/`: interfaces de leitura histórica e unidade de leitura da API.
+- `adapters/inbound/http/`: fábrica FastAPI, erros, rate limit, cache e serialização ZIP/CSV.
+- `adapters/outbound/postgres/`: SQL parametrizado e tradução dos nomes/valores em português para inglês.
+- `adapters/outbound/config_file/`: leitura das regras versionadas.
+- `scripts/demo_data.py`: gerador C2 de dados sintéticos, separado do serviço de leitura.
+- `tests/`: unidade, contratos HTTP, integração PostGIS e jornadas com navegador.
+
+Cada pedido lê metadados e dados em uma transação `REPEATABLE READ READ ONLY`, em UTC. O pool pertence à aplicação e fecha ao encerrar. Fatores são mantidos em memória por `data_version` completa, inclusive hora. O LRU de respostas usa área/parâmetros, `updated_at` e `data_version`; o calendário também inclui o dia UTC para atualizar os marcadores de mês/ano corrente. No mapa, o cache também expira quando o foco mais antigo sai da janela; resultados vazios são reavaliados após um minuto, mesmo sem atualização NRT. `ETag` acompanha as respostas JSON e GET aceita `If-None-Match`.
+
+## Regras implementadas
+
+- Área por região, Polygon/MultiPolygon ou ponto com raio geodésico, H3 6 e limite de 250.000 células. Frações usam áreas reais das células. `none` retorna somente `meta`, `area` e `coverage`; `partial` calcula apenas a parte coberta.
+- Histórico: satélite definido pela data, fatores somente no MODIS e cenários preservados até a mediana/P5–P95. A combinação segue a [decisão da equipe](../docs/importacao-regioes.md#fórmula-do-calendário-para-refazer-a-partir-do-export-de-auditoria).
+- Anomalias seguem a proposta vigente do contrato: referência independente do filtro, excluindo o próprio ano. Ausência de referência e denominador zero são `null`. `indicators.total_detections` soma os valores centrais mensais; o total anual preserva cenários e pode diferir.
+- Recente: `data_through` é o último dia de cobertura VIIRS comum aos biomas selecionados, inclusive dias cobertos com zero focos. Soma `agregados_diarios`, usa janelas de mesmo tamanho deslocadas de −15 a +15 dias, apenas anos anteriores com VIIRS, e interpolação linear para mediana/P25–P75. 29/02 usa 28/02 em ano comum. Janelas de referência que atravessam dias sem cobertura ou `dias_sem_dados` não entram; `n_windows` e `n_years` registram o suporte efetivo. Sem amostras, as estatísticas são `null`, não zero.
+- `n_high` vem de `focos`, porque a tabela diária não contém intensidade, na mesma transação e com os mesmos filtros/satélite. `high_share` é `null` com zero detecções. Falta de cobertura temporal no período histórico solicitado ou de cobertura VIIRS gera `500 internal_error`, sem detalhes internos.
+- Mapa: somente NRT, confiança nominal/alta, tipo 0 ou ausente no NRT, FRP positivo e um VIIRS por período. Pontos acima de 50.000 viram hexágonos H3 6, sem truncar; zoom escolhe H3 4/5/6 conforme o contrato. H3 sempre string e geometria GeoJSON em lon/lat. Limites de intensidade vêm do arquivo de regras; FRP não sai no JSON do mapa.
+- ZIP em memória: `result.csv`, `counts.csv`, `factors.csv`, `metadata.json`, mais `detections.csv` até 500.000 linhas inclusive. Contagens, fatores usados e focos seguem a mesma área/período e o satélite do calendário. Acima do limite, metadados informam omissão, contagem total e mensagem em inglês. CSV UTF-8 com BOM, datas UTC, valores/cabeçalhos em inglês e booleanos `true`/`false`.
+
+## Testar
+
+Na raiz, com o pacote instalado:
+
+```powershell
+# Unidade e contratos HTTP não precisam de servidor externo.
+python -m pytest backend/tests -q
+# Para incluir integração, configure TEST_DATABASE_URL com um PostGIS descartável.
+python -m pytest backend/tests -q --cov=backend/src --cov-branch --cov-fail-under=97.0
+ruff check .
+vulture data-pipeline backend/src backend/vulture_whitelist.py --exclude 'tests,test_*.py' --min-confidence 60
+```
+
+Os testes PostGIS criam schemas exclusivos e removem apenas esses schemas. Sem `TEST_DATABASE_URL`, são pulados explicitamente. O caso volumoso cria 500.001 focos sintéticos para verificar os limites do mapa e do ZIP. Os cinco `xfail` restantes tratam do nível de alerta ainda em discussão, não dos endpoints desta entrega.
+
+Com uma API já no ar:
+
+```powershell
+$env:API_URL = 'http://127.0.0.1:8000'
+python -m pytest backend/tests/contract/test_api_contract.py -k live_api -q
+```
+
+### Carga sintética C2 e navegador
+
+Em um banco **vazio e descartável**, com nome terminado em `_test` ou `_demo`, configure `DEMO_DATABASE_URL` e execute:
+
+```powershell
+python backend/scripts/demo_data.py --apply
+```
+
+O script aplica as migrations e insere uma região chamada `Synthetic demo`. Sem `--apply`, apenas imprime o SQL. Nunca aponte esse gerador para a carga científica. Os valores inventados exercitam a harmonização e as janelas; não representam observações da NASA.
+
+Suba a API com `DATABASE_URL` apontando para esse banco e o front pelo proxy. Para várias jornadas seguidas, os limites podem ser aumentados apenas nesse ambiente de testes. Então:
+
+```powershell
+npm --prefix frontend/e2e ci
+npm --prefix frontend ci
+# Instalar o Chromium: a partir de frontend/e2e, npx playwright install chromium.
+$env:FRONTEND_URL = 'http://127.0.0.1:5173'
+node frontend/e2e/node_modules/@playwright/test/cli.js test -c backend/tests/e2e/playwright.config.cjs
+```
+
+As duas jornadas novas usam os cinco endpoints reais, conferem o calendário, a janela recente, o mapa, o ZIP e a ausência de cobertura no desktop e celular. A CI executa esse fluxo além das 18 jornadas existentes com API simulada. A implementação foi verificada com dados sintéticos; desempenho e números da carga real aguardam o [roteiro do Eduardo](../docs/validacao-api-eduardo.md). D7/M2 permanece com essa pendência explícita.
+
+Referências: [Python](https://docs.python.org/3/), [FastAPI](https://fastapi.tiangolo.com/), [Starlette](https://www.starlette.io/), [Uvicorn](https://www.uvicorn.org/), [HTTPX](https://www.python-httpx.org/), [H3](https://uber.github.io/h3-py/), [Shapely](https://shapely.readthedocs.io/), [pyproj](https://pyproj4.github.io/pyproj/), [Psycopg](https://www.psycopg.org/psycopg3/docs/), [pytest](https://docs.pytest.org/), [Playwright](https://playwright.dev/).

@@ -33,6 +33,7 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 17 | [Versionamento (SemVer)](docs/versionamento.md) | Tipo no commit e no título do PR, como lançar uma versão | Antes do primeiro commit |
 | 18 | [Validação do nível de alerta](docs/validacao-alerta.md) | Solução A + B da issue #9: teste retroativo com "o que veio depois" e eventos conhecidos, no lugar da área queimada | Antes de mexer no alerta ou no `alert_rules.json` |
 | 19 | [RFC 0001: backtest do alerta](docs/rfcs/0001-backtest-alerta.md) | Como implementar a solução A + B: consultas, janelas, contas, saídas, autoteste e plano | Antes de implementar o backtest do alerta |
+| 20 | [Validação da API com a carga real](docs/validacao-api-eduardo.md) | Roteiro para o Eduardo conferir números, cobertura, ZIP e latência antes de fechar D7/M2 | Ao integrar a API com a carga real |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
@@ -52,7 +53,7 @@ firesync/
 └── infra/                 deploy na VPS: docker-compose, servidor web, .env.example (frente C)
 ```
 
-Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/` tem o serviço histórico e seus testes; as rotas HTTP ainda faltam. `frontend/` já traz o esqueleto (D1), a seleção de área, período e camada de focos recentes no mapa (D2–D3, RD07), o calendário (D4), os indicadores/gráficos (D5), os downloads e pacote de auditoria (D6), o proxy e integração com a API (D7) e os testes E2E em `frontend/e2e/`. `infra/` ainda não tem arquivos de deploy. `data-pipeline/data/` tem os quatro ZIPs de teste:
+Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/` tem as cinco rotas HTTP, histórico, janela recente, camada de focos, ZIP auditável e testes unitários, HTTP, PostGIS e E2E com dados sintéticos. `frontend/` já traz o esqueleto (D1), a seleção de área, período e camada de focos recentes no mapa (D2–D3, RD07), o calendário (D4), os indicadores/gráficos (D5), os downloads e pacote de auditoria (D6), o proxy e integração com a API (D7) e os testes E2E em `frontend/e2e/`. `infra/` ainda não tem arquivos de deploy. `data-pipeline/data/` tem os quatro ZIPs de teste:
 
 | Arquivo | Conteúdo |
 | --- | --- |
@@ -60,6 +61,17 @@ Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regr
 | `DL_FIRE_SV-C2_848021.zip` | VIIRS S-NPP |
 | `DL_FIRE_J1V-C2_848019.zip` | VIIRS NOAA-20 |
 | `DL_FIRE_J2V-C2_848020.zip` | VIIRS NOAA-21 |
+
+## Rodar localmente
+
+Com `DATABASE_URL` configurada no ambiente e o banco carregado:
+
+```powershell
+python -m pip install -e './backend[test]'
+python -m uvicorn backend.adapters.inbound.http.app:create_app --factory --host 127.0.0.1 --port 8000
+```
+
+Em outro terminal, `cd frontend`, `npm ci` e `npm run dev`. O proxy `/api` aponta para `http://localhost:8000`; `VITE_DEV_API_PROXY` permite usar `http://127.0.0.1:8000` quando necessário. Variáveis, rate limit, testes e carga sintética estão em [backend/README.md](backend/README.md). A validação da carga científica real será feita pelo Eduardo, conforme o [roteiro M2](docs/validacao-api-eduardo.md).
 
 ## Como os dados fluem
 
@@ -96,8 +108,8 @@ Detalhes de cada etapa: [importacao-regioes.md](docs/importacao-regioes.md).
 - [ ] Contrato da API ([api.md](docs/api.md) na `main`; falta A e D confirmarem, tarefa T02)
 - [x] Histórico do FIRMS baixado e análise por satélite ([pipeline-dados.md](docs/pipeline-dados.md))
 - [x] Importador, pipeline, agregação, job NRT e série do INPE ([pipeline-dados.md](docs/pipeline-dados.md))
-- [ ] API
-- [x] Frontend (D1–D7 prontos no front; falta validar com as rotas HTTP do backend no ar e gravar a demo D8)
+- [x] API HTTP C1–C6 (validação com dados sintéticos; conferência da carga real pelo Eduardo em [validacao-api-eduardo.md](docs/validacao-api-eduardo.md))
+- [x] Frontend (D1–D7 prontos no front e integração HTTP validada com PostGIS sintético no desktop/celular; M2 com carga real aguarda Eduardo e a demo D8 segue pendente)
 - [ ] Deploy público
 - [ ] Demo e página do projeto
 
@@ -107,14 +119,16 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 
 | Parte | Ferramenta | Como foi usada |
 | --- | --- | --- |
+| Integração do PR #26 com a `main`, resolução de `data-pipeline/.coveragerc` e limpeza das pendências da B6 em `docs/` | OpenAI Codex | Preservação do mínimo de cobertura de 71% e atualização dos documentos conforme a issue #68; sem alteração das contas |
 | `data-pipeline/pipeline.py`, `agregar.py`, `eda.py`, `test_pipeline.py`, `test_banco.py`, `job_nrt.py`, `Dockerfile`, `migrations/` | Claude Code (Claude Opus 5.5) | Código gerado a partir das especificações de filtro escritas pelo time de dados. Revisado pela equipe |
 | `docs/banco.md`, `data-pipeline/migrations/001_inicial.sql` | Claude Code (Claude Opus 5.5) | Schema e documento de decisões gerados a partir dos docs do repo e de um benchmark local. Revisado pela equipe |
 | `docs/pipeline-dados.md` | Claude Code (Claude Opus 5.5) | Redação do relatório do que foi feito e dos achados da análise exploratória |
-| Código e testes em `backend/src/`, `backend/tests/`, configuração Python e CI do backend | OpenAI Codex | Implementação assistida das partes 1–3 e integração da main: domínio, portas, adaptadores PostgreSQL, análise histórica, reorganização de src e CI, conforme documentação da equipe |
-| Estrutura e documentação do `backend/`, ajustes em `docs/arquitetura.md`, `docs/tarefas.md`, `docs/importacao-regioes.md` e `docs/api.md` | OpenAI Codex | Organização das camadas e revisão da documentação; decisões de método referenciadas nos registros da equipe |
+| Código e testes em `backend/src/`, `backend/tests/`, configuração Python e CI do backend | OpenAI Codex | Implementação assistida do domínio, portas, PostgreSQL e análise histórica; C1–C6 com cinco rotas FastAPI, janelas recentes, intensidade, rate limit/cache, ZIP auditável, carga sintética em `backend/scripts/`, testes HTTP/PostGIS e E2E via proxy. TDD e CI conforme documentação da equipe; carga real aguarda Eduardo |
+| Estrutura e documentação do `backend/`, ajustes em `docs/arquitetura.md`, `docs/tarefas.md`, `docs/importacao-regioes.md` e `docs/api.md` | OpenAI Codex | Organização das camadas e revisão da documentação; atualização dos READMEs, requisitos, tarefas, testes e roteiro `docs/validacao-api-eduardo.md`. Decisões de método referenciadas nos registros da equipe |
 | `docs/prompt-frontend.md` | Claude Code (Claude Opus 5.5) | Prompt do front escrito a partir dos docs do repo. A equipe aprova antes de usar |
 | `docs/api.md`, `docs/api-exemplo.json` (issues #22 e #29) | Claude Code (Claude Opus 5.5) | Correções do contrato escritas a partir das issues da auditoria. Revisado pela equipe |
 | `docs/validacao-alerta.md`, `docs/rfcs/0001-backtest-alerta.md` | Claude Code (Claude Opus 5.5) | Proposta de validação do alerta e RFC de implementação, escritos a partir da issue #9 e da revisão do PR #42. Revisado pela equipe |
+| `data-pipeline/validacao/backtest_alerta.py`, `data-pipeline/tests/test_backtest_alerta.py`, `data-pipeline/referencia/eventos_conhecidos.csv` | Claude Code (Claude Opus 5.5) | Backtest do alerta escrito a partir do RFC 0001, com TDD. As fontes dos eventos foram conferidas nas páginas oficiais. Revisado pela equipe |
 | Limpeza dos `.md` (README, CLAUDE.md, `docs/`, READMEs das pastas) | Claude Code (Claude Opus 5.5) | Levantamento do que estava desatualizado, comparando os docs com o código da `main`, e correção dos trechos. Revisado pela equipe no PR |
 | `.github/workflows/ci.yml` (job "Só documentação?"), `.github/scripts/roda_testes.sh`, `test_roda_testes.sh` | Claude Code (Claude Opus 5.5) | Filtro que pula os testes de código em PR só de `.md`. Revisado pela equipe |
 | `data-pipeline/harmonizacao/` (`calibrar.py`, `validar_inpe.py`, `modelo_a.py`, `test_calibrar.py`, `test_validar_inpe.py`), `data-pipeline/tests/test_harmonizacao.py`, `test_calibrar_integracao.py`, `test_modelo_a.py` | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Código escrito a partir das decisões de método do Weberson (escala VIIRS, fator por bioma, mês e dia ou noite, cenários por ano, faixa P5 a P95, critério de 1,5×, regras de limpeza e o modelo A pelo caminho C, RFC 0002). Os erros achados na revisão do PR #26 foram corrigidos com um teste para cada um. Revisado pelo Mateus |

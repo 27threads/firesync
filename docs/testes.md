@@ -37,7 +37,7 @@ Os dois, com papéis diferentes. **Não vale trocar os testes de unidade por cai
 Os testes da API e do front foram escritos no repositório antes das telas e dos endpoints:
 
 - **`backend/tests/domain/` e `backend/tests/application/`:** a especificação do núcleo da API (faixa P5–P95, origem e satélite do mês, intensidade, alerta, janelas, IDs H3, calendário). Os valores foram calculados à mão. Cada teste tem `xfail(strict=True)`: enquanto o código não existe, ele falha e a esteira aceita. **Quando o código fizer o teste passar, a esteira quebra com XPASS.** É o sinal para tirar o `xfail` daquele teste, que a partir daí vale de verdade.
-- **`frontend/e2e/jornadas.spec.ts`:** 9 jornadas (J1–J9), todas ativas e passando com a API simulada no desktop e no celular.
+- **`frontend/e2e/jornadas.spec.ts`:** 9 jornadas (J1–J9), todas ativas e passando com a API simulada no desktop e no celular. `backend/tests/e2e/` acrescenta duas jornadas (desktop/celular) com front, proxy, API HTTP e PostGIS sintético, sem interceptar endpoints.
 
 ### Jornadas de usuário
 
@@ -60,7 +60,7 @@ Cada jornada roda no desktop e no celular. Os seletores usam papéis e textos ac
 | Parte | Medida | Mínimo | Onde fica o mínimo |
 | --- | --- | --- | --- |
 | `data-pipeline/` | Linhas e ramos, juntando unidade e integração | **56%**, o medido na primeira esteira (PR #24): `agregar.py` 80%, `job_nrt.py` 85%, `pipeline.py` 51% | `data-pipeline/.coveragerc` |
-| `backend/src/` | Linhas e ramos | **94,2%**, após a integração do backend | `.github/workflows/ci.yml` |
+| `backend/src/` | Linhas e ramos | **97,0%**, após as rotas HTTP e os testes com PostGIS sintético | `.github/workflows/ci.yml` |
 
 O `eda.py` (análise exploratória) fica fora da cobertura. Download, `stage`, `clean` e `cadastrar` dependem do FIRMS e do IBGE, e são as próximas partes a ganhar teste.
 
@@ -76,7 +76,7 @@ Arquivo: `.github/workflows/ci.yml`. Roda em todo PR e em todo push na `main`.
 | **Código morto** | `ruff check .` (imports, variáveis e redefinições sem uso) e `vulture` (funções, classes e variáveis nunca usadas), fora dos testes |
 | **Pipeline · unidade** | `test_pipeline.py` |
 | **Pipeline · integração com PostGIS** | Migrations aplicadas duas vezes (precisam rodar de novo sem erro), `test_banco.py`, job NRT com o FIRMS simulado e o relatório de cobertura, que aparece no resumo do job |
-| **API · contrato e especificação TDD** | Contrato do `api-exemplo.json` e do `alert_rules.json`, mais a especificação do domínio. As especificações já implementadas não usam `xfail`. Com código em `backend/src/`, também a cobertura mínima de 94,2% com PostGIS |
+| **API · contrato e especificação TDD** | Contrato do `api-exemplo.json` e do `alert_rules.json`, mais a especificação do domínio. As especificações já implementadas não usam `xfail`. Com código em `backend/src/`, também a cobertura mínima de 97,0% com PostGIS |
 | **Front · unidade e jornadas** | As jornadas compilam. Com o front criado (`frontend/package.json`), roda os testes de unidade (Vitest), o build (com `tsc`, que barra variável e parâmetro sem uso), sobe o site e roda as jornadas no Chromium |
 
 ## Como rodar no seu computador
@@ -98,7 +98,7 @@ cd data-pipeline && TEST_DATABASE_URL=postgresql://postgres:teste@localhost:5434
 ```bash
 # API: unidade e contrato; integração exige um PostGIS descartável
 pip install -r backend/requirements-dev.txt
-TEST_DATABASE_URL=postgresql://usuario@localhost/banco_descartavel python -m pytest backend/tests -rxX --cov=backend/src --cov-branch --cov-fail-under=94.2
+TEST_DATABASE_URL=postgresql://usuario@localhost/banco_descartavel python -m pytest backend/tests -rxX --cov=backend/src --cov-branch --cov-fail-under=97.0
 ```
 
 ```bash
@@ -113,4 +113,6 @@ O teste do job NRT (`data-pipeline/tests/`) precisa de um banco próprio, com "t
 pip install ruff vulture && ruff check . && vulture data-pipeline backend/src backend/vulture_whitelist.py --exclude "tests,test_*.py" --min-confidence 60
 ```
 
-O arquivo `backend/vulture_whitelist.py` registra apenas as entradas públicas já usadas pelos testes (repositório PostgreSQL e `CalendarService.calculate`). Como a análise exclui testes, esses usos não seriam vistos. A lista é explícita, justificada por símbolo e não faz parte do pacote instalado.
+O arquivo `backend/vulture_whitelist.py` registra apenas as entradas públicas já usadas pelos testes (repositório PostgreSQL e `CalendarService.calculate`). Como a análise exclui testes, esses usos não seriam vistos. A lista inclui também a fábrica Uvicorn e callbacks registrados pelo FastAPI; é explícita, justificada por símbolo e não faz parte do pacote instalado.
+
+O teste `backend/tests/contract/test_api_contract.py` usa `TestClient` por padrão. Com `API_URL`, também executa um smoke test HTTP dos cinco endpoints. A carga sintética C2 é gerada por `backend/scripts/demo_data.py`; comandos em [backend/README.md](../backend/README.md). A verificação com a carga real pertence ao Eduardo: [roteiro](validacao-api-eduardo.md). Os cinco `xfail` restantes são do nível de alerta, fora desta entrega.
