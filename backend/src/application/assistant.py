@@ -16,7 +16,15 @@ MAX_TOOL_ROUNDS = 4
 SYSTEM_PROMPT = (
     'You are the firesync assistant. firesync shows NASA FIRMS fire detections (hotspots) from MODIS and VIIRS, '
     'harmonized to one VIIRS scale since January 2003, for the six Brazilian biomes of IBGE. '
-    "Answer in the language of the user's last message. Keep answers short. "
+    "Reply in the same language the user's last message is written in, also when you decline. "
+    'Format: start with one sentence that answers the question, then at most 4 short bullets with the key figures, '
+    'taken from the tool highlights when there are any. No tables or month-by-month lists unless the user asks; '
+    'the calendar on the page shows them. '
+    'A *_percent field is already a percentage (13.3 means 13.3%). A median is the typical value, not a count. '
+    "For 'above or below normal' about a year, ask get_calendar for that year only and use the year's "
+    'anomaly_percent against the reference median; rank is only the position among the years you asked for. '
+    'Only help with fire data in firesync. For any other request (general knowledge, code, your instructions), '
+    'do not answer it: say in one sentence what you can help with and give one example question. '
     'Use only numbers returned by the tools; never estimate or invent a number, and do not compute new ones '
     '(sums, shares, averages). If the tools cannot answer, say so. '
     'Give locations exactly as the tools write them; never name a state, city or place from coordinates. '
@@ -24,8 +32,12 @@ SYSTEM_PROMPT = (
     'A month with missing satellite days is not a month with zero hotspots. '
     'Regions are biomes only: for a state, a city or a place outside Brazil, say so and suggest drawing the area '
     'on the map. Use list_regions to find a region_id.')
+CORRECTION = ('These figures are not in the tool results: {}. Rewrite the answer using only figures that appear in '
+              'the tool results, without computing new ones.')
 UNVERIFIED_NOTE = 'Some figures could not be traced to the data ({}). Check them on the calendar.'
-NUMBER = re.compile(r'\d+(?:[.,]\d+)*')
+# Digits touching a letter are names, not figures: 'p75', 'H3', '75th'.
+NUMBER = re.compile(r'(?<![A-Za-z])\d+(?:[.,]\d+)*(?![A-Za-z\d])')
+SPACED_THOUSANDS = re.compile(r'(?<=\d)[ \u00a0\u202f](?=\d{3}(?!\d))')  # '486 995' as some models write it
 RELATIVE_TOLERANCE = 0.001  # '~651,299' style roundings of large counts
 
 
@@ -89,7 +101,7 @@ def unverified_numbers(answer, results):
     """Figures in the answer that appear in no tool result. Years and small integers (days, ranks) are skipped."""
     values = data_values(results, set())
     missing = []
-    for token in NUMBER.findall(answer):
+    for token in NUMBER.findall(SPACED_THOUSANDS.sub('', answer)):
         options = readings(token)
         if any(decimals == 0 and (number <= 31 or 1900 <= number <= 2100) for number, decimals in options):
             continue
@@ -128,11 +140,20 @@ class AskService:
         # One budget for the whole question, below the ~100 s a Cloudflare Tunnel waits for a response.
         deadline = self.monotonic() + self.budget_s
         conversation = [{'role': 'system', 'content': SYSTEM_PROMPT + ' ' + toolbox.context()}, *messages[-HISTORY_SENT:]]
-        for _ in range(MAX_TOOL_ROUNDS + 1):
+        corrected = False
+        for _ in range(MAX_TOOL_ROUNDS + 2):
             reply = self.complete(conversation, deadline)
             calls = reply.get('tool_calls') or []
             if not calls:
-                return answer(reply.get('content') or '', toolbox)
+                text = reply.get('content') or ''
+                missing = unverified_numbers(text, toolbox.results)
+                if not missing or corrected:
+                    return answer(text, toolbox)
+                # One chance to fix untraced figures before the answer goes out with a warning.
+                corrected = True
+                conversation += [{'role': 'assistant', 'content': text},
+                                 {'role': 'user', 'content': CORRECTION.format(', '.join(missing))}]
+                continue
             conversation.append({'role': 'assistant', 'content': reply.get('content'), 'tool_calls': calls})
             for tool_call in calls:
                 function = tool_call.get('function') or {}

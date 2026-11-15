@@ -5,6 +5,7 @@ Any provider that speaks this format fits in ASSISTANT_PROVIDERS, so an exhauste
 import json
 import logging
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from time import monotonic as system_monotonic
 
 from backend.ports.llm import LlmUnavailable
@@ -13,6 +14,10 @@ logger = logging.getLogger('uvicorn.error.firesync')
 # A ceiling, not a target: reasoning models spend part of it thinking before the answer.
 MAX_TOKENS = 4000
 USER_AGENT = 'firesync-assistant/1.0'
+# urllib's timeout is per socket read, so a provider that trickles keep-alive bytes never hits it; the call runs
+# here and the caller stops waiting at the deadline.
+# shortcut: an abandoned call keeps its thread until the provider closes; size the pool if that ever fills up.
+CALLS = ThreadPoolExecutor(max_workers=8, thread_name_prefix='assistant-provider')
 
 
 class ProviderChain:
@@ -46,9 +51,8 @@ class ProviderChain:
                                                       # Cloudflare in front of some providers blocks Python-urllib (error 1010).
                                                       'User-Agent': USER_AGENT})
             try:
-                # Each call gets its own timeout, cut to what is left of the question's budget.
-                with self.opener(request, timeout=min(self.timeout, remaining)) as response:
-                    message = json.load(response)['choices'][0]['message']
+                call = CALLS.submit(self.fetch, request, min(self.timeout, remaining))
+                message = call.result(timeout=min(self.timeout, remaining))['choices'][0]['message']
                 if not message.get('content') and not message.get('tool_calls'):
                     raise ValueError('empty reply (the model spent max_tokens reasoning)')
                 return message
@@ -56,3 +60,7 @@ class ProviderChain:
                 logger.warning('Assistant provider failed, trying the next one: %s %s: %s',
                                base_url, type(error).__name__, error)
         raise LlmUnavailable('Every assistant provider failed.')
+
+    def fetch(self, request, timeout):
+        with self.opener(request, timeout=timeout) as response:
+            return json.load(response)

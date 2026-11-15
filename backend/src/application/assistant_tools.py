@@ -11,6 +11,7 @@ from backend.domain.models.map_query import MapQuery
 MAX_MONTHS_SENT = 36
 TOP_MONTHS = 12
 TOP_HEXAGONS = 10
+MAP_WINDOWS = (24, 72, 168)  # the hours GET /detections/recent accepts
 MAP_ZOOM = '4'  # resolution-4 hexagons: the whole coverage fits in one answer
 MONTH_FIELDS = ('month', 'detections', 'source', 'missing_days', 'incomplete', 'provisional', 'anomaly_pct')
 YEAR_FIELDS = ('year', 'detections', 'rank', 'complete', 'source')
@@ -27,7 +28,8 @@ TOOL_SPECS = [
     {'type': 'function', 'function': {
         'name': 'get_calendar',
         'description': 'Monthly harmonized hotspot counts for a region and period: months (or top months for long '
-                       'periods), yearly ranking, seasonality and indicators. Period defaults to the whole series.',
+                       'periods), yearly ranking, seasonality and indicators. Period defaults to the whole series; '
+                       'for one year, pass that year (2024-01 to 2024-12).',
         'parameters': {'type': 'object', 'required': ['region_id'],
                        'properties': {'region_id': REGION_ID, 'start': MONTH, 'end': MONTH}}}},
     {'type': 'function', 'function': {
@@ -40,7 +42,7 @@ TOOL_SPECS = [
         'description': 'Where it is burning now in the whole coverage: busiest hexagons with their center, '
                        'cells to look at first and 14-day risk tiers.',
         'parameters': {'type': 'object', 'properties': {
-            'hours': {'type': 'integer', 'enum': [24, 72, 168], 'description': 'Time window up to now'}}}}},
+            'hours': {'type': 'integer', 'enum': list(MAP_WINDOWS), 'description': 'Time window up to now'}}}}},
 ]
 
 
@@ -48,9 +50,44 @@ def pick(row, fields):
     return {field: row.get(field) for field in fields}
 
 
+def readable(value):
+    """What the model reads: whole counts, '*_pct' fractions as percents. Models misread raw floats in testing."""
+    if isinstance(value, dict):
+        return dict(readable_item(name, item) for name, item in value.items())
+    if isinstance(value, list):
+        return [readable(item) for item in value]
+    if isinstance(value, float):
+        return round(value) if abs(value) >= 100 else round(value, 2)
+    return value
+
+
+def readable_item(name, value):
+    if name.endswith('_pct'):
+        numeric = isinstance(value, (int, float)) and not isinstance(value, bool)
+        return name[:-4] + '_percent', round(value * 100, 1) if numeric else value
+    return name, readable(value)
+
+
+def highlights(months, years, indicators):
+    """Peak, low and totals picked by code, so the model never has to search or add up a list."""
+    counted = [month for month in months if month['detections'] is not None]
+    found = {'period': f"{months[0]['month']} to {months[-1]['month']}" if months else None,
+             'total_detections': indicators.get('total_detections')}
+    if counted:
+        peak = max(counted, key=lambda month: month['detections'])
+        low = min(counted, key=lambda month: month['detections'])
+        found.update(peak_month=pick(peak, ('month', 'detections', 'anomaly_pct')),
+                     lowest_month=pick(low, ('month', 'detections', 'anomaly_pct')))
+    complete = [year for year in years if year.get('complete')]
+    if len(complete) > 1:
+        found['busiest_year'] = pick(max(complete, key=lambda year: year['detections']), ('year', 'detections'))
+    return found
+
+
 def calendar_summary(body):
     months = body['months']
-    summary = {'area': body['area'], 'coverage': body['coverage'], 'indicators': body['indicators'],
+    summary = {'highlights': highlights(months, body['years'], body['indicators']),
+               'area': body['area'], 'coverage': body['coverage'], 'indicators': body['indicators'],
                # A rank inside a one-year period is always 1 and reads as 'record year', so it goes only with more years.
                'years': [pick(year, YEAR_FIELDS if len(body['years']) > 1 else ONE_YEAR_FIELDS)
                          for year in body['years']],
@@ -60,7 +97,7 @@ def calendar_summary(body):
     else:
         busiest = sorted(months, key=lambda month: month['detections'] or 0, reverse=True)
         summary['top_months'] = [pick(month, MONTH_FIELDS) for month in busiest[:TOP_MONTHS]]
-    return summary
+    return readable(summary)
 
 
 def area_name(body):
@@ -136,7 +173,7 @@ class Toolbox:
     def get_recent(self, region_id):
         request, body, source = self.calendar(region_id)
         result = {'area': body['area'], 'coverage': body['coverage'], 'recent': body.get('recent')}
-        return result, [{'type': 'show_calendar', **request}], [], source
+        return readable(result), [{'type': 'show_calendar', **request}], [], source
 
     def get_fire_map(self, hours=24):
         with self.repository.read() as reader:
@@ -149,11 +186,13 @@ class Toolbox:
         hexagons = sorted(body['features'], key=lambda feature: feature['properties']['detections'], reverse=True)
         alerts = body.get('alerts') or {}
         risk = alerts.get('risk')
-        result = {'hours': body['hours'], 'total_detections': body['total_detections'],
+        result = {'hours': body['hours'], 'windows_available_hours': list(MAP_WINDOWS),
+                  'total_detections': body['total_detections'],
                   'top_hexagons': [hexagon_summary(feature['properties']) for feature in hexagons[:TOP_HEXAGONS]],
                   'look_first': [look_first_summary(cell) for cell in alerts.get('priority', [])[:TOP_HEXAGONS]],
                   'risk_tiers': risk['tiers'] if risk else None}
-        return result, [], [RISK_NOTE] if risk else [], self.source('GET /api/v1/detections/recent', hours=query.hours)
+        return (readable(result), [], [RISK_NOTE] if risk else [],
+                self.source('GET /api/v1/detections/recent', hours=query.hours))
 
 
 def place(lat, lon):

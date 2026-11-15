@@ -1,5 +1,7 @@
 """Assistant (RFC 0004): the model only picks tools; every number comes from the API use cases."""
 import io
+import threading
+import time
 import json
 from contextlib import contextmanager
 import urllib.error
@@ -12,7 +14,7 @@ from backend.adapters.outbound.config_file.rules import load_risk_rules, load_ru
 from backend.adapters.outbound.llm.openai import ProviderChain
 from backend.application.api import calculate_calendar
 from backend.application.assistant import AskService, UNVERIFIED_NOTE, unverified_numbers, validate_messages
-from backend.application.assistant_tools import RISK_NOTE, Toolbox
+from backend.application.assistant_tools import RISK_NOTE, Toolbox, readable
 from backend.domain.models.area import Area
 from backend.domain.models.error import CalendarError
 from backend.ports.llm import LlmUnavailable
@@ -105,8 +107,8 @@ def test_calendar_answer_uses_the_same_numbers_as_the_calendar_route():
         _, body = calculate_calendar(reader, Area(type='region', region_id=1), '2026-01', '2026-11',
                                      NOW.date(), load_rules())
     sent = tool_results(llm)[0]
-    assert [m['detections'] for m in sent['months']] == [m['detections'] for m in body['months']]
-    assert sent['indicators'] == body['indicators']
+    assert [m['detections'] for m in sent['months']] == [readable(m['detections']) for m in body['months']]
+    assert sent['indicators'] == readable(body['indicators'])
     assert result['answer'] == 'November 2026 had the most hotspots.'
     area = {'type': 'region', 'region_id': 1}
     assert result['actions'] == [
@@ -197,7 +199,8 @@ def test_endless_tool_calls_stop_after_the_round_limit():
     llm = ScriptedLlm(*[call('list_regions')] * 10)
     with pytest.raises(CalendarError) as error:
         ask(llm)
-    assert error.value.code == 'assistant_unavailable' and len(llm.conversations) == 5
+    # 4 tool rounds, the answer and one correction round at most
+    assert error.value.code == 'assistant_unavailable' and len(llm.conversations) == 6
 
 
 def test_time_budget_stops_the_question_between_rounds():
@@ -316,6 +319,7 @@ def test_provider_calls_are_cut_to_the_remaining_budget():
     'About 651,299, risk 0.97 at 1.58°N, 55.88°W, 82% of the time.',
     'In the last 7 days of 2026, 3 cells in the top 10.',
     'The biome covers 1,995,000 km² (1.995.000 km²).',
+    'There were 64 824 hotspots (64\u202f824 with a narrow space), near the p75 and the H3 cells, between the 25th and 75th percentile.',
 ])
 def test_figures_found_in_the_tool_results_are_verified(answer):
     results = [{'detections': 64824.0, 'anomaly_pct': 0.1326, 'median': 429962.5, 'reference': 651299.4,
@@ -330,7 +334,8 @@ def test_invented_or_computed_figures_are_flagged():
 
 
 def test_unverified_answer_says_so_and_cites_its_sources():
-    llm = ScriptedLlm(call('get_recent', region_id=1), {'content': 'There were 8,106 hotspots last week.'})
+    llm = ScriptedLlm(call('get_recent', region_id=1), {'content': 'There were 8,106 hotspots last week.'},
+                      {'content': 'Still 8,106 hotspots.'})
     result = ask(llm)
     assert not result['verified'] and result['notes'] == [UNVERIFIED_NOTE.format('8,106')]
     assert [source['endpoint'] for source in result['sources']] == ['POST /api/v1/calendar']
@@ -346,3 +351,50 @@ def test_tools_share_the_calendar_cache():
     for _ in range(2):
         ask(ScriptedLlm(call('get_recent', region_id=1), {'content': 'ok'}, repository=repository), cache=cache)
     assert len(calls) == 1
+
+
+def test_a_provider_that_hangs_is_abandoned_at_the_timeout():
+    hang = threading.Event()
+
+    def opener(request, timeout):
+        if 'slow' in request.full_url:
+            hang.wait(5)  # a provider that keeps the socket alive without answering
+            raise TimeoutError
+        return io.BytesIO(json.dumps({'choices': [{'message': {'content': 'fast'}}]}).encode())
+
+    chain = ProviderChain.from_env('https://slow/v1|k|m,https://fast/v1|k|m', 0.2, opener)
+    started = time.monotonic()
+    assert chain.complete(QUESTION, [], FAR)['content'] == 'fast'
+    assert time.monotonic() - started < 1
+    hang.set()
+
+
+def test_untraced_figures_get_one_correction_round():
+    llm = ScriptedLlm(call('get_recent', region_id=1), {'content': 'There were 8,106 hotspots last week.'},
+                      {'content': 'There were 7 hotspots in the last 7 days.'})
+    result = ask(llm)
+    assert result['verified'] and result['answer'] == 'There were 7 hotspots in the last 7 days.'
+    assert '8,106' in llm.conversations[-1][-1]['content'] and llm.conversations[-1][-1]['role'] == 'user'
+
+
+def test_tool_output_is_rounded_and_has_highlights():
+    llm = ScriptedLlm(call('get_calendar', region_id=1, start='2026-01', end='2026-11'), {'content': 'ok'})
+    ask(llm)
+    sent = tool_results(llm)[0]
+    assert sent['highlights']['period'] == '2026-01 to 2026-11'
+    assert sent['highlights']['peak_month']['detections'] == max(m['detections'] for m in sent['months'])
+    assert not any(key.endswith('_pct') for month in sent['months'] for key in month)
+
+
+def test_readable_rounds_counts_and_turns_fractions_into_percents():
+    from backend.application.assistant_tools import readable
+    assert readable({'detections': 429962.5, 'anomaly_pct': 0.13265, 'share': 0.0821, 'flag': True}) == {
+        'detections': 429962, 'anomaly_percent': 13.3, 'share': 0.08, 'flag': True}
+
+
+def test_highlights_without_counted_months():
+    from backend.application.assistant_tools import highlights
+    assert highlights([], [], {}) == {'period': None, 'total_detections': None}
+    month = {'month': '2026-01', 'detections': None, 'anomaly_pct': None}
+    assert 'peak_month' not in highlights([month], [], {'total_detections': 0})
+

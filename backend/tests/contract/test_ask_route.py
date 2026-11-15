@@ -99,7 +99,8 @@ def test_cached_answer_does_not_cross_midnight():
 
 
 def test_answer_with_untraced_figures_is_flagged_and_not_cached():
-    llm = ScriptedLlm({'content': 'There were 8,106 hotspots.'}, {'content': 'No figures this time.'})
+    llm = ScriptedLlm({'content': 'There were 8,106 hotspots.'}, {'content': 'Still 8,106.'},
+                      {'content': 'No figures this time.'})
     with client_with(llm) as client:
         first = client.post('/api/v1/ask', json=QUESTION).json()
         second = client.post('/api/v1/ask', json=QUESTION).json()
