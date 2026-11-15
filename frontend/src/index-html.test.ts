@@ -77,6 +77,30 @@ describe('index.html (static page shell)', () => {
     expect(method).toMatch(/rule v1/);
   });
 
+  // Rodada final da v1 no banco (issue #84) e intervalo de 95% (PR #85).
+  it('reports the measured result of rule v1, its interval and its weak spot', () => {
+    const method = doc.getElementById('method')?.textContent ?? '';
+    expect(method).toContain('26.6%');
+    expect(method).toMatch(/6\.0 points more than a simple persistence rule/);
+    expect(method).toMatch(/4\.1 to 8\.0/);
+    expect(method).toMatch(/95th percentile/);
+    expect(method).not.toMatch(/\bvalidated\b|\baccuracy\b/i);
+  });
+
+  it('shows how often each level was followed by high detections, and what the levels miss', () => {
+    const method = doc.getElementById('method')?.textContent ?? '';
+    expect(method).toContain('2.6%');
+    expect(method).toContain('10.7%');
+    expect(method).toMatch(/52%/);
+  });
+
+  it('gives biome frequencies and the Pantanal 2020 lead time instead of pending notes', () => {
+    const method = doc.getElementById('method')?.textContent ?? '';
+    expect(method).toMatch(/Pantanal[^.]*13\.8%/);
+    expect(method).toMatch(/40 days before/);
+    expect(method).not.toMatch(/pending/i);
+  });
+
   it('has the mount point for the interactive tool', () => {
     expect(doc.getElementById('tool-root')).not.toBeNull();
   });
