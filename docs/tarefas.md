@@ -69,6 +69,7 @@ B1 e B2 podem começar direto nos CSVs de 2024, sem esperar o importador.
 | B4 | Job de agregação gravando a contagem bruta em `agregados` (célula × ano × mês × satélite × dia/noite), só do satélite que vale em cada mês e só com confiança nominal e alta, no formato do `banco.md` (PR #2) | T01, B3 | feito pela frente A (`data-pipeline/agregar.py`, PR #2) | `agregados` preenchida para as duas regiões |
 | B5 | Comando `recalcular <regiao>` (fatores + agregados da região) | B3, B4 | a fazer | Rodar duas vezes dá o mesmo resultado |
 | B6 | Validar a série harmonizada contra a do INPE (só forma da curva, anos altos, meses de pico) e registrar o resultado da validação do B3 (erro por ano, decisão dos anos e cobertura da faixa) | A2, A7, B4 | feito (validação da B3 e comparação com o INPE registradas em [decisoes-harmonizacao.md](decisoes-harmonizacao.md), com a rodada final da issue #40; `data-pipeline/harmonizacao/validar_inpe.py` entra pelo PR #26; gráficos gerados na branch `a-b6-graficos`, falta só o PR da frente A para a `main`) | Gráficos de comparação salvos, para usar na página do projeto |
+| B7 | Modelo A pelo caminho C: curva de detecção e prova cruzada do fator ([rfcs/0002-modelo-a.md](rfcs/0002-modelo-a.md)). Etapa A com os dados de 2024; etapa B no banco da frente A, opcional | B6 | feita a etapa A (`data-pipeline/harmonizacao/modelo_a.py`; resultado em [decisoes-harmonizacao.md](decisoes-harmonizacao.md), seção 5); etapa B opcional, depende do tempo da frente A | Curva de detecção para a tela de Método |
 
 ## C. API, deploy e submissão
 
