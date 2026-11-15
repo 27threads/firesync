@@ -38,11 +38,12 @@ def bruto(linhas):
 
 
 def test_serie_diaria_conta_por_celula_e_dia_com_a_limpeza_da_frente_a():
-    df = bruto([(-10.00, -55.00, "2020-08-01", "n", 5.0, 0), (-10.01, -55.01, "2020-08-01", "h", 7.0, 0),
-                (-10.02, -55.02, "2020-08-02", "n", 3.0, 0),
-                (-10.03, -55.03, "2020-08-01", "l", 9.0, 0),      # confiança baixa: fora
-                (-10.04, -55.04, "2020-08-01", "n", 9.0, 2),      # type diferente de 0: fora
-                (-10.05, -55.05, "2020-08-01", "n", 0.0, 0)])     # FRP zero: fora
+    la, lo = h3.cell_to_latlng(CENTRO)               # pontos a metros do centro da célula, todos dentro dela
+    df = bruto([(la, lo, "2020-08-01", "n", 5.0, 0), (la + 0.001, lo, "2020-08-01", "h", 7.0, 0),
+                (la + 0.002, lo, "2020-08-02", "n", 3.0, 0),
+                (la + 0.003, lo, "2020-08-01", "l", 9.0, 0),      # confiança baixa: fora
+                (la + 0.004, lo, "2020-08-01", "n", 9.0, 2),      # type diferente de 0: fora
+                (la + 0.005, lo, "2020-08-01", "n", 0.0, 0)])     # FRP zero: fora
     s = mr.serie_diaria(df).set_index("data")
     assert set(s["unidade"]) == {h3.str_to_int(CENTRO)}
     assert s.loc["2020-08-01", "n"] == 2 and s.loc["2020-08-01", "frp"] == pytest.approx(12.0)
@@ -123,6 +124,40 @@ def test_pistas_de_clima_somam_a_chuva_e_contam_os_dias_secos_sem_olhar_o_futuro
     assert p["tmax7"][0, J_CENTRO] == pytest.approx(30.0) and p["umid7"][0, 0] == pytest.approx(30.0)
 
 
+def test_clima_do_power_vai_para_a_celula_pelo_ponto_da_grade_mais_perto(tmp_path):
+    la, lo = h3.cell_to_latlng(CENTRO)
+    perto, longe = (round(la * 2) / 2, round(lo / 0.625) * 0.625), (round(la * 2) / 2 + 5.0, round(lo / 0.625) * 0.625)
+    pd.DataFrame({"LAT": [perto[0], longe[0], perto[0]], "LON": [perto[1], longe[1], perto[1]], "YEAR": [2020] * 3,
+                  "DOY": [215, 215, 216], "PRECTOTCORR": [7.5, 99.0, -999.0]}).to_parquet(
+        tmp_path / "PRECTOTCORR_2020.parquet", index=False)        # INVENTADO; 2020-08-02 é o dia 215 do ano
+    clima = mr.clima_por_unidade(tmp_path, UNIDADES)
+    assert set(clima) == {"PRECTOTCORR"}
+    assert clima["PRECTOTCORR"][J_CENTRO, dia(T)] == pytest.approx(7.5)
+    assert np.isnan(clima["PRECTOTCORR"][J_CENTRO, dia(T) + 1])    # -999 é dado ausente
+    assert np.isnan(clima["PRECTOTCORR"][J_CENTRO, dia(T) - 1])    # dia sem linha
+
+
+def test_bioma_da_celula_pelo_centro():
+    import geopandas as gpd
+    from shapely.geometry import box
+
+    la, lo = h3.cell_to_latlng(CENTRO)
+    biomas = gpd.GeoDataFrame({"CD_Bioma": [3]}, geometry=[box(lo - 0.05, la - 0.05, lo + 0.05, la + 0.05)], crs=4326)
+    b = mr.bioma_das_unidades(UNIDADES, biomas)
+    assert b[J_CENTRO] == 3 and np.isnan(np.delete(b, J_CENTRO)).all()      # as vizinhas ficam fora do retângulo
+
+
+def test_linha_de_comando_monta_a_serie_dos_arquivos_anuais(tmp_path, monkeypatch):
+    la, lo = h3.cell_to_latlng(CENTRO)
+    bruto([(la, lo, "2020-08-01", "n", 5.0, 0)]).to_csv(tmp_path / "a.csv", index=False)
+    bruto([(la, lo, "2021-08-01", "n", 5.0, 0), (la + 0.001, lo, "2021-08-01", "h", 2.0, 0)]).to_csv(tmp_path / "b.csv", index=False)
+    monkeypatch.setattr(sys, "argv", ["modelo_risco.py", "--viirs", str(tmp_path / "a.csv"), str(tmp_path / "b.csv"),
+                                      "--gravar-serie", str(tmp_path / "s" / "serie.parquet")])
+    mr.main()
+    s = pd.read_parquet(tmp_path / "s" / "serie.parquet").set_index("data")
+    assert s.loc["2020-08-01", "n"] == 1 and s.loc["2021-08-01", "n"] == 2 and s.loc["2021-08-01", "frp"] == pytest.approx(7.0)
+
+
 def test_medidas_comparam_modelo_regra_e_ingenua_com_o_mesmo_numero_de_alertas():
     y = np.array([1, 1, 0, 0, 0, 0, 0, 0], bool)
     p = np.array([0.9, 0.8, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])           # o modelo acerta os dois
@@ -179,7 +214,7 @@ def test_ponta_a_ponta_pela_linha_de_comando(tmp_path, monkeypatch):
     dias = pd.date_range("2012-02-01", "2024-12-31")
     linhas = []
     for u in UNIDADES[:4]:
-        base = 3 + 3 * np.sin((dias.dayofyear.to_numpy() - 150) / 58.0)      # temporada de fogo no meio do ano
+        base = 3 + 3 * np.sin((dias.day_of_year.to_numpy() - 150) / 58.0)      # temporada de fogo no meio do ano
         n = rng.poisson(np.clip(base, 0.05, None))
         linhas.append(pd.DataFrame({"unidade": u, "data": dias.strftime("%Y-%m-%d"), "n": n, "frp": n * 10.0}))
     serie = pd.concat(linhas)
