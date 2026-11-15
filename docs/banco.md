@@ -154,11 +154,11 @@ Comandos em bash. Na VPS, a partir de `infra/`. No Git Bash do Windows, rode ant
 | 4 | VPS | `docker compose cp /tmp/firesync.dump db:/tmp/ && docker compose exec db pg_restore -U firesync -d firesync --clean --if-exists --no-owner -j 4 /tmp/firesync.dump` | 30–60 min |
 | 5 | VPS | **Estatísticas:** `docker compose exec db vacuumdb -U firesync -d firesync --analyze-in-stages`. O `pg_restore` não leva as estatísticas, e sem elas o Postgres pode escolher planos muito lentos | 5–10 min |
 | 6 | VPS | Conferir contra o banco local: `SELECT satelite, count(*) FROM focos GROUP BY 1`, `SELECT count(*) FROM agregados`, `SELECT count(*) FROM agregados_diarios` e `SELECT * FROM config` (com `data_version` e `atualizado_em`). Os números têm que ser iguais aos da máquina local | 5 min |
-| 7 | VPS | Usuário só de leitura para a API (abaixo) | 2 min |
+| 7 | VPS | Usuário só de leitura para a API (abaixo), com a mesma senha de `API_DB_PASSWORD` do `.env` | 2 min |
 | 8 | VPS | `docker compose up -d --build`, para subir `api`, `job-nrt` e `tunnel`. Depois, `docker compose logs -f job-nrt`: a primeira rodada termina com `nrt_run_finished` e mostra em `days` quantos dias ela buscou. E `GET /api/v1/health` pelo túnel | 10 min |
 | 9 | VPS | Apagar o dump (`/tmp/firesync.dump` na VPS e `docker compose exec db rm /tmp/firesync.dump`) e ligar o backup (abaixo) | — |
 
-**Usuário só de leitura da API.** A API nunca escreve. Com um usuário só de leitura, um erro na API não apaga dados, e o tempo máximo por consulta protege o pool de conexões. O SQL abaixo foi testado num banco descartável: o usuário lê e a escrita é recusada. Para usar, o `DATABASE_URL` do serviço `api` no `infra/docker-compose.yml` passa a ser `postgresql://firesync_api:${API_DB_PASSWORD}@db:5432/firesync`, com `API_DB_PASSWORD` no `.env`.
+**Usuário só de leitura da API.** A API nunca escreve. Com um usuário só de leitura, um erro na API não apaga dados, e o tempo máximo por consulta protege o pool de conexões. O SQL abaixo foi testado num banco descartável: o usuário lê e a escrita é recusada. O `infra/docker-compose.yml` já conecta a API com esse usuário, e a senha vem de `API_DB_PASSWORD` no `.env`. **Sem este passo, a API não consegue entrar no banco.**
 
 ```sql
 CREATE ROLE firesync_api LOGIN PASSWORD '<API_DB_PASSWORD do .env>';
@@ -175,7 +175,7 @@ ALTER ROLE firesync_api SET statement_timeout = '30s';
 
 | Variável | Quem usa | Exemplo |
 | --- | --- | --- |
-| `DATABASE_URL` | pipeline (usuário `firesync`, escreve) e API (de preferência o usuário `firesync_api`, só leitura; ver o roteiro de carga) | `postgresql://firesync:<senha>@db:5432/firesync` |
+| `DATABASE_URL` | pipeline (usuário `firesync`, escreve) e API (usuário `firesync_api`, só leitura, criado no roteiro de carga) | `postgresql://firesync:<senha>@db:5432/firesync` |
 | `POSTGRES_PASSWORD` | compose (serviço `db`) | só no `.env` |
 | `FIRMS_MAP_KEY` | pipeline (`download`) | só no `.env` |
 
