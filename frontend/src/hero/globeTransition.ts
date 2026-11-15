@@ -3,6 +3,13 @@
 /** Enquadramento final da descida: o Brasil no centro, no zoom 4 dos tiles do NASA GIBS. */
 export const SURFACE_VIEW = { latitude: -14, longitude: -52, zoom: 4, radius: 1.6, fov: 34 };
 
+/** Abaixo desta largura (celular e tablet em pé) o texto fica em cima e o globo embaixo. */
+export const STACKED_OPENING_MAX_WIDTH = 959;
+
+export type OpeningLayout = 'stacked' | 'side';
+
+export const openingLayout = (width: number): OpeningLayout => (width <= STACKED_OPENING_MAX_WIDTH ? 'stacked' : 'side');
+
 export const BLUE_MARBLE_TILES =
   'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg';
 

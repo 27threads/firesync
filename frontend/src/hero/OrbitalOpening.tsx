@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { chapterAt, journeyProgress } from './globeTransition';
+import { useMediaQuery } from '../ui/useMediaQuery';
+import { chapterAt, journeyProgress, STACKED_OPENING_MAX_WIDTH } from './globeTransition';
 import { prefersReducedMotion } from './heroIntro';
 import { OPENING_AUDIENCE, OPENING_CHAPTERS, OPENING_DATA_CREDIT } from './openingCopy';
 
@@ -18,6 +19,8 @@ export function OrbitalOpening() {
   const progress = useRef(0);
   const [chapter, setChapter] = useState(0);
   const [playing, setPlaying] = useState(() => !prefersReducedMotion());
+  // A mesma regra de openingLayout, que a cena usa para enquadrar o globo.
+  const stacked = useMediaQuery(`(max-width: ${STACKED_OPENING_MAX_WIDTH}px)`);
 
   useEffect(() => {
     const element = section.current;
@@ -55,7 +58,7 @@ export function OrbitalOpening() {
   const content = OPENING_CHAPTERS[chapter] ?? OPENING_CHAPTERS[0];
 
   return (
-    <section ref={section} className="opening" aria-labelledby="opening-title">
+    <section ref={section} className="opening" data-layout={stacked ? 'stacked' : 'side'} aria-labelledby="opening-title">
       <div className="opening__sticky">
         <Suspense fallback={<div className="orbital-canvas" />}>
           <OrbitalScene playing={playing} progress={progress} />
