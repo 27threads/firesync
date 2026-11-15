@@ -54,6 +54,7 @@ O `pyproject.toml` mapeia `src/` para o pacote `backend`, sem diretório interme
 - `adapters/outbound/postgres/`: SQL parametrizado e tradução dos nomes/valores em português para inglês.
 - `adapters/outbound/config_file/`: leitura das regras versionadas.
 - `scripts/demo_data.py`: gerador C2 de dados sintéticos, separado do serviço de leitura.
+- `scripts/assistant_benchmark.py`: bateria do assistente (RFC 0004) com perguntas cujo gabarito sai do próprio calendário, incluindo continuação de conversa, fora do assunto e lugar sem cobertura. Rode à mão antes de mudar prompt, ferramenta ou provedor: precisa de `DATABASE_URL` com a carga real e de `ASSISTANT_PROVIDERS`, então não entra na esteira.
 - `tests/`: unidade, contratos HTTP, integração PostGIS e jornadas com navegador.
 
 Cada pedido lê metadados e dados em uma transação `REPEATABLE READ READ ONLY`, em UTC. O pool pertence à aplicação e fecha ao encerrar. Fatores são mantidos em memória por `data_version` completa, inclusive hora. O LRU de respostas usa área/parâmetros, `updated_at` e `data_version`; o calendário também inclui o dia UTC para atualizar os marcadores de mês/ano corrente. No mapa, o cache também expira quando o foco mais antigo sai da janela; resultados vazios são reavaliados após um minuto, mesmo sem atualização NRT. `ETag` acompanha as respostas JSON e GET aceita `If-None-Match`.

@@ -111,9 +111,10 @@ def test_calendar_answer_uses_the_same_numbers_as_the_calendar_route():
     assert sent['indicators'] == readable(body['indicators'])
     assert result['answer'] == 'November 2026 had the most hotspots.'
     area = {'type': 'region', 'region_id': 1}
+    label = 'Test · 2026-01 to 2026-11'
     assert result['actions'] == [
-        {'type': 'show_calendar', 'area': area, 'start': '2026-01', 'end': '2026-11'},
-        {'type': 'download_export', 'area': area, 'start': '2026-01', 'end': '2026-11'}]
+        {'type': 'show_calendar', 'label': label, 'area': area, 'start': '2026-01', 'end': '2026-11'},
+        {'type': 'download_export', 'label': label, 'area': area, 'start': '2026-01', 'end': '2026-11'}]
     assert result['notes'] == [] and result['verified']
     assert result['sources'] == [{'endpoint': 'POST /api/v1/calendar', 'area': area, 'region': 'Test', 'start': '2026-01',
                                   'end': '2026-11', 'data_version': '2026-11-14T14:00:00Z',
@@ -134,7 +135,8 @@ def test_recent_tool_returns_the_recent_block_and_shows_the_default_period():
     result = ask(llm)
     sent = tool_results(llm)[0]
     assert sent['recent']['last_7_days']['detections'] == 7
-    assert result['actions'] == [{'type': 'show_calendar', 'area': {'type': 'region', 'region_id': 1}}]
+    assert result['actions'] == [{'type': 'show_calendar', 'label': 'Test',
+                                  'area': {'type': 'region', 'region_id': 1}}]
 
 
 def test_tool_error_goes_back_to_the_model_without_an_action():
@@ -398,3 +400,47 @@ def test_highlights_without_counted_months():
     month = {'month': '2026-01', 'detections': None, 'anomaly_pct': None}
     assert 'peak_month' not in highlights([month], [], {'total_detections': 0})
 
+
+def test_regions_come_with_the_prompt():
+    llm = ScriptedLlm({'content': 'hi'})
+    ask(llm)
+    assert 'Regions (region_id name): 1 Test.' in llm.conversations[0][0]['content']
+
+
+def test_follow_up_answered_from_memory_is_sent_to_the_tools():
+    history = [{'role': 'user', 'content': 'How was the Test region in 2026?'},
+               {'role': 'assistant', 'content': 'It had 12,345 hotspots.'},
+               {'role': 'user', 'content': 'And the year before?'}]
+    llm = ScriptedLlm({'content': 'It had 54,321 hotspots.'},
+                      call('get_calendar', region_id=1, start='2025-01', end='2025-12'),
+                      {'content': 'The calendar shows the year.'})
+    result = ask(llm, messages=history)
+    correction = llm.conversations[1][-1]
+    assert correction['role'] == 'user' and 'without calling any tool' in correction['content']
+    assert result['verified'] and result['sources'][0]['start'] == '2025-01'
+
+
+def test_fire_map_says_how_old_the_data_is():
+    llm = ScriptedLlm(call('get_fire_map', hours=24), {'content': 'ok'})
+    ask(llm)
+    sent = tool_results(llm)[0]
+    assert sent['data_updated_at'] == '2026-11-14T15:00:00Z' and sent['hours_since_update'] == 0
+
+
+def test_action_label_names_region_and_period():
+    from backend.application.assistant_tools import action_label
+    assert action_label({'region': 'Pantanal', 'start': '2024-01', 'end': '2024-12'}) == 'Pantanal · 2024-01 to 2024-12'
+    assert action_label({'region': None}) is None
+
+
+def test_a_provider_that_failed_goes_last_for_a_minute():
+    now = [0.0]
+    opener = Opener(quota_error('https://a/v1/chat/completions'), {'content': 'b1'}, {'content': 'b2'},
+                    {'content': 'a again'})
+    chain = ProviderChain.from_env('https://a/v1|ka|m1,https://b/v1|kb|m2', 20, opener, monotonic=lambda: now[0])
+    assert chain.complete(QUESTION, [], FAR)['content'] == 'b1'
+    now[0] = 30
+    assert chain.complete(QUESTION, [], FAR)['content'] == 'b2'  # a is cooling down: b is asked first
+    now[0] = 61
+    assert chain.complete(QUESTION, [], FAR)['content'] == 'a again'
+    assert [url.split('/')[2] for url in opener.urls] == ['a', 'b', 'b', 'a']
