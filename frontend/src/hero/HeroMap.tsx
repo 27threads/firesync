@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { LayerGroup, Map as LeafletMap } from 'leaflet';
 import { fetchRecentDetections, fetchRegions } from '../api/client';
-import type { PriorityCell, RecentDetectionsResponse, RegionOption } from '../api/types';
+import type { GeoJsonPolygon, PriorityCell, RecentDetectionsResponse, RegionOption } from '../api/types';
 import { loadLeafletWithGeoman } from '../controls/leafletLoader';
 import { BLUE_MARBLE_TILES, MAP_WHEEL_SETTLE_MS, SURFACE_VIEW } from './globeTransition';
 import {
@@ -17,16 +17,20 @@ import {
   type HeroFilters,
   type HeroMode,
   agoLabel,
+  announceArea,
   brasiliaLabel,
   countColor,
   filterCount,
   groupByTier,
+  hexSummary,
   hexVisible,
   iconSize,
   levelName,
+  pointSummary,
   priorityVisible,
   staleness,
   tierStartsOpen,
+  type MapSummary,
 } from './heroMapModel';
 import './heroMap.css';
 
@@ -47,6 +51,10 @@ interface View {
 const PAGE = 10;
 const cap = (text: string) => text[0]!.toUpperCase() + text.slice(1);
 const fmt = (n: number) => new Intl.NumberFormat('en-US').format(n);
+const escape = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+/** Popup text for a click on the map. Every value is escaped before it becomes HTML. */
+const popupHtml = ({ title, lines }: MapSummary) =>
+  `<div class="hm-pop"><strong>${escape(title)}</strong>${lines.map((line) => `<span>${escape(line)}</span>`).join('')}</div>`;
 
 export default function HeroMap({ active, onReturn, onNext }: Props) {
   const mapNode = useRef<HTMLDivElement>(null);
@@ -79,6 +87,20 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
   const [drawing, setDrawing] = useState('');
   const [hasShape, setHasShape] = useState(false);
   const [coords, setCoords] = useState({ lat: '-3.1', lon: '-60.2', radius: '50' });
+  // Name of the area just sent to the calendar below, for the "See its calendar" hint.
+  const [announced, setAnnounced] = useState('');
+  const rootRef = useRef<HTMLDivElement>(null);
+  const footRef = useRef<HTMLElement>(null);
+
+  // The footer grows to two or three lines (Risk tab, narrow screens): the controls above it follow its height.
+  useEffect(() => {
+    const foot = footRef.current;
+    const root = rootRef.current;
+    if (!foot || !root || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => root.style.setProperty('--hm-foot', `${foot.offsetHeight}px`));
+    observer.observe(foot);
+    return () => observer.disconnect();
+  }, []);
 
   // Relógio do "Data updated X h ago".
   useEffect(() => {
@@ -130,6 +152,11 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
         shapeLayer.current?.addLayer(layer);
         setHasShape(true);
         setDrawing('');
+        const geometry = (layer as unknown as { toGeoJSON: () => { geometry: GeoJsonPolygon } }).toGeoJSON().geometry;
+        if (geometry.type === 'Polygon') {
+          announceArea({ type: 'geojson', geometry });
+          setAnnounced('Your drawn area');
+        }
       });
       mapRef.current = map;
       publish();
@@ -233,10 +260,13 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
       for (const f of data.features) {
         const [lng, lat] = f.geometry.coordinates;
         const k = f.properties.intensity;
-        L.circleMarker([lat, lng], { radius: k === 'high' ? 8 : k === 'medium' ? 5 : 3, color: '#ffffff', weight: k === 'high' ? 2 : 1, fillColor: countColor(k === 'high' ? 100 : k === 'medium' ? 10 : 1), fillOpacity: 0.8 }).addTo(layer);
+        L.circleMarker([lat, lng], { radius: k === 'high' ? 9 : k === 'medium' ? 7 : 5, color: '#ffffff', weight: 2, fillColor: countColor(k === 'high' ? 100 : k === 'medium' ? 10 : 1), fillOpacity: 0.95 })
+          .bindPopup(popupHtml(pointSummary(f.properties, lat, lng)), { className: 'hm-popup', maxWidth: 280 })
+          .addTo(layer);
       }
       return;
     }
+    const shares = Object.fromEntries((data.alerts?.risk?.tiers ?? []).map((t) => [t.tier, t.historical_share]));
     for (const f of data.features) {
       const p = f.properties;
       if (!hexVisible(p, mode, filters)) continue;
@@ -246,12 +276,18 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
       const fill = risk ? TIER_COLOR[p.risk_tier!] : countColor(p.detections);
       const fire = p.detections > 0;
       const latlngs = ring.map(([lng, lat]) => [lat!, lng!] as [number, number]);
+      const centreLat = ring.reduce((sum, c) => sum + (c[1] ?? 0), 0) / ring.length;
+      const centreLng = ring.reduce((sum, c) => sum + (c[0] ?? 0), 0) / ring.length;
+      // Far away the cells are tiny: an outline in their own colour makes them bigger and keeps the colour readable.
+      // Close up a white outline separates neighbours on the dark satellite image.
       L.polygon(latlngs, {
-        color: risk ? (fire && near ? '#ffffff' : fill) : near ? '#ffffff' : fill,
+        color: near ? '#ffffff' : fill,
         fillColor: fill,
-        weight: risk ? (fire && near ? 2.5 : near ? 1 : 0.4) : near ? 1 : 0.4,
+        weight: risk && fire && near ? 2.5 : near ? 1.2 : 2.5,
         fillOpacity: HEX_FILL_OPACITY,
-      }).addTo(layer);
+      })
+        .bindPopup(popupHtml(hexSummary(p, centreLat, centreLng, data.hours, shares)), { className: 'hm-popup', maxWidth: 300 })
+        .addTo(layer);
       // Ícone de alerta: só quando o hexágono já comporta o símbolo.
       const level = p.alert_level;
       if (mode === 'fire' && (level === 'critical' || level === 'attention')) {
@@ -296,6 +332,8 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
     }
     const [west, south, east, north] = region.bbox;
     map.fitBounds([[south, west], [north, east]], { animate: false });
+    announceArea({ type: 'region', region_id: region.region_id });
+    setAnnounced(region.name);
   };
 
   const startDraw = (shape: 'Rectangle' | 'Polygon') => {
@@ -315,6 +353,7 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
     shapeLayer.current?.clearLayers();
     setHasShape(false);
     setDrawing('');
+    setAnnounced('');
   };
 
   const placeCircle = (event: { preventDefault: () => void }) => {
@@ -332,6 +371,8 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
     map.fitBounds(circle.getBounds(), { padding: [40, 40], maxZoom: 11, animate: false });
     setHasShape(true);
     setAreaPanel('none');
+    announceArea({ type: 'point', lat, lon, radius_km: km });
+    setAnnounced(`${km} km around ${lat}, ${lon}`);
   };
 
   const toggle = <T,>(list: T[], value: T) => (list.includes(value) ? list.filter((x) => x !== value) : [...list, value]);
@@ -375,7 +416,7 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
   );
 
   return (
-    <div className="hm" data-active={active ? 'true' : 'false'} aria-hidden={!active} {...(active ? {} : { inert: '' as unknown as boolean })}>
+    <div ref={rootRef} className="hm" data-active={active ? 'true' : 'false'} aria-hidden={!active} {...(active ? {} : { inert: '' as unknown as boolean })}>
       <div ref={mapNode} className="hm__map" role="application" aria-label="Fire map" />
 
       <nav className="hm-toolbar" aria-label="Map view and area">
@@ -404,9 +445,17 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
           </select>
         </label>
         <button type="button" className="hm-tool" aria-pressed={areaPanel === 'draw' || drawing !== ''} onClick={() => setAreaPanel(areaPanel === 'draw' ? 'none' : 'draw')}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+          </svg>
           Draw area
         </button>
         <button type="button" className="hm-tool" aria-pressed={areaPanel === 'coords'} onClick={() => setAreaPanel(areaPanel === 'coords' ? 'none' : 'coords')}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z" />
+            <circle cx="12" cy="10" r="2.5" />
+          </svg>
           Coordinates
         </button>
         {areaPanel === 'draw' && (
@@ -641,11 +690,19 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
         </button>
       </div>
 
+      {announced && (
+        <button type="button" className="hm-announce" onClick={onNext}>
+          Calendar below now shows <b>{announced}</b> · See it
+        </button>
+      )}
+
       <button type="button" className="hm-next" onClick={onNext} aria-label="Scroll down to the explorer" title="Scroll down to the explorer">
-        ▾
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
       </button>
 
-      <footer className="hm-footnote">
+      <footer ref={footRef} className="hm-footnote">
         {mode === 'fire' ? (
           <span>Recent hot spots (NASA FIRMS, VIIRS) can still change. Usual does not mean safe.</span>
         ) : (

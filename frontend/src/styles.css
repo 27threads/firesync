@@ -389,46 +389,6 @@ select {
   color: var(--fog-200);
 }
 
-.opening__controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 18px;
-}
-
-.opening__controls button {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius);
-  background: transparent;
-  color: var(--fog-200);
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.opening__controls button:hover,
-.opening__controls button:focus-visible {
-  background: var(--graphite-800);
-}
-
-.opening__step span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--fog-400);
-  transition: width var(--t-fast) var(--ease);
-}
-
-.opening__step[aria-pressed='true'] span {
-  width: 18px;
-  border-radius: 3px;
-  background: var(--amber);
-}
-
 .opening__credit {
   margin: 14px 0 0;
   font-size: 12px;
@@ -2221,7 +2181,6 @@ select {
 
 /* Tela de toque: botões pequenos com pelo menos 44 px de área de toque. */
 @media (pointer: coarse) {
-  .opening__controls button,
   .story__dot {
     width: 44px;
     height: 44px;

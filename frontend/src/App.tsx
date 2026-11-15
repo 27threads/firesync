@@ -1,9 +1,11 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MONTH_NAMES } from './calendar/calendarModel';
+import type { AreaInput } from './api/types';
 import { AssistantBubble } from './assistant/AssistantBubble';
 import { SelectionPanel } from './controls/SelectionPanel';
 import { buildExampleStory } from './discovery/exampleStory';
 import { prefersReducedMotion } from './hero/heroIntro';
+import { HERO_AREA_EVENT } from './hero/heroMapModel';
 import { useLeftHero } from './hero/useLeftHero';
 import { HistoryPanel } from './history/HistoryPanel';
 import { IndicatorRow } from './summary/IndicatorRow';
@@ -54,6 +56,15 @@ export function App() {
     setSelectedKey(null);
     ex.selectArea(area, period);
   };
+
+  // An area chosen on the hero map (region, drawing or coordinates) becomes the explorer's area too.
+  const selectAreaRef = useRef(selectArea);
+  selectAreaRef.current = selectArea;
+  useEffect(() => {
+    const onHeroArea = (event: Event) => selectAreaRef.current((event as CustomEvent<AreaInput>).detail);
+    window.addEventListener(HERO_AREA_EVENT, onHeroArea);
+    return () => window.removeEventListener(HERO_AREA_EVENT, onHeroArea);
+  }, []);
 
   // Mesma condição do resumo: sem erro e sem área fora da cobertura.
   const hasAnswer = ['ready', 'demo', 'api_unavailable', 'loading'].includes(ex.result.kind);
