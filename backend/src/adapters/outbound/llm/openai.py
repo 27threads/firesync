@@ -18,11 +18,19 @@ USER_AGENT = 'firesync-assistant/1.0'
 # here and the caller stops waiting at the deadline.
 # shortcut: an abandoned call keeps its thread until the provider closes; size the pool if that ever fills up.
 CALLS = ThreadPoolExecutor(max_workers=8, thread_name_prefix='assistant-provider')
+COOLDOWN_S = 60
 
 
 class ProviderChain:
     def __init__(self, providers, timeout, opener=urllib.request.urlopen, monotonic=system_monotonic):
         self.providers, self.timeout, self.opener, self.monotonic = providers, timeout, opener, monotonic
+        self.failed_at = {}  # base_url -> when it last failed
+
+    def in_order(self):
+        """Providers that failed in the last COOLDOWN_S go last: a provider out of quota or timing out would
+        otherwise take its share of every question's time budget. They stay in the list, in case all fail."""
+        now = self.monotonic()
+        return sorted(self.providers, key=lambda provider: now - self.failed_at.get(provider[0], -COOLDOWN_S) < COOLDOWN_S)
 
     @classmethod
     def from_env(cls, value, timeout, opener=urllib.request.urlopen, monotonic=system_monotonic):
@@ -37,7 +45,7 @@ class ProviderChain:
         return cls([(*provider, None)[:4] for provider in providers], timeout, opener, monotonic) if providers else None
 
     def complete(self, messages, tools, deadline):
-        for base_url, key, model, effort in self.providers:
+        for base_url, key, model, effort in self.in_order():
             remaining = deadline - self.monotonic()
             if remaining <= 0:
                 break
@@ -55,8 +63,10 @@ class ProviderChain:
                 message = call.result(timeout=min(self.timeout, remaining))['choices'][0]['message']
                 if not message.get('content') and not message.get('tool_calls'):
                     raise ValueError('empty reply (the model spent max_tokens reasoning)')
+                self.failed_at.pop(base_url, None)
                 return message
             except (OSError, ValueError, KeyError, IndexError, TypeError) as error:  # quota, 5xx, timeout, bad body
+                self.failed_at[base_url] = self.monotonic()
                 logger.warning('Assistant provider failed, trying the next one: %s %s: %s',
                                base_url, type(error).__name__, error)
         raise LlmUnavailable('Every assistant provider failed.')
