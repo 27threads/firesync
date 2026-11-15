@@ -10,14 +10,27 @@ from psycopg.rows import dict_row
 from backend.adapters.outbound.postgres.history import PostgresHistoryRepository
 from backend.application.audit import DETECTION_LIMIT
 from backend.domain.models.error import CalendarError
-from backend.domain.models.month import Month
+from backend.domain.models.month import SATELLITE_SWITCHES, Month
 from backend.domain.intensity import intensity_class
 
 POINT_LIMIT = 50_000
 VALID_DETECTION = "confianca IN ('nominal','alta') AND (tipo = 0 OR tipo IS NULL) AND frp > 0"
-# Same monthly boundaries as Month.satellite; used for queries spanning a switch.
-SELECTED_SATELLITE = """satelite = CASE WHEN datahora_utc < '2012-02-01'::timestamptz THEN 'Aqua'
-    WHEN datahora_utc < '2026-11-01'::timestamptz THEN 'SNPP' ELSE 'N20' END"""
+VIIRS_START = SATELLITE_SWITCHES[0][0]
+
+
+def satellite_sql(column, cast):
+    """SQL filter for the satellite of each day, built from SATELLITE_SWITCHES (constants, never user input)."""
+    previous = ['Aqua'] + [satellite for _, satellite in SATELLITE_SWITCHES]
+    cases = ' '.join(f"WHEN {column} < '{start.isoformat()}'::{cast} THEN '{before}'"
+                     for (start, _), before in zip(SATELLITE_SWITCHES, previous))
+    return f"satelite = CASE {cases} ELSE '{SATELLITE_SWITCHES[-1][1]}' END"
+
+
+SELECTED_SATELLITE = satellite_sql('datahora_utc', 'timestamptz')
+# Observed VIIRS satellites and the days each one counts (the last one has no end).
+VIIRS_DAYS = {satellite: (start, (SATELLITE_SWITCHES[i + 1][0] - timedelta(days=1))
+                          if i + 1 < len(SATELLITE_SWITCHES) else date.max)
+              for i, (start, satellite) in enumerate(SATELLITE_SWITCHES)}
 DETECTION_COLUMNS = """satelite AS satellite, lat AS latitude, lon AS longitude,
     datahora_utc AS acquired_utc, CASE confianca WHEN 'alta' THEN 'high'
     WHEN 'baixa' THEN 'low' ELSE 'nominal' END AS confidence,
@@ -31,14 +44,14 @@ def utc_text(value):
 def coverage_intervals(snapshot):
     """Intersect the regions' observed VIIRS coverage, retaining gaps."""
     regions = {row['region_id'] for row in snapshot.area['biomes']}
-    common = [(date(2012, 2, 1), date.max)]
+    common = [(VIIRS_START, date.max)]
     for region in regions:
         available = []
         for row in snapshot.periods:
-            if row['region_id'] != region or row['satellite'] not in ('SNPP', 'N20'):
+            if row['region_id'] != region or row['satellite'] not in VIIRS_DAYS:
                 continue
-            first = max(row['start'], date(2012, 2, 1) if row['satellite'] == 'SNPP' else date(2026, 11, 1))
-            last = min(row['end'], date(2026, 10, 31) if row['satellite'] == 'SNPP' else date.max)
+            first = max(row['start'], VIIRS_DAYS[row['satellite']][0])
+            last = min(row['end'], VIIRS_DAYS[row['satellite']][1])
             if first <= last:
                 available.append((first, last))
         common = [(max(a, c), min(b, d)) for a, b in common for c, d in available if max(a, c) <= min(b, d)]
@@ -108,9 +121,9 @@ class PostgresApiReader(PostgresHistoryRepository):
             raise CalendarError('invalid_data', 'No observed VIIRS coverage is available.')
         through = coverage[-1][1]
         ids = [h3.str_to_int(cell) for cell in snapshot.cells]
-        self.cursor.execute("""SELECT data AS day, sum(focos_brutos)::bigint AS detections
-            FROM agregados_diarios WHERE h3=ANY(%s::bigint[]) AND data >= '2012-02-01' AND data <= %s
-            AND satelite = CASE WHEN data < '2026-11-01' THEN 'SNPP' ELSE 'N20' END GROUP BY data""", (ids, through))
+        self.cursor.execute(f"""SELECT data AS day, sum(focos_brutos)::bigint AS detections
+            FROM agregados_diarios WHERE h3=ANY(%s::bigint[]) AND data >= %s AND data <= %s
+            AND {satellite_sql('data', 'date')} GROUP BY data""", (ids, VIIRS_START, through))
         daily = {row['day']: row['detections'] for row in self.cursor.fetchall()}
         start = min(through.replace(day=1), through - timedelta(days=6))
         intensity, params = self._intensity_sql()
