@@ -11,7 +11,8 @@ from validacao import backtest_alerta as bt
 
 REGRA = {
     "baseline": {"window_days": 7, "neighbor_days": 15, "reference_years_from": 2012},
-    "levels": {"critical": {"min_ratio_to_median": 2.0, "trend_days": 3, "requires_rising_trend": True},
+    "levels": {"critical": {"min_ratio_to_median": 2.0, "min_detections": 10, "trend_days": 3,
+                            "requires_rising_trend": True},
                "attention": {"above_percentile": 75}},
 }
 
@@ -132,6 +133,20 @@ def test_piso_continuo_tira_o_degrau_da_mediana_baixa():
     assert bt.nivel(a, 2.0, True, 75, 10, piso_continuo=False).tolist() == [[2, 2]]
     assert bt.nivel(a, 2.0, True, 75, 10, piso_continuo=True).tolist() == [[0, 2]]
 
+
+def test_nivel_da_regra_usa_o_piso_continuo_da_v1():
+    """Issue #66, item 5: os eventos conhecidos usavam o piso só na mediana zero, e não a v1 da API."""
+    a = {"s7": np.array([[2.0, 10.0]]), "med7": np.ones((1, 2)), "p75": np.full((1, 2), 99.0),
+         "p90": np.full((1, 2), 99.0), "sobe": np.ones((1, 2), bool)}
+    assert bt.nivel_da_regra(a, REGRA).tolist() == [[0, 2]]
+    piso_baixo = {**REGRA, "levels": {**REGRA["levels"],
+                                      "critical": {**REGRA["levels"]["critical"], "min_detections": 2}}}
+    assert bt.nivel_da_regra(a, piso_baixo).tolist() == [[2, 2]]   # o piso vem do alert_rules.json
+
+
+def test_regra_atual_da_grade_e_a_variante_com_piso_continuo():
+    atuais = [r for r in bt.regras(REGRA) if r["regra_atual"]]
+    assert [r["regra"] for r in atuais] == ["razao2.0_tend1_atencao_p75_piso_continuo"]
 
 def test_evento_sem_alerta_tem_antecedencia_vazia_e_regiao_errada_avisa_o_evento():
     """Issue #59, item 3: 0 semanas (alerta menos de 7 dias antes) não pode ser igual a "nenhum alerta"."""

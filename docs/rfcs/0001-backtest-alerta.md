@@ -86,7 +86,7 @@ Tudo em `numpy`, vetorizado por unidade. Para cada semana, `t` é o último dia 
 - **Atenção:** não é Crítico e `s7 > P75` (ou P90, conforme a grade).
 - **Normal:** o resto.
 
-**Grade:** razão em {1,5; 2; 2,5; 3} × tendência {ligada, desligada} × Atenção em {P75, P90} × piso {só na mediana zero, contínuo} = 32 regras, mais a `0.2` marcada (piso só na mediana zero). O P90 e o mínimo de 10 do gabarito também rodam com {P80, P95} e {5, 20} nas duas versões do piso da regra atual, para mostrar a sensibilidade.
+**Grade:** razão em {1,5; 2; 2,5; 3} × tendência {ligada, desligada} × Atenção em {P75, P90} × piso {só na mediana zero, contínuo} = 32 regras, com a regra do `alert_rules.json` marcada (hoje a `v1`, piso contínuo). O `eventos.csv` usa essa mesma regra, igual ao `recent` da API. O P90 e o mínimo de 10 do gabarito também rodam com {P80, P95} e {5, 20} nas duas versões do piso da regra atual, para mostrar a sensibilidade.
 
 **Medidas por regra** (sobre todas as semanas × unidades):
 - frequência de cada nível;

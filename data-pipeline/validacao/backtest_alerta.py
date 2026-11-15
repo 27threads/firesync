@@ -128,6 +128,13 @@ def nivel(a, razao, tendencia, atencao, piso, piso_continuo=False):
     return np.where(critico, 2, np.where(a["s7"] > a[f"p{atencao}"], 1, 0))
 
 
+def nivel_da_regra(a, regra):
+    """Nível pela v1 do alert_rules.json, com o piso contínuo de min_detections, a mesma conta do `recent` da API."""
+    crit = regra["levels"]["critical"]
+    return nivel(a, crit["min_ratio_to_median"], crit["requires_rising_trend"],
+                 regra["levels"]["attention"]["above_percentile"], crit["min_detections"], piso_continuo=True)
+
+
 def gabarito(a, pct, minimo):
     return (a["s14"] > a[f"g{pct}"]) & (a["s14"] >= minimo)
 
@@ -167,7 +174,7 @@ def regras(regra):
     atual = (crit["min_ratio_to_median"], crit["requires_rising_trend"], regra["levels"]["attention"]["above_percentile"])
     for r, t, at, pc in itertools.product(RAZOES, TENDENCIAS, ATENCOES, PISOS_CONTINUOS):
         yield {"regra": f"razao{r}_tend{int(t)}_atencao_p{at}" + ("_piso_continuo" if pc else ""), "razao": r,
-               "tendencia": t, "atencao": at, "piso_continuo": pc, "regra_atual": (r, t, at, pc) == (*atual, False),
+               "tendencia": t, "atencao": at, "piso_continuo": pc, "regra_atual": (r, t, at, pc) == (*atual, True),
                "variante_da_atual": (r, t, at) == atual}
 
 
@@ -261,9 +268,7 @@ def main():
     semanas, ab = avaliar(mb, regra)
     tabela(semanas, ab, regra, colunas=biomas).to_csv(args.saida / "por_bioma.csv", index=False)
     if args.eventos.exists():
-        crit, at = regra["levels"]["critical"], regra["levels"]["attention"]["above_percentile"]
-        niv = nivel(ab, crit["min_ratio_to_median"], crit["requires_rising_trend"], at, PISO_MEDIANA_ZERO)
-        eventos(ler_eventos(args.eventos), biomas, semanas, ab, niv).to_csv(args.saida / "eventos.csv", index=False)
+        eventos(ler_eventos(args.eventos), biomas, semanas, ab, nivel_da_regra(ab, regra)).to_csv(args.saida / "eventos.csv", index=False)
 
     texto = relatorio(bt)
     (args.saida / "relatorio.txt").write_text(texto + "\n", encoding="utf-8")
