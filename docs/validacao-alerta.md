@@ -1,6 +1,6 @@
 # Validação do nível de alerta (solução A + B)
 
-Nov 14, 2026 · proposta da frente A, em revisão no PR #42 · issue #9 · implementação: [RFC 0001](rfcs/0001-backtest-alerta.md)
+Nov 14, 2026 · proposta da frente A, aprovada no PR #42 · issue #9 · implementação: [RFC 0001](rfcs/0001-backtest-alerta.md)
 
 Critérios que melhora (ver [premiacao.md](premiacao.md)): **Validity** (prova que o alerta funciona), **Best Use of Science** (número medido, com os limites declarados) e **Impact** (regra transparente e versionada).
 
@@ -73,22 +73,19 @@ O gabarito começa **no dia seguinte ao último dia usado pelo nível**. Nenhum 
 
 **Saída:** `relatorios/alerta/backtest.csv` (uma linha por regra testada) e `relatorios/alerta/por_bioma.csv`.
 
-**Texto da tela** (inglês, fixo; os números saem do `backtest.csv`; sem "validated" nem "accuracy"):
+**Texto da tela** (inglês; os números saem do `backtest.csv`; sem "validated" nem "accuracy"):
 
 > *Rule v1, backtested 2013–2024: when it flagged Critical, the next 14 days had unusually high VIIRS detections X% of the time, Y points more than a simple persistence rule. It measures detections, not burned area.*
 
-### Entrega da tela de Método (frente D)
+### Resultado da `v1` na tela de Método
 
-A estrutura em inglês está em `frontend/index.html`, disponível também sem JavaScript. Enquanto a `v1` e sua rodada final estiverem pendentes, a tela explica o método e informa a pendência sem publicar percentuais provisórios ou a antecedência de outra regra.
+A `v1` (`config/alert_rules.json` 1.0, piso contínuo) passou no critério completo e sai como "aprovada" no `relatorio.txt` (rodada final da frente A na issue #65). A tela de Método (`frontend/index.html`) publica:
 
-Para concluir a publicação dos resultados:
+- **Células H3 res 4:** acerto do Crítico de 26,6%, ganho de 6,0 pontos sobre a ingênua na mesma frequência, positivo nos 12 anos.
+- **Biomas:** só a frequência de cada nível, porque nos biomas inteiros a `v1` não ganhou da ingênua em cinco dos seis.
+- **Pantanal 2020:** Crítico 40 dias antes do Decreto 080/2020 (MS) e em Atenção ou Crítico até ele, com o decreto em "Data & credits". Os 20 dias da Amazônia 2019 e os 15 do Pantanal 2024 aparecem junto. Os números saem da antecedência contínua do `backtest_alerta.py` (PR #77). A antecedência sem exigir alerta contínuo (54 dias) não vai para a tela, porque o alerta voltou a Normal antes do decreto.
 
-1. **B:** registrar a regra escolhida e sua versão, o piso, a tendência, o ganho mínimo e o critério de sensibilidade.
-2. **A:** entregar os resultados da rodada dessa versão: frequência, acerto e ganho contra persistência nas células H3 res 4; frequências por bioma; antecedência do exemplo Pantanal 2020 e fonte oficial.
-3. **C:** confirmar que o `recent` usa a mesma regra e referência do teste.
-4. **D:** substituir os textos de pendência pelos resultados correspondentes. Usar o texto acima somente se passar no critério de decisão; caso contrário, usar a versão sem ganho. Nos biomas, publicar apenas as frequências. Vincular o exemplo à mesma versão e manter a explicação de que o decreto marca a resposta oficial, não o início do fogo.
-
-O acerto é a proporção dos alertas Crítico seguidos do evento definido, não a cobertura de todos os eventos. O resultado das células não representa uma garantia para cada polígono do usuário. Manter visível que a referência inclui anos posteriores e que o teste mede detecções VIIRS, não área queimada.
+O acerto é a proporção dos alertas Crítico seguidos do evento definido, não a cobertura de todos os eventos. O resultado das células não representa uma garantia para cada polígono do usuário. A tela mantém visível que a referência inclui anos posteriores, que o teste mede detecções VIIRS, não área queimada, e que o decreto marca a resposta oficial, não o início do fogo.
 
 ## Solução B: eventos conhecidos
 
