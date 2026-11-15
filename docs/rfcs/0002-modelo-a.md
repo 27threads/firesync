@@ -25,7 +25,7 @@ O **modelo A** era o plano original da frente B: um modelo treinado que aprende 
 | Etapa | Dados | Quem roda | Quando | Corte de treino e teste |
 | --- | --- | --- | --- | --- |
 | **A** | Arquivos de 2024 do Brasil inteiro que já estão no repositório (`data-pipeline/data/`, S-NPP e Aqua) | Frente B, sem depender do banco | Sábado à noite | **No espaço:** blocos da grade H3 sorteados para treino e teste, com todos os meses dos dois lados |
-| **B** | Histórico do banco de teste | Frente A, com o mesmo script | Domingo de manhã, **só se couber** sem atrasar o servidor público | **No tempo:** treino em 2019 a 2021, teste em 2022 a 2024 (anos que o modelo não vê; mostra se a deriva do Aqua atrapalha) |
+| **B** | Arquivos anuais públicos do FIRMS (S-NPP e Aqua) | Frente B, sem depender do banco | Domingo de manhã, **só se couber** sem atrasar as entregas essenciais | **No tempo:** treino em 2019 a 2021, teste em 2022 a 2024 (anos que o modelo não vê; mostra se a deriva do Aqua atrapalha) |
 
 A etapa A sozinha já entrega a curva de detecção. A etapa B testa em anos que o modelo nunca viu e, com o Aqua ainda na órbita original no treino, é o experimento mais limpo.
 
@@ -86,15 +86,15 @@ A ordem de execução do caminho C. Cada passo só começa depois do anterior, e
 
 **Ainda não feitos:** a etapa B (passos 10 a 12), os passos 13 e 14 (registro final e entrega à frente D, que dependem da revisão e do merge dos PRs #26, #48 e #53) e o passo 0.1 (resposta dos revisores às duas perguntas do RFC).
 
-### Etapa B: modelo com o histórico (frente A, domingo de manhã, opcional)
+### Etapa B: modelo com o histórico (frente B, domingo de manhã, opcional)
 
 | Passo | O quê | Quem |
 | --- | --- | --- |
-| 10 | Acrescentar ao script um modo que lê o banco, como o `calibrar.py` já faz | Frente B |
-| 11 | Rodar no banco de teste, **sem gravar nada**: treino em 2019 a 2021, teste em 2022 a 2024, e mandar os CSVs | Eduardo |
+| 10 | Preparar a leitura dos arquivos anuais públicos do FIRMS (S-NPP e Aqua) pelo script | Frente B |
+| 11 | Rodar com os arquivos anuais, **sem acessar o banco**: treino em 2019 a 2021, teste em 2022 a 2024, e gerar os CSVs | Frente B |
 | 12 | Comparar com a etapa A e ver se a deriva do Aqua atrapalha nos anos recentes | Frente B |
 
-Só entra se a frente A tiver tempo **depois** de levar o banco para o servidor público. Se não couber, fica declarado como próximo passo.
+A frente B assumiu a execução com os arquivos públicos do FIRMS, sem depender da disponibilidade da frente A ou do banco de teste. Só entra se couber sem atrasar as entregas essenciais; se não couber, fica declarado como próximo passo.
 
 ### Registro e entrega
 
@@ -107,7 +107,7 @@ Só entra se a frente A tiver tempo **depois** de levar o banco para o servidor 
 ## Prazos e ponto de corte
 
 - **Etapa A até a meia-noite de sábado.** Se o gradient boosting não ficar pronto, fica só a tabela simples, que já entrega a curva.
-- **Etapa B no domingo de manhã, só se a frente A tiver tempo** depois de levar o banco para o servidor. Se não couber, fica como próximo passo, declarado.
+- **Etapa B no domingo de manhã, pela frente B**, com os arquivos anuais públicos do FIRMS, só se couber sem atrasar as entregas essenciais. Se não couber, fica como próximo passo, declarado.
 - **O modelo não pode atrasar o essencial:** os fatores no servidor público, a API, o front e a tela de Método.
 
 ## Dependência nova
@@ -125,7 +125,8 @@ O gradient boosting precisa do **scikit-learn** no `requirements.txt` do `data-p
 
 | Frente | O que muda |
 | --- | --- |
-| **A (dados)** | Só a etapa B, opcional: rodar o script no banco de teste (sem gravar nada) e mandar os CSVs. Estimativa: cerca de 1 hora, com a execução |
+| **A (dados)** | Sem execução adicional para a etapa B; a frente B usa os arquivos públicos do FIRMS |
+| **B (modelo)** | Executar a etapa B com os arquivos anuais públicos do FIRMS e gerar os CSVs, sem depender do banco |
 | **C (API)** | Nenhum campo novo. O modelo não entra no cálculo do calendário |
 | **D (front)** | A tela de Método ganha a curva de detecção (imagem ou dados) e os limites declarados. Nenhuma frase sobre a prova cruzada. Os textos saem do relatório |
 
