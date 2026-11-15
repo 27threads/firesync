@@ -161,7 +161,7 @@ volumes:
 
 - O `docker-entrypoint-initdb.d` só roda com o volume vazio. Migrations novas (`002_...sql`) precisam ser aplicadas à mão ou por um passo de deploy.
 - A API deve esperar o `healthcheck` (`depends_on: db: condition: service_healthy`).
-- O `job-nrt` roda `job_nrt.py` a cada 3 h: baixa as últimas 48 h de `VIIRS_NOAA20_NRT` e `VIIRS_NOAA21_NRT`, importa, refaz `agregados` dos meses da janela, atualiza `dias_sem_dados` e grava `config.atualizado_em`. Tem trava no banco (`pg_try_advisory_lock`), então duas rodadas nunca correm juntas. Uma rodada que falha não grava `atualizado_em`, e a próxima tenta de novo.
+- O `job-nrt` roda `job_nrt.py` a cada 3 h: baixa `VIIRS_NOAA20_NRT` e `VIIRS_NOAA21_NRT` do último dia NRT gravado até hoje (no mínimo 48 h, no máximo 5 dias, o limite da API de área do FIRMS), importa, refaz `agregados` dos meses da janela, atualiza `dias_sem_dados` e grava `config.atualizado_em`. Tem trava no banco (`pg_try_advisory_lock`), então duas rodadas nunca correm juntas. Uma rodada que falha não grava `atualizado_em`, e a próxima tenta de novo.
 - **`config.atualizado_em`** (texto ISO 8601 em UTC, ex.: `2026-11-14T18:43:16Z`, igual ao `updated_at` do `api.md`) é gravada pelo `agregar.py` no mesmo commit dos dados: é o `meta.updated_at` da API.
 
 ## Carga na VPS (roteiro)
