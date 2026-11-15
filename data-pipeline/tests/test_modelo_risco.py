@@ -187,9 +187,9 @@ def test_linha_de_comando_monta_a_serie_dos_arquivos_anuais(tmp_path, monkeypatc
 def test_anomalia_e_o_valor_menos_a_media_das_mesmas_semanas_em_anos_anteriores():
     semanas = semanas_de(2015, 2019)
     x = np.zeros((len(semanas), 2), np.float32)
-    w = 52 * 4 + 10                                    # uma semana de 2019
-    x[w - 52] = [10.0, 0.0]                            # a mesma semana em 2018
-    x[w - 104] = [20.0, 0.0]                           # e em 2017
+    w = 52 * 2 + 10                                    # uma semana de 2017, com dois anos anteriores na série
+    x[w - 52] = [10.0, 0.0]                            # a mesma semana em 2016
+    x[w - 104] = [20.0, 0.0]                           # e em 2015
     x[w] = [50.0, 7.0]
     a = mr.anomalia(x)
     assert a[w, 0] == pytest.approx(50.0 - 15.0) and a[w, 1] == pytest.approx(7.0)
