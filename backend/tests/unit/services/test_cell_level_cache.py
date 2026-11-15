@@ -1,5 +1,7 @@
 """Revisão do PR #86: o nível de cada célula res 4 não depende do recorte do mapa, só dos dados.
 Guardado por versão dos dados, arrastar ou dar zoom não volta ao banco nem refaz a conta."""
+import threading
+import time
 from datetime import date
 
 from backend.adapters.outbound.postgres.cell_level_cache import CellLevelCache
@@ -71,3 +73,27 @@ def test_alerts_block_accepts_levels_already_computed_and_matches_the_daily_path
 
 def test_alerts_block_without_levels_or_daily_counts_is_off():
     assert alerts_block({'cell_levels': None, 'cell_daily': None}, {'version': 't'}) == (None, {})
+
+
+def test_two_requests_with_a_cold_cache_compute_the_same_cells_only_once():
+    """Revisão do PR #86: dois pedidos juntos, com o cache vazio, não podem refazer a mesma consulta cada um com uma conexão."""
+    cache, calls = CellLevelCache(), []
+    started, release = threading.Event(), threading.Event()
+
+    def slow(cells):
+        calls.append(sorted(cells))
+        started.set()
+        release.wait(5)
+        return {cell: {'alert_level': 'normal'} for cell in cells}
+
+    results = []
+    first = threading.Thread(target=lambda: results.append(cache.levels(VERSION, ['a', 'b'], slow)))
+    second = threading.Thread(target=lambda: results.append(cache.levels(VERSION, ['a', 'b'], slow)))
+    first.start()
+    started.wait(5)
+    second.start()
+    time.sleep(0.2)          # the second request is now waiting for the first
+    release.set()
+    first.join(5)
+    second.join(5)
+    assert calls == [['a', 'b']] and len(results) == 2 and results[0] == results[1]
