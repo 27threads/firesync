@@ -112,39 +112,6 @@ describe('App', () => {
     expect(await screen.findByRole('button', { name: /audit package/i })).toBeEnabled();
   });
 
-  it('asks for recent detections around a new selection even before the map is on screen', async () => {
-    const calls = mockApi(() => json(example));
-    render(<App />);
-    const select = await screen.findByRole('combobox', { name: /region/i });
-    await waitFor(() => expect(select).toBeEnabled());
-    const before = calls.filter((c) => c.url.includes('/detections/recent')).length;
-    fireEvent.change(select, { target: { value: '1' } });
-    await waitFor(() =>
-      expect(calls.filter((c) => c.url.includes('/detections/recent') && c.url.includes('bbox=-74,-16.3,-43.9,5.3')).length).toBeGreaterThan(0),
-    );
-    expect(calls.filter((c) => c.url.includes('/detections/recent')).length).toBeGreaterThan(before);
-  });
-
-  it('lets an earlier recent-detections request finish when a newer one starts (no aborted responses)', async () => {
-    const signals: (AbortSignal | null | undefined)[] = [];
-    mockApi(() => json(example));
-    const base = globalThis.fetch as unknown as (url: string, init?: RequestInit) => Promise<Response>;
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((url: string, init?: RequestInit) => {
-        if (url.includes('/detections/recent')) signals.push(init?.signal);
-        return base(url, init);
-      }),
-    );
-    render(<App />);
-    const select = await screen.findByRole('combobox', { name: /region/i });
-    await waitFor(() => expect(select).toBeEnabled());
-    fireEvent.change(select, { target: { value: '1' } });
-    fireEvent.change(screen.getByRole('combobox', { name: /recent hot spots window/i }), { target: { value: '168' } });
-    await waitFor(() => expect(signals.length).toBeGreaterThanOrEqual(2));
-    expect(signals.some((s) => s?.aborted)).toBe(false);
-  });
-
   it('never aborts a recent-detections request, not even when the map unmounts (StrictMode remounts in dev)', async () => {
     const signals: (AbortSignal | null | undefined)[] = [];
     mockApi(() => json(example));

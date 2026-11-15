@@ -106,7 +106,6 @@ export function HistoryPanel({
   const svgRef = useRef<SVGSVGElement>(null);
   const overlayRef = useRef<SVGSVGElement>(null);
   const playedRef = useRef(false);
-  const [asTable, setAsTable] = useState(false);
   const [hover, setHover] = useState<{ cell: CalendarCell; anchor: DOMRect } | null>(null);
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const narrow = useMediaQuery(NARROW_QUERY);
@@ -171,25 +170,20 @@ export function HistoryPanel({
       <section aria-labelledby="history-title">
         <div className="section-head">
           <div>
-            <h2 id="history-title">A longer view of fire activity</h2>
+            <h2 id="history-title">Fire calendar</h2>
             <p>
               Monthly detections on the VIIRS scale, {periodLabel}. One row per year, January to December.
               {shown?.isDemo ? ' Demo data.' : ''}
             </p>
           </div>
-          {data && (
-            <div className="section-head__actions">
-              <button type="button" className="btn btn--quiet" aria-pressed={asTable} onClick={() => setAsTable((v) => !v)}>
-                View as table
-              </button>
-            </div>
-          )}
         </div>
 
         {!data || !model ? (
           <EmptyHistory result={result} />
         ) : (
           <div className={result.kind === 'loading' ? 'is-loading' : undefined}>
+            {/* Chart and table side by side: the calendar is the core of the challenge (review on 15/11). */}
+            <div className="cal-duo">
             <div className="calendar-block">
               <div>
                 <div className="calendar-scroll" style={{ position: 'relative' }}>
@@ -249,7 +243,8 @@ export function HistoryPanel({
               </div>
               <MonthPanel month={selectedMonth} months={data.months} />
             </div>
-            {asTable && <CalendarTable data={data} />}
+            <CalendarTable data={data} />
+            </div>
 
             <div className="context-grid">
               <SeasonalChart seasonality={data.seasonality} includesEstimatedYears={includesEstimatedYears} highlightMonthIndex={highlightMonthIndex} />

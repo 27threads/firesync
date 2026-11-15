@@ -58,12 +58,8 @@ test.describe('Responsividade', () => {
   test('R5: na tela de toque, os botões pequenos têm pelo menos 44 px', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'celular', 'só na tela de toque');
     await abrirSemApi(page, CELULAR);
-    // O mapa só carrega quando aparece na tela.
-    await page.locator('.map-stage').scrollIntoViewIfNeeded();
     const botoes = [
       page.getByRole('button', { name: /^Question 1/ }),
-      // O hero também tem um mapa com zoom: mede o do explorador, que é o que foi rolado até a tela.
-      page.locator('.map-stage').getByRole('button', { name: 'Zoom in' }),
     ];
     for (const botao of botoes) {
       await botao.scrollIntoViewIfNeeded();

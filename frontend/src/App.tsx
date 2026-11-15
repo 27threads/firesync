@@ -9,7 +9,6 @@ import { HERO_AREA_EVENT } from './hero/heroMapModel';
 import { useLeftHero } from './hero/useLeftHero';
 import { HistoryPanel } from './history/HistoryPanel';
 import { IndicatorRow } from './summary/IndicatorRow';
-import { MapStage } from './map/MapStage';
 import { useExplorer } from './state/useExplorer';
 import { Summary } from './summary/Summary';
 import { Verdict } from './summary/Verdict';
@@ -102,6 +101,19 @@ export function App() {
           </p>
         )}
 
+        {/* Right after the hero map: the fire calendar of the chosen area. */}
+        <HistoryPanel
+          shown={ex.shown}
+          result={ex.result}
+          selectedKey={selectedKey}
+          onSelectKey={setSelectedKey}
+          highlightMonthIndex={step?.monthIndex ?? null}
+          highlightYear={step?.year ?? null}
+          areaLabel={areaLabel}
+          periodLabel={periodLabel}
+          request={ex.request}
+        />
+
         {ex.shown && hasAnswer && <Verdict window={ex.shown.data.recent.last_7_days} areaLabel={areaLabel} />}
 
         {ex.shown && <IndicatorRow indicators={ex.shown.data.indicators} isDemo={ex.shown.isDemo} />}
@@ -118,11 +130,6 @@ export function App() {
               onSetPeriod={ex.setPeriod}
               onShowExample={() => openExample(null)}
             />
-            <MapStage
-              shape={ex.selection.shape}
-              startOnArrival={ex.selection.isExample}
-              onSelectPolygon={(geometry) => selectArea({ type: 'geojson', geometry })}
-            />
           </div>
           <Summary
             shown={ex.shown}
@@ -137,17 +144,6 @@ export function App() {
           />
         </div>
 
-        <HistoryPanel
-          shown={ex.shown}
-          result={ex.result}
-          selectedKey={selectedKey}
-          onSelectKey={setSelectedKey}
-          highlightMonthIndex={step?.monthIndex ?? null}
-          highlightYear={step?.year ?? null}
-          areaLabel={areaLabel}
-          periodLabel={periodLabel}
-          request={ex.request}
-        />
       </div>
 
       {ASSISTANT_ENABLED && (

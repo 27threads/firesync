@@ -53,5 +53,3 @@ export const SPACECRAFT_LIGHT = { ambient: 0.8, sun: 2.3 };
 /** Quanto a janela rola (em alturas de tela) com o mapa em tela cheia já à mostra, antes de a abertura acabar. */
 export const MAP_ARRIVAL_HOLD = 0.8;
 
-/** Depois da chegada, a roda do mouse só passa a dar zoom no mapa após este tempo, para o gesto da descida terminar. */
-export const MAP_WHEEL_SETTLE_MS = 900;

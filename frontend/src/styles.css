@@ -2533,3 +2533,24 @@ select {
   margin: 4px 0;
   padding-left: 18px;
 }
+
+/* Fire calendar: chart and month-by-month table side by side on wide screens. */
+.cal-duo {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 24px;
+  align-items: start;
+}
+.cal-duo .cal-table-wrap {
+  max-height: 560px;
+  overflow: auto;
+  margin: 0;
+}
+@media (max-width: 999px) {
+  .cal-duo {
+    grid-template-columns: 1fr;
+  }
+}
+.cal-duo .calendar-block {
+  grid-template-columns: 1fr;
+}

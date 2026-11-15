@@ -3,7 +3,7 @@ import type { LayerGroup, Map as LeafletMap } from 'leaflet';
 import { fetchRecentDetections, fetchRegions } from '../api/client';
 import type { GeoJsonPolygon, PriorityCell, RecentDetectionsResponse, RegionOption } from '../api/types';
 import { loadLeafletWithGeoman } from '../controls/leafletLoader';
-import { BLUE_MARBLE_TILES, MAP_WHEEL_SETTLE_MS, SURFACE_VIEW } from './globeTransition';
+import { BLUE_MARBLE_TILES, SURFACE_VIEW } from './globeTransition';
 import {
   COUNT_GRADIENT,
   DEFAULT_FILTERS,
@@ -123,7 +123,7 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
       const node = mapNode.current;
       if (cancelled || !node) return;
       leafletRef.current = L;
-      map = L.map(node, { zoomControl: false, scrollWheelZoom: false, zoomSnap: 0, minZoom: SURFACE_VIEW.zoom, preferCanvas: true }).setView(
+      map = L.map(node, { zoomControl: false, scrollWheelZoom: false, fadeAnimation: false, zoomSnap: 0, minZoom: SURFACE_VIEW.zoom, preferCanvas: true }).setView(
         [SURFACE_VIEW.latitude, SURFACE_VIEW.longitude],
         SURFACE_VIEW.zoom,
         { animate: false },
@@ -194,9 +194,9 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
       map.setZoomAround(anchor, z + diff * 0.28, { animate: false });
       raf = requestAnimationFrame(step);
     };
+    // The wheel over the map only zooms, never scrolls the page (review on 15/11: zooming out sent people back up).
+    // The buttons "Back to the globe" and "See the fire calendar" are the ways out.
     const onWheel = (e: WheelEvent) => {
-      const down = e.deltaY > 0;
-      if (!down && map.getZoom() <= SURFACE_VIEW.zoom + 0.001) return;
       e.preventDefault();
       const unit = e.deltaMode === 1 ? 33 : 120;
       if (!raf) target = map.getZoom();
@@ -204,9 +204,8 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
       anchor = map.mouseEventToContainerPoint(e);
       if (!raf) raf = requestAnimationFrame(step);
     };
-    const timer = window.setTimeout(() => el.addEventListener('wheel', onWheel, { passive: false }), MAP_WHEEL_SETTLE_MS);
+    el.addEventListener('wheel', onWheel, { passive: false });
     return () => {
-      window.clearTimeout(timer);
       if (raf) cancelAnimationFrame(raf);
       el.removeEventListener('wheel', onWheel);
     };
@@ -219,7 +218,8 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
     setLoading(true);
     setError('');
     const timer = window.setTimeout(() => {
-      fetchRecentDetections({ bbox: view.bbox, zoom: view.zoom, hours: 24 }, controller.signal)
+      // Always hexagons: the points of a close zoom were hard to read (review on 15/11); the click summary explains a cell.
+      fetchRecentDetections({ bbox: view.bbox, zoom: view.zoom, hours: 24, mode: 'hexagons' }, controller.signal)
         .then((response) => {
           if (!controller.signal.aborted) setData(response);
         })
@@ -317,8 +317,7 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
   const zoomBy = (direction: 1 | -1) => {
     const map = mapRef.current;
     if (!map) return;
-    if (direction === -1 && map.getZoom() <= SURFACE_VIEW.zoom + 0.001) onReturn();
-    else map.setZoom(map.getZoom() + direction, { animate: false });
+    map.setZoom(Math.max(SURFACE_VIEW.zoom, map.getZoom() + direction), { animate: false });
   };
 
   const goToRegion = (id: string) => {
@@ -696,7 +695,15 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
         </button>
       )}
 
-      <button type="button" className="hm-next" onClick={onNext} aria-label="Scroll down to the explorer" title="Scroll down to the explorer">
+      <button type="button" className="hm-back" onClick={onReturn}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="m6 15 6-6 6 6" />
+        </svg>
+        Back to the globe
+      </button>
+
+      <button type="button" className="hm-next" onClick={onNext}>
+        See the fire calendar
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="m6 9 6 6 6-6" />
         </svg>
