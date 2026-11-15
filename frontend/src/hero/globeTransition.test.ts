@@ -1,4 +1,4 @@
-import { chapterAt, journeyProgress, mercatorLatitude, openingLayout, smoothPhase, tilePosition } from './globeTransition';
+import { chapterAt, journeyProgress, litDiffuseGain, mercatorLatitude, openingLayout, smoothPhase, SPACECRAFT_LIGHT, tilePosition } from './globeTransition';
 
 describe('globe opening geometry', () => {
   it('stacks the copy over the globe below the tablet width and puts it beside the globe above', () => {
@@ -32,5 +32,16 @@ describe('globe opening geometry', () => {
     expect(chapterAt(0)).toBe(0);
     expect(chapterAt(0.3)).toBe(1);
     expect(chapterAt(0.7)).toBe(2);
+  });
+});
+
+describe('spacecraft lighting', () => {
+  // Bug: ambient 2.2 + sun 3 lit the NASA textures at 1.65x their colour, so gold and silver foil clipped to white.
+  it('keeps the sunlit face at or below the texture colour so the foil does not wash out to white', () => {
+    expect(litDiffuseGain(SPACECRAFT_LIGHT)).toBeLessThanOrEqual(1);
+  });
+
+  it('still lights the shadowed side enough to read the model against the page', () => {
+    expect(litDiffuseGain({ ambient: SPACECRAFT_LIGHT.ambient, sun: 0 })).toBeGreaterThanOrEqual(0.2);
   });
 });

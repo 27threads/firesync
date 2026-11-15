@@ -44,3 +44,8 @@ export function surfaceCameraDistance(height: number): number {
   const pixelsPerUnit = (256 * 2 ** SURFACE_VIEW.zoom) / (2 * Math.PI * SURFACE_VIEW.radius);
   return height / (2 * Math.tan((SURFACE_VIEW.fov * Math.PI) / 360) * pixelsPerUnit);
 }
+
+// Lambert diffuse in Three.js lights a texture at albedo x intensity / pi.
+export const litDiffuseGain = ({ ambient, sun }: { ambient: number; sun: number }) => (ambient + sun) / Math.PI;
+
+export const SPACECRAFT_LIGHT = { ambient: 0.8, sun: 2.3 };

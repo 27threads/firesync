@@ -7,7 +7,7 @@ import suomiUrl from './assets/suomi-npp.glb?url';
 import earthUrl from './assets/earth-surface.jpg?url';
 import fastEarthUrl from './assets/earth-fast.jpg?url';
 import { SPACECRAFT_LABELS } from './openingCopy';
-import { advanceGlobeRotation, BLUE_MARBLE_TILES, mercatorLatitude, openingLayout, smoothPhase, surfaceCameraDistance, SURFACE_VIEW, tilePosition } from './globeTransition';
+import { advanceGlobeRotation, BLUE_MARBLE_TILES, mercatorLatitude, openingLayout, smoothPhase, SPACECRAFT_LIGHT, surfaceCameraDistance, SURFACE_VIEW, tilePosition } from './globeTransition';
 
 // Portada do protótipo em lovable/. Geometria só de apresentação: não são efemérides nem coordenadas de focos.
 export default function OrbitalScene({ playing, progress, onSurfaceReady, onGlobeReady }: { playing: boolean; progress: MutableRefObject<number>; onSurfaceReady?: () => void; onGlobeReady?: () => void }) {
@@ -53,8 +53,8 @@ export default function OrbitalScene({ playing, progress, onSurfaceReady, onGlob
     controls.enableDamping = true;
     controls.minPolarAngle = 0.5;
     controls.maxPolarAngle = 2.6;
-    scene.add(new THREE.AmbientLight(color('--orbital-light'), 2.2));
-    const sun = new THREE.DirectionalLight(color('--orbital-light'), 3);
+    scene.add(new THREE.AmbientLight(color('--orbital-light'), SPACECRAFT_LIGHT.ambient));
+    const sun = new THREE.DirectionalLight(color('--orbital-light'), SPACECRAFT_LIGHT.sun);
     sun.position.set(-3, 4, 5);
     scene.add(sun);
     const system = new THREE.Group();
