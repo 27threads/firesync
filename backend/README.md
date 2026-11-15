@@ -27,6 +27,7 @@ O proxy existente encaminha `/api` para a API. `VITE_API_URL` permite uma API em
 | --- | --- | --- |
 | `DATABASE_URL` | obrigatória | PostgreSQL com a carga, via psycopg 3 e pool |
 | `FRONTEND_ORIGIN` | `http://localhost:5173` | Única origem permitida pelo CORS |
+| `CLIENT_IP_HEADER` | vazio (IP do socket) | Header com o IP real do usuário para o rate limit. Só atrás de proxy que sobrescreve o header (`CF-Connecting-IP` no Cloudflare Tunnel, [deploy.md](../docs/deploy.md)) |
 | `RATE_LIMIT_GENERAL` | `60` | Pedidos aceitos por IP na janela |
 | `RATE_LIMIT_CALENDAR` | `10` | Pedidos de calendário por IP na janela |
 | `RATE_LIMIT_EXPORT` | `2` | Pedidos de exportação por IP na janela |
