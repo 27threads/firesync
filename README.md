@@ -125,6 +125,16 @@ A API valida área/período, limita o corpo a 1.000.000 bytes, usa SQL parametri
 
 Credenciais ficam em variáveis de ambiente e `.env` não versionado; valores `VITE_` são públicos. A API roda como usuário sem privilégio no container e só lê o banco. Cloudflare Tunnel, HTTPS e os headers CSP/HSTS complementam a proteção. Dependências devem ser revisadas antes de atualizações; esses controles não constituem certificação OWASP. Fontes: [deploy](docs/deploy.md), [API](backend/README.md) e [headers do front](frontend/public/_headers).
 
+<a id="regras-que-não-mudam-sem-falar-com-a-equipe"></a>
+
+## 8. Melhores práticas
+
+Aplicar KISS, DRY e SOLID: cálculos puros no domínio, casos de uso com responsabilidade definida e dependência de portas, mantendo SQL/HTTP nos adaptadores. Preservar cenários até a mediana e P5–P95; usar a interseção dos anos de calibração; distinguir zero, ausência de cobertura e mês incompleto.
+
+A série harmonizada usa Aqua em jan/2003–jan/2012, S-NPP em fev/2012–out/2026 e NOAA-20 desde nov/2026: um VIIRS por período, sem somar sensores. Aplicam-se os filtros de confiança nominal/alta e `type = 0` (ausente no NRT é admitido); os fatores são congelados após a calibração histórica.
+
+Código e contrato público usam inglês; tabelas e colunas do banco seguem os nomes em português do modelo de dados; datas são UTC. Ruff, Vulture e TypeScript verificam problemas de código. As regras científicas pertencem à equipe e estão em [decisões da harmonização](docs/decisoes-harmonizacao.md) e [importação de regiões](docs/importacao-regioes.md).
+
 ## Uso de IA
 
 | Parte | Ferramenta | Como foi usada |
