@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "status": "tiers from the calibration of the walk-forward test 2021-2024 (RFC 0003); rates are updated with the final model",
+  "status": "tiers and rates from the calibration of the final 10-variable model in the walk-forward test 2021-2024 (RFC 0003)",
   "horizon_days": 14,
   "target": "10 or more VIIRS detections in the H3 resolution 4 cell during the next 14 days",
   "unit": "H3 resolution 4 cell (about 1,770 km2)",
@@ -11,14 +11,14 @@
     { "tier": "lower", "min_prob": 0.0 }
   ],
   "historical_share": {
-    "very_high": 0.825,
-    "high": 0.466,
-    "medium": 0.273,
+    "very_high": 0.820,
+    "high": 0.461,
+    "medium": 0.271,
     "lower": 0.029
   },
   "historical_share_by_season": {
-    "peak_aug_oct": { "very_high": 0.844, "high": 0.476, "medium": 0.275, "lower": 0.047 },
-    "other_months": { "very_high": 0.785, "high": 0.454, "medium": 0.271, "lower": 0.026 }
+    "peak_aug_oct": { "very_high": 0.840, "high": 0.471, "medium": 0.276, "lower": 0.046 },
+    "other_months": { "very_high": 0.777, "high": 0.448, "medium": 0.267, "lower": 0.026 }
   },
   "overall_share": 0.152,
   "period": "tested year by year on 2021-2024, training only on earlier years, without the Pantanal",

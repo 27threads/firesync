@@ -79,7 +79,7 @@ Decisão do Weberson (15/11/2026). A pergunta é outra: não "vai passar do norm
 | Faixa | Probabilidade | Frequência observada de fogo relevante nos 14 dias seguintes | Parte das células |
 | --- | --- | --- | --- |
 | Muito alto | 60% ou mais | **82%** | 11% (29% na temporada de ago a out) |
-| Alto | 40% a 60% | 47% | 5% |
+| Alto | 40% a 60% | 46% | 5% |
 | Médio | 20% a 40% | 27% | 7% |
 | Menor | abaixo de 20% | 3% | 77% |
 
@@ -103,7 +103,7 @@ São duas datas escolhidas para ilustrar, e não uma medição. Na segunda, as f
 
 **Limites**
 - O teste foi exploratório e sem o Pantanal. O treino usa semanas que terminam no domingo, e o job aplica o modelo em qualquer dia, o que não foi testado.
-- As faixas e as taxas vêm do modelo de 22 variáveis do teste; o de 10 variáveis do job rende o mesmo (conferência em andamento), e as taxas são atualizadas se houver diferença.
+- As faixas e as taxas são do modelo final de 10 variáveis, o mesmo do job. Tirar a potência do fogo e o bioma não custou nada (acerto das 10% mais arriscadas: 59,7% nos dois modelos, em 2017 a 2024).
 - O job precisa do banco com `agregados_diarios` e de um servidor onde rodar. Sem a VPS, as notas podem ser calculadas no banco local e levadas no dump.
 - A frequência de uma faixa é uma média do passado, e não uma previsão para aquele lugar.
 
