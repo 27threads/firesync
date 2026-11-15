@@ -135,6 +135,12 @@ A série harmonizada usa Aqua em jan/2003–jan/2012, S-NPP em fev/2012–out/20
 
 Código e contrato público usam inglês; tabelas e colunas do banco seguem os nomes em português do modelo de dados; datas são UTC. Ruff, Vulture e TypeScript verificam problemas de código. As regras científicas pertencem à equipe e estão em [decisões da harmonização](docs/decisoes-harmonizacao.md) e [importação de regiões](docs/importacao-regioes.md).
 
+## 9. Usabilidade
+
+A interface prioriza **situação atual → contexto histórico → detalhes**. O usuário escolhe a área, lê um resumo em linguagem simples e pode aprofundar a análise ou exportar os resultados. Controles avançados ficam em “More options”.
+
+A paleta cividis, rótulos, hachuras, bordas e navegação por teclado evitam depender apenas da cor. Desktop e celular têm jornadas próprias. O sistema identifica dados de demonstração, desatualização e falta de cobertura; o nível de alerta sazonal é distinto do risco dos próximos 14 dias. Veja [UX](docs/ux-telas.md) e [frontend](frontend/README.md).
+
 ## Uso de IA
 
 | Parte | Ferramenta | Como foi usada |
