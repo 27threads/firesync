@@ -65,10 +65,47 @@ As diferenças do clima são contra a `v1`. A do ONI e a da chuva bruta, de roda
 
 ## Decisão
 
-1. **O modelo de risco não entra no produto.** Menos de 1 ponto de ganho não justifica trocar uma regra transparente por um modelo de 13 pistas. O alerta continua sendo a `v1`.
+1. **O modelo da pergunta "fogo acima do normal?" não entra no produto.** Menos de 1 ponto de ganho não justifica trocar uma regra transparente por um modelo de 13 pistas. O alerta continua sendo a `v1`. (O modelo da pergunta "onde vai ter fogo?" **entra**, ver a seção seguinte.)
 2. **O resultado entra na tela de Método** como prova de que a regra simples foi testada contra um modelo treinado. Sugestão de frase, em inglês:
    > *We also trained a machine-learning model on 13 years of fire history plus rainfall, temperature, humidity, wind and El Niño data. With the same number of alerts, it was right only 0.9 points more often than rule v1 (26.4% vs 25.5%, 2017–2023), so we kept the simpler, explainable rule.*
 3. **O código fica no repositório** (`data-pipeline/validacao/modelo_risco.py`), com testes, para quem quiser refazer.
+
+## Segunda pergunta: "onde vai ter fogo nos próximos 14 dias?" (entra no produto)
+
+Decisão do Weberson (15/11/2026). A pergunta é outra: não "vai passar do normal?", e sim **em quais células de ~1.770 km² haverá fogo relevante (10 ou mais detecções) nos 14 dias seguintes**. É o que um comandante precisa para posicionar equipes.
+
+**O modelo** é um gradient boosting com 10 variáveis, todas da contagem diária de detecções por célula: fogo de 7, 14 e 30 dias, tendência, fogo nas células vizinhas, o que aconteceu na mesma época em anos anteriores, semana do ano e posição. Ele dá uma **probabilidade** para cada célula, que vira faixa de risco (`config/risk_rules.json`).
+
+| Faixa | Probabilidade | Frequência observada de fogo relevante nos 14 dias seguintes | Parte das células |
+| --- | --- | --- | --- |
+| Muito alto | 60% ou mais | **82%** | 11% (29% na temporada de ago a out) |
+| Alto | 40% a 60% | 47% | 5% |
+| Médio | 20% a 40% | 27% | 7% |
+| Menor | abaixo de 20% | 3% | 77% |
+
+Teste ano a ano, treinando só com anos anteriores (2021 a 2024, sem o Pantanal, que tem anomalias): a probabilidade prevista fica a cerca de 4 pontos da observada, na temporada e fora dela, então a legenda vale o ano todo.
+
+**O que o teste mostrou**
+- Contra a melhor régua simples (fogo dos últimos 30 dias mais a média da mesma época), o modelo acerta **2,4 pontos a mais** nas 10% de células mais arriscadas (59,7% contra 57,5%, com o modelo base de 12 variáveis), em 8 de 8 anos.
+- **Mais variáveis não ajudam.** Dez variáveis extras (fogo de 90 dias, dias com fogo, dias desde o último fogo, vizinhança de 2º anel, frequência histórica da janela) somaram só +0,1 a +0,2 ponto, abaixo do critério de +0,5 fixado antes. Clima (chuva, temperatura, umidade, vento) e El Niño também não ajudam. Para subir o acerto, o que falta é informação nova (previsão do tempo, secura da vegetação), e não mais variáveis de fogo.
+- Dentro de cada bioma o ranking funciona (49% a 62% de acerto nas 10% mais arriscadas), exceto no Pampa, onde quase não há fogo.
+
+**Como entra no produto:** o cálculo roda **fora da API**, no job `data-pipeline/risco_celulas.py`, que treina com tudo o que existe até a data, pontua as células e grava em `risco_celulas` (migration 005). A API só lê a tabela (combinado na issue #90). Não há modelo nem scikit-learn no backend.
+
+**Exemplo real, só com dados até a data** (o modelo não viu os 14 dias seguintes):
+
+| Data | Células com fogo relevante nos 14 dias seguintes | Muito alto: previsto / observado | As 10% mais arriscadas acertaram |
+| --- | --- | --- | --- |
+| 8/9/2024 (pico) | 45% | 86% / 82% | 99% |
+| 4/2/2024 (fora do pico) | 3% | 80% / 71% | 23% |
+
+São duas datas escolhidas para ilustrar, e não uma medição. Na segunda, as faixas média e alta ficaram abaixo do previsto (12% e 34% observados, para 28% e 50% previstos). Isso é bem mais que a diferença média de cerca de 4 pontos medida em 2021 a 2024: numa data isolada o desvio pode ser grande, e a legenda mostra uma média do passado.
+
+**Limites**
+- O teste foi exploratório e sem o Pantanal. O treino usa semanas que terminam no domingo, e o job aplica o modelo em qualquer dia, o que não foi testado.
+- As faixas e as taxas vêm do modelo de 22 variáveis do teste; o de 10 variáveis do job rende o mesmo (conferência em andamento), e as taxas são atualizadas se houver diferença.
+- O job precisa do banco com `agregados_diarios` e de um servidor onde rodar. Sem a VPS, as notas podem ser calculadas no banco local e levadas no dump.
+- A frequência de uma faixa é uma média do passado, e não uma previsão para aquele lugar.
 
 ## Limites
 
