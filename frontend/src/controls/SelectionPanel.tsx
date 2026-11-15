@@ -14,12 +14,6 @@ interface SelectionPanelProps {
   onShowExample: () => void;
 }
 
-function isNarrow(): boolean {
-  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-    ? window.matchMedia('(max-width: 760px)').matches
-    : false;
-}
-
 export function SelectionPanel({
   regions,
   apiStatus,
@@ -45,11 +39,6 @@ export function SelectionPanel({
     setEnd(period.end);
   }, [period.start, period.end]);
 
-  // No celular, o painel recolhe depois de uma escolha para devolver espaço ao mapa e ao resumo.
-  const collapseOnNarrow = () => {
-    if (isNarrow()) setOpen(false);
-  };
-
   const regionValue = selection.area?.type === 'region' ? String(selection.area.region_id) : '';
 
   function submitPoint(event: FormEvent) {
@@ -61,7 +50,6 @@ export function SelectionPanel({
     }
     setPointErrors({});
     onSelectArea(result.value);
-    collapseOnNarrow();
   }
 
   function submitPeriod(event: FormEvent) {
@@ -94,7 +82,6 @@ export function SelectionPanel({
             className="controls__example"
             onClick={() => {
               onShowExample();
-              collapseOnNarrow();
             }}
           >
             Explore the example
@@ -111,7 +98,6 @@ export function SelectionPanel({
             onChange={(e) => {
               if (!e.target.value) return;
               onSelectArea({ type: 'region', region_id: Number(e.target.value) });
-              collapseOnNarrow();
             }}
           >
             <option value="">

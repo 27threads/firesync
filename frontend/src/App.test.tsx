@@ -90,6 +90,30 @@ describe('App', () => {
     expect(await screen.findByRole('button', { name: /audit package/i })).toBeEnabled();
   });
 
+  it('asks for recent detections around a new selection even before the map is on screen', async () => {
+    const calls = mockApi(() => json(example));
+    render(<App />);
+    const select = await screen.findByRole('combobox', { name: /region/i });
+    await waitFor(() => expect(select).toBeEnabled());
+    const before = calls.filter((c) => c.url.includes('/detections/recent')).length;
+    fireEvent.change(select, { target: { value: '1' } });
+    await waitFor(() =>
+      expect(calls.filter((c) => c.url.includes('/detections/recent') && c.url.includes('bbox=-74,-16.3,-43.9,5.3')).length).toBeGreaterThan(0),
+    );
+    expect(calls.filter((c) => c.url.includes('/detections/recent')).length).toBeGreaterThan(before);
+  });
+
+  it('keeps the region selector available after a choice, so the area can be changed again', async () => {
+    mockApi(() => json(example));
+    render(<App />);
+    const select = await screen.findByRole('combobox', { name: /region/i });
+    await waitFor(() => expect(select).toBeEnabled());
+    fireEvent.change(select, { target: { value: '1' } });
+    await screen.findByRole('grid', { name: /fire calendar/i });
+    expect(screen.getByRole('combobox', { name: /region/i })).toHaveTextContent('Amazônia');
+    expect(screen.getByRole('button', { name: /download audit package/i })).toBeEnabled();
+  });
+
   it('turns a 429 into a friendly alert with the wait time', async () => {
     mockApi(() => json({ error: { code: 'rate_limited', message: 'Too many requests. Try again in 30 seconds.' } }, 429, { 'Retry-After': '30' }));
     render(<App />);

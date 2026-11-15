@@ -16,6 +16,7 @@ import {
   styleForIntensityPoint,
 } from '../controls/recentDetectionsModel';
 import type { MapShape } from '../state/useExplorer';
+import { shapeView } from './shapeView';
 
 export type BasemapId = 'black-marble' | 'blue-marble';
 type DrawMode = 'rectangle' | 'polygon' | null;
@@ -382,14 +383,24 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
   }, [basemap]);
 
   useEffect(() => {
+    const changed = shapeRef.current !== shape;
     shapeRef.current = shape;
     const L = leafletRef.current;
     const map = mapRef.current;
     const selectionGroup = selectionGroupRef.current;
-    if (!L || !map || !selectionGroup) return;
+    if (!L || !map || !selectionGroup) {
+      // O mapa ainda não carregou (fica abaixo da abertura): os focos recentes da nova área
+      // são pedidos já, pelo enquadramento da seleção. Quando o mapa carregar, ele parte daqui.
+      if (!changed) return;
+      const view = shapeView(shape);
+      currentBboxRef.current = view.bbox;
+      currentZoomRef.current = view.zoom;
+      if (showHotSpotsRef.current) void requestRecentDetections(view.bbox, hotSpotsHoursRef.current, view.zoom);
+      return;
+    }
     const bounds = renderShape(L, selectionGroup, shape);
     if (bounds) map.fitBounds(bounds, { padding: [48, 48], maxZoom: 7, animate: false });
-  }, [shape, mapReady]);
+  }, [shape, mapReady, requestRecentDetections]);
 
   const clientToLngLat = useCallback((clientX: number, clientY: number): [number, number] => {
     const viewport = viewportRef.current;

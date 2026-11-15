@@ -104,7 +104,7 @@ export function ExportBar({ data, isDemo, request, areaLabel, periodLabel }: Exp
             disabled={!auditAvailable || busy === 'zip'}
             aria-describedby="audit-note"
           >
-            {busy === 'zip' ? 'Preparing audit package…' : 'Audit package (ZIP)'}
+            {busy === 'zip' ? 'Preparing audit package…' : 'Download audit package (ZIP)'}
           </button>
         </li>
       </ul>
