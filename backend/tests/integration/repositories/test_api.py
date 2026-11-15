@@ -174,6 +174,24 @@ def test_custom_intensity_thresholds_agree_for_points_and_hexagons(api_database,
     assert rows['hexagons'][0]['n_high'] == 2
 
 
+def test_map_data_through_follows_the_coverage_not_the_last_day_with_detections(api_database, alert_rules):
+    """Revisão do PR #86: `agregados_diarios` só tem dias com focos. Se o último dia coberto não teve nenhum, a janela
+    do nível não pode ficar um dia atrasada (53 detecções e Crítico no lugar de 3 e Atenção, no caso reproduzido)."""
+    from datetime import datetime, UTC
+    from backend.adapters.outbound.postgres.api import PostgresApiRepository
+    from backend.domain.models.map_query import MapQuery
+    pool, _, _ = api_database
+    with pool.connection() as conn:
+        conn.execute("UPDATE cobertura SET data_fim = '2026-11-15' WHERE satelite = 'N20'")   # cobertura até 15/11, sem focos em 15/11
+    now = datetime(2026, 11, 15, 15, tzinfo=UTC)
+    with PostgresApiRepository(pool, alert_rules).read() as reader:
+        rows = reader.map_rows(MapQuery.parse('-61,-4,-59,-2', '72', '4'), now)
+    assert rows['data_through'] == date(2026, 11, 15)
+    with PostgresApiRepository(pool, alert_rules).read() as reader:      # a cobertura nunca passa do relógio
+        rows = reader.map_rows(MapQuery.parse('-61,-4,-59,-2', '72', '4'), datetime(2026, 11, 14, 15, tzinfo=UTC))
+    assert rows['data_through'] == date(2026, 11, 14)
+
+
 def test_map_skips_alert_levels_when_too_many_cells_are_in_view(api_database, alert_rules, monkeypatch):
     """RFC 0003: acima do limite de células res 4, o mapa não calcula o nível, em vez de ficar lento."""
     from backend.adapters.outbound.postgres import api as postgres_api

@@ -189,9 +189,14 @@ class PostgresApiReader(PostgresHistoryRepository):
     def _cell_history(self, grouped, now):
         """Daily VIIRS counts of each resolution 4 cell with recent fire, for its alert level (RFC 0003)."""
         parents = {h3.cell_to_parent(h3.int_to_str(row['h3']), ALERT_RESOLUTION) for row in grouped}
-        self.cursor.execute(f"SELECT max(data) AS through FROM agregados_diarios WHERE data <= %s AND {satellite_sql('data', 'date')}",
-                            (now.date(),))
+        # The last covered day, not the last day with detections: `agregados_diarios` has no row for a day without fire.
+        self.cursor.execute("SELECT max(data_fim) AS through FROM cobertura WHERE satelite = ANY(%s) AND data_fim <= %s",
+                            (list(VIIRS_DAYS), now.date()))
         through = self.cursor.fetchone()['through']
+        if through is None:  # no coverage rows: fall back to the last day with detections
+            self.cursor.execute(f"SELECT max(data) AS through FROM agregados_diarios WHERE data <= %s AND {satellite_sql('data', 'date')}",
+                                (now.date(),))
+            through = self.cursor.fetchone()['through']
         if not parents or through is None or len(parents) > MAX_ALERT_CELLS:
             return {'cell_daily': None, 'data_through': through, 'coverage_start': VIIRS_START}
         child_to_parent = {h3.str_to_int(child): parent for parent in parents
