@@ -383,7 +383,9 @@ def main():
     if a.oni:
         conjuntos["fogo+oni"] = {**fogo, "oni": pista_oni(ler_oni(a.oni), semanas)}
     if a.clima:  # o clima parte das pistas de fogo, sem o ONI (que não ajudou: RFC 0003)
-        conjuntos["fogo+clima"] = {**fogo, **pistas_clima(clima_por_unidade(a.clima, unidades), semanas)}
+        clima = pistas_clima(clima_por_unidade(a.clima, unidades), semanas)
+        conjuntos["fogo+anomalia"] = {**fogo, **{k: v for k, v in clima.items() if k.endswith("_anom")}}
+        conjuntos["fogo+clima"] = {**fogo, **clima}       # o último conjunto é o da importância das pistas
 
     partes = []
     for nome, pistas in conjuntos.items():
