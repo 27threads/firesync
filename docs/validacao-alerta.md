@@ -22,7 +22,7 @@ O GlobFire só vai até 2020, e o AQ1km do INPE é mensal (sem o dia). Como a AP
 | O que | Gabarito | Resultado |
 | --- | --- | --- |
 | Contagem bruta (Aqua) | Série mensal do INPE (A2) | correlação 0,998, mesmo mês de pico em 23 de 23 anos |
-| Série harmonizada (calendário) | INPE (B6, código corrigido, issue #40) | correlação mensal de 0,94 a 0,99 por bioma; degrau em 2012 perto de zero (Mata Atlântica −14,1% e Pampa +10,8% declarados no Método) |
+| Série harmonizada (calendário) | INPE (B6, código corrigido, issue #40) | correlação mensal de 0,94 a 0,99 por bioma; degrau em 2012 perto de zero (Mata Atlântica −12,7% e Pampa +12,3% declarados no Método; números finais da B6 em [decisoes-harmonizacao.md](decisoes-harmonizacao.md), seção 4) |
 
 Esta solução cobre o que falta: **o alerta**.
 
