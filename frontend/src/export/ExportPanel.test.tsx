@@ -84,7 +84,7 @@ describe('ExportPanel (Tela 5: Exportar, RF13, RD05)', () => {
     );
 
     await waitFor(() => {
-      expect(onTriggerDownload).toHaveBeenCalledWith(expect.any(Blob), 'firesync-2026-11-14.zip');
+      expect(onTriggerDownload).toHaveBeenCalledWith(expect.objectContaining({ size: 2 }), 'firesync-2026-11-14.zip');
     });
     expect(auditBtn).not.toBeDisabled();
   });
@@ -146,7 +146,7 @@ describe('ExportPanel (Tela 5: Exportar, RF13, RD05)', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: /monthly series csv/i }));
-    expect(onTriggerDownload).toHaveBeenCalledWith(expect.any(Blob), 'result.csv');
+    expect(onTriggerDownload).toHaveBeenCalledWith(expect.objectContaining({ type: 'text/csv;charset=utf-8' }), 'result.csv');
   });
 
   it('downloads calendar PNG from the rendered fire-calendar SVG', async () => {
@@ -170,7 +170,10 @@ describe('ExportPanel (Tela 5: Exportar, RF13, RD05)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /calendar image \(png\)/i }));
     await waitFor(() => {
-      expect(onTriggerDownload).toHaveBeenCalledWith(expect.any(Blob), 'firesync-calendar-2003-01-2026-11.png');
+      expect(onTriggerDownload).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'image/png' }),
+        'firesync-calendar-2003-01-2026-11.png',
+      );
     });
   });
 });
