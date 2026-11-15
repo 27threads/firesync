@@ -16,3 +16,12 @@ Cada script traz, no começo, o critério fixado **antes** de rodar. Não rodam 
 | `modelo_onde4.py` | Variáveis do modelo final (10) contra as extras | Segunda pergunta |
 
 Todos usam `risco_celulas.py` (treino e variáveis) e `validacao/modelo_risco.py` e `validacao/backtest_alerta.py` (série e janelas). A série de entrada tem as colunas `unidade, data, n` (célula H3 de resolução 4 e contagem diária de detecções VIIRS), o mesmo formato do `--serie` do `risco_celulas.py`.
+
+## Números do pitch (antecedência e captura)
+
+| Script | O que responde |
+| --- | --- |
+| `diario.py` | Antecedência do aviso com notas **diárias** na Amazônia (51% dos inícios de fogo relevante avisados, mediana de 10 dias entre os avisados) |
+| `captura.py` | Curva de captura: que parte do fogo relevante uma brigada pega olhando só as X% células de maior nota |
+| `quietas.py` | Células quietas (zero detecções em 30 dias): quantas existem, quantas têm início de fogo, e a captura por faixa de nota |
+| `antecedencia.py` | Primeira versão da antecedência, só com notas de domingo (substituída pelo `diario.py`; ficou com um viés, ver o RFC) |
