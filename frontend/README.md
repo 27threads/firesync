@@ -7,7 +7,7 @@ Aplicação web: mapa para escolher a área, calendário em heatmap, janela rece
 - **Decisões já registradas** ([docs/arquitetura.md](../docs/arquitetura.md)):
   - mapa: Leaflet com renderizador canvas (`preferCanvas`) + Leaflet-Geoman para desenhar em carga tardia (confirmado pela frente D); mapa base do NASA EOSDIS GIBS, sem chave de API: `VIIRS_Black_Marble` (padrão) ou `BlueMarble_NextGeneration`, com `Coastlines_15m` (o CARTO passou a exigir chave; ver ponto 6 de [docs/arquitetura.md](../docs/arquitetura.md)), mais camada de focos recentes (`24 h`, `72 h`, `7 days`) em hexágonos H3 (`cividis` log) ou pontos diferenciados por raio/borda e cor segundo a classe de intensidade (`low`, `medium`, `high`);
   - cores: cividis em escala logarítmica. Mês incompleto, estimado ou fora da cobertura vão marcados por hachura, borda ou rótulo, nunca só por cor.
-- **Requisitos que cobre:** RF06–RF13 e RD01–RD07 ([docs/requisitos.md](../docs/requisitos.md)).
+- **Requisitos que cobre:** RF06–RF13 e RD01–RD07 ([docs/requisitos.md](../docs/requisitos.md)), mais o aviso antecipado do RFC 0003 (D10): lista "Where to look first", selo do alerta e legenda do risco, só quando a API manda `alerts` e `alerts.risk`.
 
 Comandos: `npm ci`, `npm test` (Vitest), `npm run dev` (porta 5173), `npm run build` e `npm run preview`. O texto fixo (intro, Method, Data & credits e o crédito ao FIRMS) fica no `index.html`, para a página abrir completa sem JavaScript; o React monta a ferramenta em `#tool-root` e o calendário da abertura em `#hero-viz`.
 

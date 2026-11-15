@@ -44,11 +44,11 @@ Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele
 
 ## 3. Requisitos não funcionais (implícitos no texto)
 
-- [ ] **RNF01:** Ser uma **aplicação web**, acessada pelo navegador. ⏳ **parcial:** app integrado localmente (front → proxy → API → PostGIS sintético); carga real aguarda Eduardo e deploy público segue em C7.
+- [x] **RNF01:** Ser uma **aplicação web**, acessada pelo navegador. ✅ no ar em https://firesync.nogranlabs.com.br, com a API e a carga real; os 5 endpoints conferidos no site em 15/11, no desktop e no celular (D7, C7).
 - [x] **RNF02:** **Fonte de dados:** o texto sugere o **NASA FIRMS** (Earthdata), que fornece os dados do MODIS e do VIIRS. ✅ NASA FIRMS: resumos anuais por país (SP) e API (SP e NRT).
 - [ ] **RNF03:** **Atualização contínua.** O calendário precisa estar "atualizado", então os dados novos devem entrar periodicamente. ⏳ **parcial:** job NRT a cada 3 h pronto e testado (`job_nrt.py` + `Dockerfile`); falta rodar na VPS.
 - [x] **RNF04:** **Desempenho.** São mais de 20 anos de focos no mundo inteiro, então as consultas por área e período precisam ser rápidas. Isso pede pré-agregação e indexação espacial. ✅ pré-agregação (`agregados`, `agregados_diarios`) e índice espacial H3: calendário de 100 × 100 km em 2–9 ms, Amazônia inteira em ~0,8 s, focos recentes em 19 ms (medido no banco de teste).
-- [x] **RNF05:** **Usabilidade e acessibilidade**, porque o usuário pode estar numa situação de emergência. ✅ controles de área/período e camada de focos recentes com labels, `aria-pressed`, `aria-describedby`, alertas em `role="alert"`, calendário em `cividis` com hachura/borda, pontos diferenciados por raio e borda além da cor, navegação por teclado e downloads acessíveis no front (D1–D7, validado nas 18 jornadas E2E J1–J9 em desktop e celular).
+- [x] **RNF05:** **Usabilidade e acessibilidade**, porque o usuário pode estar numa situação de emergência. ✅ controles de área/período e camada de focos recentes com labels, `aria-pressed`, `aria-describedby`, alertas em `role="alert"`, calendário em `cividis` com hachura/borda, pontos diferenciados por raio e borda além da cor, navegação por teclado e downloads acessíveis no front (D1–D7, validado nas 22 jornadas E2E J1–J11 em desktop e celular).
 
 ### Definidos pela equipe
 

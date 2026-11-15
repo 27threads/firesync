@@ -74,4 +74,21 @@ describe('recentDetectionsModel', () => {
     expect(pointHtml).toMatch(/Night/i);
     expect(pointHtml).not.toMatch(/\bFRP\b|\bMW\b/i);
   });
+
+  it('adds the alert badge and the risk tier to the hexagon tooltip only when the API sends them', () => {
+    const base = { h3: '85a8100ffffffff', detections: 37, n_low: 21, n_medium: 12, n_high: 4 };
+    const before = formatHexagonTooltip(base);
+    expect(before).not.toMatch(/Unusual|risk/i);
+
+    const unusual = formatHexagonTooltip({ ...base, alert_cell: '84a8101ffffffff', alert_level: 'critical' });
+    expect(unusual).toMatch(/Unusual for the season/);
+    expect(formatHexagonTooltip({ ...base, alert_level: 'normal' })).not.toMatch(/Unusual/);
+    expect(formatHexagonTooltip({ ...base, alert_level: null })).not.toMatch(/Unusual/);
+
+    const withRisk = formatHexagonTooltip({ ...base, risk_tier: 'very_high', risk_prob: 0.71 }, 14);
+    expect(withRisk).toMatch(/Fire risk, next 14 days: Very high/);
+    // Sem a legenda (alerts.risk), o tooltip não mostra a faixa; sem nota, não mostra risco zerado.
+    expect(formatHexagonTooltip({ ...base, risk_tier: 'very_high' })).not.toMatch(/risk/i);
+    expect(formatHexagonTooltip({ ...base, risk_tier: null, risk_prob: null }, 14)).not.toMatch(/risk/i);
+  });
 });

@@ -5,6 +5,7 @@ import type {
   RecentPointProperties,
 } from '../api/types';
 import { makeColorScale } from '../calendar/colorScale';
+import { alertBadge, riskTierLabel } from '../map/alertsModel';
 
 export interface HexagonLayerStyle {
   fillColor: string;
@@ -106,18 +107,27 @@ function formatAcquiredUtc(isoUtc: string): string {
   return `${isoUtc} UTC`;
 }
 
-/** Formats an accessible English tooltip for an H3 hexagon without raw FRP in MW. */
-export function formatHexagonTooltip(props: RecentHexagonProperties): string {
+/**
+ * Formats an accessible English tooltip for an H3 hexagon without raw FRP in MW.
+ * `riskHorizonDays` comes from `alerts.risk`: without it, the risk tier is not shown.
+ */
+export function formatHexagonTooltip(props: RecentHexagonProperties, riskHorizonDays?: number): string {
   const total = props.detections.toLocaleString('en-US');
   const high = props.n_high.toLocaleString('en-US');
   const medium = props.n_medium.toLocaleString('en-US');
   const low = props.n_low.toLocaleString('en-US');
-  return [
+  const badge = alertBadge(props.alert_level);
+  const lines = [
     `<div class="map-detection-tooltip">`,
     `<strong>${total} hot spots</strong> <span class="muted">(H3 ${escapeHtml(props.h3)})</span>`,
     `<div>Intensity — High: ${high} · Medium: ${medium} · Low: ${low}</div>`,
-    `</div>`,
-  ].join('');
+  ];
+  if (badge) lines.push(`<div><span class="map-badge">${badge}</span></div>`);
+  if (riskHorizonDays !== undefined && props.risk_tier) {
+    lines.push(`<div>Fire risk, next ${riskHorizonDays} days: ${riskTierLabel(props.risk_tier)}</div>`);
+  }
+  lines.push(`</div>`);
+  return lines.join('');
 }
 
 /** Formats an accessible English tooltip for an individual hot spot point in UTC without raw FRP in MW. */
