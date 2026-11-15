@@ -86,7 +86,7 @@ Tudo em `numpy`, vetorizado por unidade. Para cada semana, `t` é o último dia 
 - **Atenção:** não é Crítico e `s7 > P75` (ou P90, conforme a grade).
 - **Normal:** o resto.
 
-**Grade:** razão em {1,5; 2; 2,5; 3} × tendência {ligada, desligada} × Atenção em {P75, P90} × piso {só na mediana zero, contínuo} = 32 regras, com a regra do `alert_rules.json` marcada (hoje a `v1`, piso contínuo). O `eventos.csv` usa essa mesma regra, igual ao `recent` da API. O P90 e o mínimo de 10 do gabarito também rodam com {P80, P95} e {5, 20} nas duas versões do piso da regra atual, para mostrar a sensibilidade.
+**Grade:** razão em {1,5; 2; 2,5; 3} × tendência {ligada, desligada} × Atenção em {P75, P90} × piso {só na mediana zero, contínuo} = 32 regras, com a regra do `alert_rules.json` marcada (hoje a `v1`, piso contínuo). Todas usam o piso `min_detections` do `alert_rules.json`. O `eventos.csv` usa a regra marcada, a mesma regra de nível do `recent` da API; o normal é que difere, porque aqui entram os anos posteriores (ver os limites em [validacao-alerta.md](../validacao-alerta.md)). O P90 e o mínimo de 10 do gabarito também rodam com {P80, P95} e {5, 20} nas duas versões do piso da regra atual, para mostrar a sensibilidade.
 
 **Medidas por regra** (sobre todas as semanas × unidades):
 - frequência de cada nível;
@@ -104,7 +104,7 @@ Tudo em `numpy`, vetorizado por unidade. Para cada semana, `t` é o último dia 
 | --- | --- | --- |
 | `backtest.csv` | 1 por regra da grade (+ sensibilidade) | `regra, razao, tendencia, atencao, p_gabarito, minimo, freq_normal, freq_atencao, freq_critico, acerto, cobertura, cobertura_critico, alarme_falso, trocas_mes, acerto_ingenua, ganho, anos_com_ganho_positivo` |
 | `por_bioma.csv` | 1 por regra × bioma | as mesmas, nos 6 biomas inteiros |
-| `eventos.csv` | 1 por evento × semana | `evento, semana, nivel, detections, typical_median` e a `antecedencia_semanas` |
+| `eventos.csv` | 1 por evento × semana | `evento, semana, nivel, detections, typical_median`, a `antecedencia_semanas`, `antecedencia_no_limite` e `alerta_continuo` |
 | `relatorio.txt` | resumo | a regra atual com a situação dela, as regras aprovadas no critério completo (gabarito principal e as quatro variações) e as que passam no principal sem sensibilidade calculada, que não contam como aprovadas |
 
 ### 4. Eventos conhecidos (solução B)
@@ -118,7 +118,7 @@ nome,regiao,inicio,fim,fonte_url,fonte_descricao
 - Lugar = `regiao`, o nome do bioma em `regioes` (o id muda de um banco para outro). UF ou polígono menor ficam para depois.
 - **Nenhuma linha sem `fonte_url` oficial** (INPE, decreto de emergência, relatório do governo). O script recusa linha sem fonte.
 - Candidatos: Pantanal 2020, Amazônia ago/2019, Pantanal 2024 (início antecipado), Amazônia e Cerrado 2024.
-- Antecedência = dias (e semanas cheias) entre o primeiro domingo em Atenção ou Crítico (nas 8 semanas antes do `inicio`) e o `inicio`. **Vazia** quando não houve alerta, para não se confundir com "menos de 7 dias" (issue #59).
+- Antecedência = dias (e semanas cheias) entre o primeiro domingo em Atenção ou Crítico (nas 8 semanas antes do `inicio`) e o `inicio`. **Vazia** quando não houve alerta, para não se confundir com "menos de 7 dias" (issue #59). `antecedencia_no_limite` marca o alerta já ligado na 1ª semana da janela: a antecedência real pode ser maior, e a tela diz "at least". `alerta_continuo` diz se o nível ficou em Atenção ou Crítico do primeiro alerta até o último domingo antes do `inicio`; sem isso, a tela não pode dizer "was already at Attention or Critical".
 
 ### 5. Autoteste (`test_backtest_alerta.py`, sem banco)
 

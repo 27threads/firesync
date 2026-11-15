@@ -59,7 +59,7 @@ def test_gabarito_nao_se_sobrepoe_a_semana_avaliada():
     m[0, dia(t) - 6: dia(t) + 1] = [10, 20, 30, 40, 50, 60, 70]  # sobe nos últimos 3 dias
     semanas, a = bt.avaliar(m, REGRA)
     w = semanas.index(t)
-    assert bt.nivel(a, 2.0, True, 75, bt.PISO_MEDIANA_ZERO)[w, 0] == 2   # o nível vê o fogo
+    assert bt.nivel(a, 2.0, True, 75, 10)[w, 0] == 2   # o nível vê o fogo
     assert not bt.gabarito(a, 90, 10)[w, 0]                             # o gabarito não vê
     # e o fogo na semana seguinte entra no gabarito da semana avaliada
     m[0, dia(t) + 1: dia(t) + 8] = 30
@@ -147,6 +147,54 @@ def test_nivel_da_regra_usa_o_piso_continuo_da_v1():
 def test_regra_atual_da_grade_e_a_variante_com_piso_continuo():
     atuais = [r for r in bt.regras(REGRA) if r["regra_atual"]]
     assert [r["regra"] for r in atuais] == ["razao2.0_tend1_atencao_p75_piso_continuo"]
+
+def test_nivel_da_regra_le_tendencia_e_atencao_do_json():
+    """Revisão do PR #71: a tendência e o percentil de Atenção também vêm do alert_rules.json."""
+    a = {"s7": np.array([[30.0, 50.0]]), "med7": np.array([[1.0, 100.0]]), "p75": np.full((1, 2), 40.0),
+         "p90": np.full((1, 2), 60.0), "sobe": np.zeros((1, 2), bool)}
+    assert bt.nivel_da_regra(a, REGRA).tolist() == [[0, 1]]   # sem subir, não é Crítico; 50 > P75
+    sem_tendencia = {**REGRA, "levels": {"critical": {**REGRA["levels"]["critical"], "requires_rising_trend": False},
+                                         "attention": {"above_percentile": 90}}}
+    assert bt.nivel_da_regra(a, sem_tendencia).tolist() == [[2, 0]]   # 50 não passa do P90
+
+
+def test_grade_usa_o_piso_do_alert_rules_json():
+    """Revisão do PR #71: a regra atual do relatório e o eventos.csv usam o mesmo min_detections."""
+    a = {k: np.full((1, 1), v, np.float32) for k, v in
+         {"s7": 2.0, "med7": 1.0, "p75": 99.0, "p90": 99.0, "score": 0.1, "s14": 0.0,
+          "g80": 99.0, "g90": 99.0, "g95": 99.0}.items()}
+    a["sobe"] = np.ones((1, 1), bool)
+    piso_baixo = {**REGRA, "levels": {**REGRA["levels"],
+                                      "critical": {**REGRA["levels"]["critical"], "min_detections": 2}}}
+    for regra, freq in ((REGRA, 0.0), (piso_baixo, 1.0)):
+        bt_ = bt.tabela([date(2020, 1, 5)], a, regra)
+        atual = bt_[bt_["regra_atual"] & (bt_["p_gabarito"] == 90) & (bt_["minimo"] == 10)]
+        assert atual["freq_critico"].tolist() == [freq]
+
+
+def eventos_com(niv):
+    inicio = date(2020, 7, 5)
+    semanas = [inicio + timedelta(weeks=i) for i in range(-8, 1)]
+    a = {"s7": np.ones((9, 1)), "med7": np.ones((9, 1))}
+    ev = pd.DataFrame({"nome": ["X"], "regiao": ["Pantanal"], "inicio": [pd.Timestamp(inicio)],
+                       "fim": [pd.Timestamp(inicio)]})
+    return bt.eventos(ev, np.array(["Pantanal"]), semanas, a, np.array(niv)[:, None]).iloc[0]
+
+
+def test_antecedencia_avisa_quando_bate_no_limite_da_janela():
+    """Revisão do PR #71: alerta já ligado na 1ª semana da janela = a antecedência real pode ser maior."""
+    no_limite = eventos_com([1, 1, 1, 1, 1, 1, 1, 1, 2])
+    assert no_limite["antecedencia_dias"] == 56 and bool(no_limite["antecedencia_no_limite"])
+    assert not eventos_com([0, 0, 0, 0, 0, 1, 2, 2, 2])["antecedencia_no_limite"]
+
+
+def test_antecedencia_diz_se_o_alerta_ficou_ligado_ate_o_inicio():
+    """Revisão do PR #71: um alerta isolado que voltou a Normal não é o mesmo que um alerta contínuo."""
+    assert bool(eventos_com([0, 0, 0, 0, 0, 1, 2, 2, 2])["alerta_continuo"])
+    blip = eventos_com([0, 1, 0, 0, 0, 0, 0, 1, 2])
+    assert blip["antecedencia_dias"] == 49 and not blip["alerta_continuo"]
+    assert not eventos_com([0, 0, 1, 1, 0, 0, 0, 0, 2])["alerta_continuo"]   # desligou antes do início
+
 
 def test_evento_sem_alerta_tem_antecedencia_vazia_e_regiao_errada_avisa_o_evento():
     """Issue #59, item 3: 0 semanas (alerta menos de 7 dias antes) não pode ser igual a "nenhum alerta"."""
