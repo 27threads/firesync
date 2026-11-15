@@ -43,6 +43,9 @@ def test_five_endpoints_and_full_calendar_contract(client, api_example):
         assert set(data[field][0]) == set(api_example[field][0])
     for field in ['last_7_days', 'month_to_date']:
         assert set(data['recent'][field]) == set(api_example['recent'][field])
+    latest = data['indicators']['latest_complete_year']
+    assert set(latest) == {'year', 'detections', 'reference_median', 'anomaly_pct'}
+    assert set(latest) == set(api_example['indicators']['latest_complete_year'])
     assert data['months'][0]['detections'] == 15
     assert data['recent']['last_7_days']['detections'] == 7
     assert data['indicators']['last_7_days_vs_typical_pct'] == data['recent']['last_7_days']['difference_pct']
