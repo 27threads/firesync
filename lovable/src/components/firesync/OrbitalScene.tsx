@@ -257,6 +257,7 @@ export default function OrbitalScene({ playing, progress, onSurfaceReady, onGlob
     let earthRotation = 0;
     const startPosition = new THREE.Vector3(0, 0.65, startDistance);
     let frame = 0;
+    let settledAtEnd = false;
     const worldPosition = new THREE.Vector3();
     const projected = new THREE.Vector3();
     const ray = new THREE.Ray();
@@ -269,6 +270,8 @@ export default function OrbitalScene({ playing, progress, onSurfaceReady, onGlob
       previousFrame = now;
       const running = animate.current && !reduced.matches && !document.hidden;
       const approach = reduced.matches ? 0 : progress.current;
+      // Com o mapa em tela cheia o globo fica escondido: um quadro final basta, o resto da GPU fica para o mapa.
+      if (approach >= 0.999) { if (settledAtEnd) return; settledAtEnd = true; } else settledAtEnd = false;
       const descent = smoothPhase(approach, 0.02, 0.9);
       const flatten = smoothPhase(approach, 0.35, 0.88);
       earthRotation = advanceGlobeRotation(earthRotation, delta, approach, running);

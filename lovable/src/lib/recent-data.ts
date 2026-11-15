@@ -1,8 +1,21 @@
 import circle from "@turf/circle";
+import { scaleSequentialLog, interpolateCividis } from "d3";
 import type { Feature, Geometry } from "geojson";
 import fixture from "@/data/demo-recent.json";
 export type Level = "critical" | "attention" | "normal";
 export type Intensity = "high" | "medium" | "low";
+export type RiskTier = "very_high" | "high" | "medium" | "lower";
+export const TIERS: RiskTier[] = ["very_high", "high", "medium", "lower"];
+export const TIER_LABEL: Record<RiskTier, string> = { very_high: "Very high", high: "High", medium: "Medium", lower: "Lower" };
+export const TIER_COLOR: Record<RiskTier, string> = { very_high: "#c62828", high: "#ef6c1a", medium: "#f5bf2a", lower: "#cdd2d8" };
+// Escala logarítmica cividis, acessível a daltonismo (RD03 e RD04): poucos hot spots em azul-escuro,
+// muitos em amarelo. O zero tem cor própria, fora da rampa (a escala logarítmica não representa o zero).
+export const COUNT_DOMAIN: [number, number] = [1, 100];
+export const ZERO_COLOR = "#d9dde3";
+const countScale = scaleSequentialLog(interpolateCividis).domain(COUNT_DOMAIN).clamp(true);
+export const countColor = (n: number) => (n > 0 ? countScale(n) : ZERO_COLOR);
+export const COUNT_GRADIENT = `linear-gradient(to right, ${[1, 2, 4, 8, 16, 32, 64, 100].map(countColor).join(", ")})`;
+export const RING_COLOR = { critical: "#d62728", attention: "#f2b134" } as const;
 export type Viewport = { bbox: [number, number, number, number]; zoom: number };
 export type DetectionProperties = {
   h3?: string;
@@ -12,6 +25,8 @@ export type DetectionProperties = {
   n_high?: number;
   alert_cell?: string;
   alert_level?: Level;
+  risk_prob?: number | null;
+  risk_tier?: RiskTier | null;
   frp?: number;
   saturated?: boolean;
 };
@@ -23,6 +38,16 @@ export type Priority = {
   typical_median: number;
   share_followed_by_high?: number;
   center: [number, number];
+  risk_prob?: number | null;
+  risk_tier?: RiskTier | null;
+};
+export type RiskLegend = {
+  scored_at: string;
+  data_ref: string;
+  model_version: string;
+  horizon_days: number;
+  rules_version: string;
+  tiers: { tier: RiskTier; min_prob: number; historical_share: number | null }[];
 };
 export type RecentData = {
   type: "FeatureCollection";
@@ -39,6 +64,7 @@ export type RecentData = {
         horizon_days: number;
         overall_share?: number;
         priority: Priority[];
+        risk?: RiskLegend;
       }
     | undefined;
 };
@@ -62,9 +88,10 @@ export function inView(center: [number, number], bbox: Viewport["bbox"]) {
 }
 export function priorityInView(data: RecentData, view: Viewport) {
   const rank = { critical: 0, attention: 1, normal: 2 };
+  const tier = (p: Priority) => (p.risk_tier ? TIERS.indexOf(p.risk_tier) : TIERS.length);
   return (data.alerts?.priority ?? [])
     .filter((p) => inView(p.center, view.bbox))
-    .sort((a, b) => rank[a.alert_level] - rank[b.alert_level] || b.detections_7d - a.detections_7d);
+    .sort((a, b) => tier(a) - tier(b) || rank[a.alert_level] - rank[b.alert_level] || b.detections_7d - a.detections_7d);
 }
 export function riskFrequency(cell: Priority, data: RecentData, drawn = false) {
   if (

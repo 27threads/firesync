@@ -82,7 +82,7 @@ export function MapOpening({ selection, onSelect }: { selection: AreaSelection |
         <p className="orbital-data-credit">{OPENING_DATA_CREDIT}</p>
       </div>
       <div className={`orbital-map-workspace ${mapActive ? 'is-active' : ''}`} aria-hidden={!mapActive} inert={!mapActive}>
-         {globeReady && <ClientOnly><Suspense fallback={<div className="map-loading">Loading map…</div>}><RecentWorkspace active={mapActive} resetForHandoff={resetForHandoff} selection={selection} onSelect={onSelect} onReady={() => setMapReady(true)} onReturn={() => showChapter(0)} onRecentSummary={(data, demo) => setRecentSummary({ data, demo })} /></Suspense></ClientOnly>}
+         {globeReady && <ClientOnly><Suspense fallback={<div className="map-loading">Loading map…</div>}><RecentWorkspace active={mapActive} resetForHandoff={resetForHandoff} selection={selection} onSelect={onSelect} onReady={() => setMapReady(true)} onReturn={() => showChapter(0)} onNext={() => document.querySelector('.opening-context')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })} onRecentSummary={(data, demo) => setRecentSummary({ data, demo })} /></Suspense></ClientOnly>}
       </div>
     </div>
     <div className="orbital-foot"><span>Earth & spacecraft: NASA · Illustrative scale & orbits</span><a href="#investigate">Monthly record</a></div>

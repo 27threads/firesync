@@ -7,10 +7,12 @@ import { BLUE_MARBLE_TILES, MAP_WHEEL_SETTLE_MS, restoreSurfaceView, SURFACE_VIE
 import { LocateFixed, MapPin, Minus, Pentagon, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { intensityClass, type DetectionFeature, type Level, type Intensity, type RecentData, type Viewport } from '@/lib/recent-data';
+import { intensityClass, countColor, TIER_COLOR, TIER_LABEL, type RiskTier, type DetectionFeature, type Level, type Intensity, type RecentData, type Viewport } from '@/lib/recent-data';
 
 export type AreaSelection = { type: 'geojson'; geometry: unknown; name?: string } | { type: 'circle'; latitude: number; longitude: number; radius_km: number } | { type: 'region'; region_id: number };
-export default function AreaMap({ onSelect, selection, immersive = false, active = true, resetForHandoff = false, onReady, initialCountry, recent, onViewport, onCell, focus, layer = 'risk', levels = ['critical','attention','normal'], intensities = ['high','medium','low'], basemap = 'blue', drawMode, operational = false, stateBounds }: { onSelect: (area: AreaSelection | null) => void; selection: AreaSelection | null; immersive?: boolean; active?: boolean; resetForHandoff?: boolean; onReady?: () => void; initialCountry?: string; recent?: RecentData | null; onViewport?: (view: Viewport) => void; onCell?: (cell: DetectionFeature) => void; focus?: { center: [number,number]; nonce: number } | undefined; layer?: string; levels?: Level[]; intensities?: Intensity[]; basemap?: string; drawMode?: string; operational?: boolean; stateBounds?: Viewport['bbox'] }) {
+// Camada de cor translúcida: deixa o relevo e a vegetação do mapa aparecerem por baixo.
+const HEX_FILL_OPACITY = 0.55;
+export default function AreaMap({ onSelect, selection, immersive = false, active = true, resetForHandoff = false, onReady, initialCountry, recent, onViewport, onCell, focus, layer = 'risk', levels = ['critical','attention','normal'], intensities = ['high','medium','low'], basemap = 'blue', drawMode, operational = false, stateBounds, tiers = ['very_high','high','medium','lower'], quietOnly = false, onMinZoomOut }: { onMinZoomOut?: () => void; tiers?: RiskTier[]; quietOnly?: boolean; onSelect: (area: AreaSelection | null) => void; selection: AreaSelection | null; immersive?: boolean; active?: boolean; resetForHandoff?: boolean; onReady?: () => void; initialCountry?: string; recent?: RecentData | null; onViewport?: (view: Viewport) => void; onCell?: (cell: DetectionFeature) => void; focus?: { center: [number,number]; nonce: number } | undefined; layer?: string; levels?: Level[]; intensities?: Intensity[]; basemap?: string; drawMode?: string; operational?: boolean; stateBounds?: Viewport['bbox'] }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const callback = useRef(onSelect); callback.current = onSelect;
@@ -30,7 +32,7 @@ export default function AreaMap({ onSelect, selection, immersive = false, active
   };
   useEffect(() => {
     if (!container.current) return;
-    const map = L.map(container.current, { zoomControl: false, scrollWheelZoom: immersive ? false : true, preferCanvas: true }).setView([SURFACE_VIEW.latitude, SURFACE_VIEW.longitude], immersive ? SURFACE_VIEW.zoom : 5);
+    const map = L.map(container.current, { zoomControl: false, scrollWheelZoom: immersive ? false : true, preferCanvas: true, ...(immersive ? { minZoom: SURFACE_VIEW.zoom, zoomSnap: 0, zoomDelta: 1 } : {}) }).setView([SURFACE_VIEW.latitude, SURFACE_VIEW.longitude], immersive ? SURFACE_VIEW.zoom : 5);
     mapRef.current = map;
     const imagery = L.tileLayer(BLUE_MARBLE_TILES, { attribution: 'Imagery: <a href="https://earthdata.nasa.gov/gibs">NASA GIBS · Blue Marble</a>', maxNativeZoom: 8, maxZoom: 14 });
     imagery.once('load', () => readyCallback.current?.());
@@ -73,14 +75,52 @@ export default function AreaMap({ onSelect, selection, immersive = false, active
     const map=mapRef.current; if(!map || !recent) return;
     const tokens=getComputedStyle(document.documentElement);
     const token=(name:string)=>tokens.getPropertyValue(name).trim();
-    const visible=recent.features.filter(f => (!f.properties.alert_level || levels.includes(f.properties.alert_level)) && (f.geometry.type !== 'Point' || intensities.includes(intensityClass(f.properties.frp ?? 0, f.properties.saturated))));
+    const isCell=(f:DetectionFeature)=>f.geometry.type!=='Point';
+    const visible=recent.features.filter(f => {
+      const p=f.properties;
+      if (f.geometry.type==='Point') return intensities.includes(intensityClass(p.frp ?? 0, p.saturated));
+      if (layer==='risk') return (!p.risk_tier || tiers.includes(p.risk_tier)) && (!quietOnly || !(p.detections && p.detections>0));
+      const any=((p.n_low??0)>0&&intensities.includes('low'))||((p.n_medium??0)>0&&intensities.includes('medium'))||((p.n_high??0)>0&&intensities.includes('high'))||(p.n_low==null&&p.n_medium==null&&p.n_high==null);
+      return any && (!p.alert_level || levels.includes(p.alert_level));
+    });
+    const styleOf=(f?:{properties?:DetectionFeature['properties']}|undefined) => {
+        const p=f?.properties; const severity=recent.alerts ? p?.alert_level ?? 'normal' : 'normal';
+        const near=map.getZoom()>=6; if (layer==='risk' && p?.risk_tier) { const ink=TIER_COLOR[p.risk_tier as RiskTier]; const fire=(p.detections??0)>0; return {color:fire&&near?'#ffffff':ink,fillColor:ink,weight:fire&&near?2.5:near?1:0.4,fillOpacity:HEX_FILL_OPACITY}; }
+        if (layer==='intensity') { return {color:near?'#ffffff':countColor(p?.detections??0),fillColor:countColor(p?.detections??0),weight:near?1:0.4,fillOpacity:HEX_FILL_OPACITY}; }
+        const ink=token(layer === 'risk' ? `--risk-${severity}` : '--map-selection'); return {color:ink,fillColor:ink,weight:severity==='critical'?4:severity==='attention'?3:1,fillOpacity:severity==='normal'?0.08:0.32,dashArray:severity==='attention'?'5 3':undefined};
+    };
     const marks=L.geoJSON({type:'FeatureCollection',features:visible} as FeatureCollection, {
-      style: f => { const p=f?.properties; const severity=recent.alerts ? p?.alert_level ?? 'normal' : 'normal'; const ink=token(layer === 'risk' ? `--risk-${severity}` : layer==='intensity' ? '--intensity-high' : '--map-selection'); return {color:ink,fillColor:ink,weight:severity==='critical'?4:severity==='attention'?3:1,fillOpacity:layer==='count'?0.55:severity==='normal'?0.08:0.32,dashArray:severity==='attention'?'5 3':undefined}; },
+      style: f => styleOf(f as never),
       pointToLayer: (f,c) => { const k=intensityClass(f.properties.frp ?? 0,f.properties.saturated); return L.circleMarker(c,{radius:k==='high'?8:k==='medium'?5:3,color:token(`--intensity-${k}`),weight:k==='high'?3:1,fillOpacity:0.7}); },
-      onEachFeature: (f,l) => { const p=f.properties; const text=layer==='count'?`${p.detections ?? '—'}`:p.alert_level==='critical'?'! Critical':p.alert_level==='attention'?'△ Attention':null; if(text && recent.alerts) l.bindTooltip(text,{permanent:true,direction:'center',className:'risk-map-label'}); l.on('click',()=>cellCallback.current?.(f as DetectionFeature)); }
+      onEachFeature: (f,l) => { const p=f.properties; const text=layer==='risk'&&p.risk_tier? (p.risk_tier==='very_high'||p.risk_tier==='high'?TIER_LABEL[p.risk_tier as RiskTier]:null) : layer==='intensity'&&p.alert_level==='critical'?'! Critical':layer==='intensity'&&p.alert_level==='attention'?'△ Attention':null; if(text && recent.alerts) l.bindTooltip(text,{sticky:true,direction:'top',className:'risk-map-label'}); l.on('click',()=>cellCallback.current?.(f as DetectionFeature)); }
     }).addTo(map);
-    return ()=>{map.removeLayer(marks);};
-  },[recent,layer,levels,intensities]);
+    void isCell;
+    const rings=L.layerGroup().addTo(map);
+    const drawRings=()=>{
+      rings.clearLayers();
+      if (layer!=='intensity') return;
+      for (const f of visible) {
+        if (f.geometry.type!=='Polygon') continue;
+        const ring=(f.geometry.coordinates[0]??[]) as number[][];
+        if (ring.length<3) continue;
+        const lng=ring.reduce((a,c)=>a+(c[0]??0),0)/ring.length, lat=ring.reduce((a,c)=>a+(c[1]??0),0)/ring.length;
+        // Ícone só quando o hexágono já tem tamanho para abrigá-lo: sem poluir o zoom nacional.
+        const c0=map.latLngToContainerPoint([lat,lng]), v0=map.latLngToContainerPoint([ring[0]![1]!,ring[0]![0]!]);
+        const hexR=Math.hypot(c0.x-v0.x,c0.y-v0.y);
+        const lv=f.properties.alert_level;
+        if (recent.alerts && (lv==='critical'||lv==='attention') && hexR>=8) {
+          const size=Math.round(Math.max(14,Math.min(24,hexR*0.9)));
+          L.marker([lat,lng],{icon:L.divIcon({className:`fs-map-icon fs-map-icon-${lv}`,html:'<span>!</span>',iconSize:[size,size],iconAnchor:[size/2,size/2]}),interactive:false,keyboard:false}).addTo(rings);
+        }
+      }
+    };
+    drawRings();
+    const restyle=()=>marks.setStyle(styleOf);
+    let settle = 0;
+    const settled = () => { window.clearTimeout(settle); settle = window.setTimeout(() => { drawRings(); restyle(); }, 140); };
+    map.on('zoomend', settled);
+    return ()=>{window.clearTimeout(settle);map.off('zoomend',settled);map.removeLayer(marks);map.removeLayer(rings);};
+  },[recent,layer,levels,intensities,tiers,quietOnly]);
   useEffect(()=>{if(focus) mapRef.current?.setView([focus.center[1],focus.center[0]],8,{animate:false});},[focus]);
   useEffect(() => {
     if (!stateBounds) return;
@@ -96,8 +136,32 @@ export default function AreaMap({ onSelect, selection, immersive = false, active
     if (!active) { map.pm.disableDraw(); return; }
     map.invalidateSize({ animate: false });
     // Let the arrival gesture finish before wheel movement starts zooming the map.
-    const timer = window.setTimeout(() => map.scrollWheelZoom.enable(), MAP_WHEEL_SETTLE_MS);
-    return () => { window.clearTimeout(timer); map.scrollWheelZoom.disable(); };
+    // Mesma direção da abertura: rolar para baixo aproxima, para cima afasta. No enquadramento inicial,
+    // rolar para cima deixa a página subir de volta ao globo (não bloqueia o scroll da página).
+    const el = map.getContainer();
+    let target = map.getZoom();
+    let anchor = map.getSize().divideBy(2);
+    let raf = 0;
+    const step = () => {
+      raf = 0;
+      const z = map.getZoom();
+      const diff = target - z;
+      if (Math.abs(diff) < 0.01) { map.setZoomAround(anchor, target, { animate: false }); return; }
+      map.setZoomAround(anchor, z + diff * 0.28, { animate: false });
+      raf = requestAnimationFrame(step);
+    };
+    const onWheel = (e: WheelEvent) => {
+      const down = e.deltaY > 0;
+      if (!down && map.getZoom() <= SURFACE_VIEW.zoom + 0.001) return;
+      e.preventDefault();
+      const unit = e.deltaMode === 1 ? 33 : 120;
+      if (!raf) target = map.getZoom();
+      target = Math.max(SURFACE_VIEW.zoom, Math.min(map.getMaxZoom(), target + Math.max(-1, Math.min(1, e.deltaY / unit)) * 0.6));
+      anchor = map.mouseEventToContainerPoint(e);
+      if (!raf) raf = requestAnimationFrame(step);
+    };
+    const timer = window.setTimeout(() => el.addEventListener('wheel', onWheel, { passive: false }), MAP_WHEEL_SETTLE_MS);
+    return () => { window.clearTimeout(timer); if (raf) cancelAnimationFrame(raf); el.removeEventListener('wheel', onWheel); };
   }, [active, immersive]);
   useEffect(() => {
     const map = mapRef.current;
@@ -145,7 +209,7 @@ export default function AreaMap({ onSelect, selection, immersive = false, active
         <div className="mission-selection-tools">{tools.map(tool => <Tooltip key={tool.label}><TooltipTrigger asChild><Button variant="ghost" size="icon" aria-label={tool.label} aria-pressed={tool.pressed} disabled={tool.disabled} onClick={tool.run}><tool.icon size={17} /></Button></TooltipTrigger><TooltipContent className="mission-tooltip">{tool.label}</TooltipContent></Tooltip>)}</div>
       </div>}
       <div className="mission-navigation" role="toolbar" aria-label="Map navigation">
-        {[{ label: 'Zoom in', icon: Plus, run: () => mapRef.current?.zoomIn(1, { animate: false }) }, { label: 'Zoom out', icon: Minus, run: () => mapRef.current?.zoomOut(1, { animate: false }) }, { label: 'Center on Brazil', icon: LocateFixed, run: () => { const map = mapRef.current; if (map) restoreSurfaceView(map); } }].map(tool => <Tooltip key={tool.label}><TooltipTrigger asChild><Button variant="ghost" size="icon" aria-label={tool.label} onClick={tool.run}><tool.icon size={17} /></Button></TooltipTrigger><TooltipContent side="left" className="mission-tooltip">{tool.label}</TooltipContent></Tooltip>)}
+        {[{ label: 'Zoom in', icon: Plus, run: () => mapRef.current?.zoomIn(1, { animate: false }) }, { label: 'Zoom out', icon: Minus, run: () => { const map = mapRef.current; if (!map) return; if (immersive && map.getZoom() <= SURFACE_VIEW.zoom) onMinZoomOut?.(); else map.zoomOut(1, { animate: false }); } }, { label: 'Center on Brazil', icon: LocateFixed, run: () => { const map = mapRef.current; if (map) restoreSurfaceView(map); } }].map(tool => <Tooltip key={tool.label}><TooltipTrigger asChild><Button variant="ghost" size="icon" aria-label={tool.label} onClick={tool.run}><tool.icon size={17} /></Button></TooltipTrigger><TooltipContent side="left" className="mission-tooltip">{tool.label}</TooltipContent></Tooltip>)}
       </div>
     </TooltipProvider>}
   </div>;
