@@ -23,7 +23,7 @@ Escopo: consulta pública da cobertura disponível no Brasil, com calendário de
 
 **Caso de uso central — analisar uma área:** o visitante seleciona área e período válidos; a API consulta o banco carregado; a tela apresenta calendário, indicadores e opções de exportação. Pré-condição: serviços e dados disponíveis. Pós-condição: análise vinculada à seleção. Fora da cobertura, aparece “sem dados”; entrada inválida ou excesso de pedidos produz mensagem específica, nunca zeros que simulem observações.
 
-**Telas/protótipo:** abertura com globo → mapa e seleção → resumo recente → calendário e gráficos → Método e créditos. `lovable/` guarda o protótipo; `frontend/` contém a aplicação principal. Detalhes e critérios: [requisitos](requisitos.md), [UX](ux-telas.md) e [tarefas](tarefas.md). O assistente do [RFC 0004](rfcs/0004-assistente-virtual.md) é uma evolução planejada nesta base documental.
+**Telas/protótipo:** abertura com globo → mapa e seleção → resumo recente → calendário e gráficos → Método e créditos. `lovable/` guarda o protótipo; `frontend/` contém a aplicação principal. Detalhes e critérios: [requisitos](requisitos.md), [UX](ux-telas.md) e [tarefas](tarefas.md). O assistente do [RFC 0004](rfcs/0004-assistente-virtual.md) já está implementado. A interface depende de `VITE_ENABLE_ASSISTANT=true` no build e o backend de `ASSISTANT_PROVIDERS`; a existência do código não implica ativação em produção.
 
 ## 2. Projeto de software
 
@@ -116,6 +116,7 @@ Fluxo de dados: **NASA FIRMS → importação e filtros → PostgreSQL/PostGIS �
 | `POST /calendar` | Histórico harmonizado, indicadores e comparação recente. |
 | `GET /detections/recent` | Focos no recorte e janela escolhidos; alerta e risco quando disponíveis. |
 | `POST /export` | ZIP com resultados, contagens, fatores, metadados e focos quando permitidos. |
+| `POST /ask` | Assistente que consulta ferramentas dos casos de uso da API; sem provedores configurados, retorna `503 assistant_unavailable`. |
 
 Uma integração começa pelo [contrato da API](api.md) e pelo [JSON de exemplo](api-exemplo.json); segue com implementação dos adaptadores, testes de contrato e integração, validação no front e publicação. Quebras exigem coordenação entre as frentes e atualização do contrato. A arquitetura utiliza jobs em lote e HTTP, sem ESB ou iPaaS documentados.
 
@@ -133,7 +134,7 @@ Aplicar KISS, DRY e SOLID: cálculos puros no domínio, casos de uso com respons
 
 A série harmonizada usa Aqua em jan/2003–jan/2012, S-NPP em fev/2012–out/2026 e NOAA-20 desde nov/2026: um VIIRS por período, sem somar sensores. Aplicam-se os filtros de confiança nominal/alta e `type = 0` (ausente no NRT é admitido); os fatores são congelados após a calibração histórica.
 
-Código e contrato público usam inglês; tabelas e colunas do banco seguem os nomes em português do modelo de dados; datas são UTC. Ruff, Vulture e TypeScript verificam problemas de código. As regras científicas pertencem à equipe e estão em [decisões da harmonização](decisoes-harmonizacao.md) e [importação de regiões](importacao-regioes.md).
+Código e contrato público usam inglês; o assistente responde no idioma da pergunta conforme o RFC 0004; tabelas e colunas do banco seguem os nomes em português do modelo de dados; datas são UTC. Ruff, Vulture e TypeScript verificam problemas de código. As regras científicas pertencem à equipe e estão em [decisões da harmonização](decisoes-harmonizacao.md) e [importação de regiões](importacao-regioes.md).
 
 ## 9. Usabilidade
 
