@@ -36,7 +36,7 @@ Os dois, com papéis diferentes. **Não vale trocar os testes de unidade por cai
 
 Os testes da API e do front foram escritos no repositório antes das telas e dos endpoints:
 
-- **`backend/tests/domain/` e `backend/tests/application/`:** a especificação do núcleo da API (faixa P5–P95, origem e satélite do mês, intensidade, alerta, janelas, IDs H3, calendário). Os valores foram calculados à mão. Cada teste tem `xfail(strict=True)`: enquanto o código não existe, ele falha e a esteira aceita. **Quando o código fizer o teste passar, a esteira quebra com XPASS.** É o sinal para tirar o `xfail` daquele teste, que a partir daí vale de verdade.
+- **`backend/tests/domain/` e `backend/tests/application/`:** a especificação do núcleo da API (faixa P5–P95, origem e satélite do mês, intensidade, alerta, janelas, IDs H3, calendário). Os valores foram calculados à mão. As especificações implementadas, incluindo o alerta da issue #59, executam sem `xfail`. Novas especificações ainda não implementadas podem usar `xfail(strict=True)`; ao implementar, remova o marcador.
 - **`frontend/e2e/jornadas.spec.ts`:** 9 jornadas (J1–J9), todas ativas e passando com a API simulada no desktop e no celular. `backend/tests/e2e/` acrescenta duas jornadas (desktop/celular) com front, proxy, API HTTP e PostGIS sintético, sem interceptar endpoints.
 
 ### Jornadas de usuário
@@ -115,4 +115,4 @@ pip install ruff vulture && ruff check . && vulture data-pipeline backend/src ba
 
 O arquivo `backend/vulture_whitelist.py` registra apenas as entradas públicas já usadas pelos testes (repositório PostgreSQL e `CalendarService.calculate`). Como a análise exclui testes, esses usos não seriam vistos. A lista inclui também a fábrica Uvicorn e callbacks registrados pelo FastAPI; é explícita, justificada por símbolo e não faz parte do pacote instalado.
 
-O teste `backend/tests/contract/test_api_contract.py` usa `TestClient` por padrão. Com `API_URL`, também executa um smoke test HTTP dos cinco endpoints. A carga sintética C2 é gerada por `backend/scripts/demo_data.py`; comandos em [backend/README.md](../backend/README.md). A verificação com a carga real pertence ao Eduardo: [roteiro](validacao-api-eduardo.md). Os cinco `xfail` restantes são do nível de alerta, fora desta entrega.
+O teste `backend/tests/contract/test_api_contract.py` usa `TestClient` por padrão. Com `API_URL`, também executa um smoke test HTTP dos cinco endpoints. A carga sintética C2 é gerada por `backend/scripts/demo_data.py`; comandos em [backend/README.md](../backend/README.md). A verificação com a carga real pertence ao Eduardo: [roteiro](validacao-api-eduardo.md). O nível de alerta da issue #59 tem testes ativos do piso contínuo, tendência, indisponibilidade de dados e resposta HTTP; não há `xfail` restante no domínio.

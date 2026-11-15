@@ -1,10 +1,6 @@
 """Especificação TDD do núcleo da API (domínio, arquitetura hexagonal).
 
-Os testes implementados executam as interfaces reais do domínio. Apenas o nível de
-alerta permanece em xfail(strict=True), aguardando a decisão da equipe.
-
-Quando você implementar uma parte e o teste passar, o `strict=True` faz a esteira quebrar com XPASS.
-É o aviso para tirar o marcador daquele teste: a partir daí, ele vale de verdade.
+Os testes executam as interfaces reais do domínio, incluindo o alerta aprovado na issue #59.
 
 Os valores esperados foram calculados à mão e seguem o docs/api.md. Mudar um valor aqui é mudar o contrato.
 """
@@ -13,7 +9,6 @@ from datetime import date
 
 import pytest
 
-TDD = pytest.mark.xfail(strict=True, reason="TDD: domínio ainda não implementado")
 
 
 # ---------------------------------------------------------------- faixa de incerteza (P5–P95)
@@ -68,7 +63,6 @@ def test_classe_de_intensidade(frp, sensor, confianca, classe, alert_rules):
 
 
 # ---------------------------------------------------------------- nível de alerta
-@TDD
 @pytest.mark.parametrize("agora, mediana, p75, ultimos, anteriores, nivel", [
     (100, 40, 50, [20, 25, 30], [5, 10, 15], "critical"),   # 2,5× a mediana e subindo
     (80, 40, 50, [20, 25, 30], [5, 10, 15], "critical"),    # exatamente 2× conta

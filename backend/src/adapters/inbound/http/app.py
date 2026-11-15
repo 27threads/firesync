@@ -129,7 +129,7 @@ def create_app(repository: ApiRepository | None = None, clock=None, monotonic=No
             cache_key = ('calendar', key, meta['updated_at'], meta['data_version'])
             body = cache.get(cache_key)
             if body is None:
-                _, body = calculate_calendar(reader, area, start, end, now.date())
+                _, body = calculate_calendar(reader, area, start, end, now.date(), rules)
                 cache.put(cache_key, body)
             request.state.n_cells = body['area']['n_cells']
             return json_response(request, body, meta, key)
@@ -142,7 +142,7 @@ def create_app(repository: ApiRepository | None = None, clock=None, monotonic=No
         area, start, end = parse_request(payload)
         now = clock()
         with repository.read() as reader:
-            snapshot, result = calculate_calendar(reader, area, start, end, now.date())
+            snapshot, result = calculate_calendar(reader, area, start, end, now.date(), rules)
             request.state.n_cells = result['area']['n_cells']
             files, metadata = audit_document(reader, snapshot, result, payload, now, rules)
         return Response(audit_zip(files, metadata), media_type='application/zip',

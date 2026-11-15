@@ -1,6 +1,6 @@
 {
-  "version": "0.2",
-  "status": "initial proposal, to be calibrated by the backtest in issue #9",
+  "version": "1.0",
+  "status": "continuous floor approved in issue #59; backtest decision recorded in PR #62",
   "baseline": {
     "window_days": 7,
     "neighbor_days": 15,
@@ -10,6 +10,7 @@
   "levels": {
     "critical": {
       "min_ratio_to_median": 2.0,
+      "min_detections": 10,
       "trend_days": 3,
       "requires_rising_trend": true
     },

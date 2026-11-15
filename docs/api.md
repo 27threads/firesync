@@ -163,8 +163,12 @@ Sempre calculado até o último dia com dado (`data_through`), **independente do
 | Campo | Tipo | Significado |
 | --- | --- | --- |
 | `data_through` | data | Último dia com dado |
+| `alert_level` | texto ou `null` | `normal`, `attention` ou `critical`, calculado na janela de 7 dias; `null` sem referência histórica ou com dia indisponível na janela atual |
+| `alert_rules_version` | texto | Versão de `config/alert_rules.json` usada no cálculo |
 | `last_7_days` | objeto | Os 7 dias até `data_through` (janela principal, para alerta precoce) |
 | `month_to_date` | objeto | Do dia 1 do mês atual até `data_through` (RF11) |
+
+**Regra do alerta (decisão da [issue #59](https://github.com/27threads/firesync/issues/59#issuecomment-6886903635)):** Crítico exige `s7 >= max(2 × mediana, 10)` e soma de `t−2..t` maior que a de `t−5..t−3`. O piso de 10 vale para qualquer mediana, inclusive zero. Se não for Crítico, Atenção exige `s7 > P75`; caso contrário, Normal. Razão, piso, percentil e tendência vêm da configuração versionada. A semana fixa em domingo pertence ao backtest; a API avalia a janela móvel até `data_through`. O nível vale para `last_7_days`, não para o mês.
 
 Os dois objetos têm o mesmo formato:
 
