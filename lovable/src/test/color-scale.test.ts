@@ -1,24 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { countColor, ZERO_COLOR, COUNT_BINS } from "@/lib/recent-data";
+import { countColor, ZERO_COLOR, COUNT_GRADIENT } from "@/lib/recent-data";
 
-describe("faixas de cor dos hot spots por área (Figma)", () => {
+const lum = (rgb: string) => {
+  const m = rgb.match(/\d+/g)!.map(Number);
+  return 0.2126 * m[0]! + 0.7152 * m[1]! + 0.0722 * m[2]!;
+};
+
+describe("escala de cor dos hot spots (cividis, logarítmica)", () => {
   it("zero tem cor própria, fora da rampa", () => {
     expect(countColor(0)).toBe(ZERO_COLOR);
-    expect(COUNT_BINS.map((b) => b.color)).not.toContain(ZERO_COLOR);
+    expect(countColor(1)).not.toBe(ZERO_COLOR);
   });
-  it("cada faixa tem a sua cor e a rampa escurece com a contagem", () => {
-    const lum = (hex: string) => {
-      const n = parseInt(hex.slice(1), 16);
-      return 0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255);
-    };
-    const cores = [1, 3, 10, 30].map(countColor);
-    expect(new Set(cores).size).toBe(4);
-    for (let i = 1; i < cores.length; i++) expect(lum(cores[i]!)).toBeLessThan(lum(cores[i - 1]!));
+  it("a luminosidade cresce com a contagem, o que se lê sem depender do matiz", () => {
+    expect(lum(countColor(10))).toBeGreaterThan(lum(countColor(1)));
+    expect(lum(countColor(100))).toBeGreaterThan(lum(countColor(10)));
   });
-  it("os limites das faixas são 1–2, 3–9, 10–29 e 30 ou mais", () => {
-    expect(countColor(2)).toBe(countColor(1));
-    expect(countColor(9)).toBe(countColor(3));
-    expect(countColor(29)).toBe(countColor(10));
-    expect(countColor(5000)).toBe(countColor(30));
+  it("é logarítmica: 1 a 10 e 10 a 100 mudam a cor na mesma proporção", () => {
+    const a = lum(countColor(10)) - lum(countColor(1));
+    const b = lum(countColor(100)) - lum(countColor(10));
+    expect(Math.abs(a - b)).toBeLessThan(Math.max(a, b) * 0.5);
+  });
+  it("acima do limite a cor não muda (clamp)", () => {
+    expect(countColor(5000)).toBe(countColor(100));
+  });
+  it("o gradiente da legenda usa a mesma escala", () => {
+    expect(COUNT_GRADIENT).toContain(countColor(1));
+    expect(COUNT_GRADIENT).toContain(countColor(100));
   });
 });

@@ -7,9 +7,11 @@ import { BLUE_MARBLE_TILES, MAP_WHEEL_SETTLE_MS, restoreSurfaceView, SURFACE_VIE
 import { LocateFixed, MapPin, Minus, Pentagon, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { intensityClass, countColor, RING_COLOR, TIER_COLOR, TIER_LABEL, type RiskTier, type DetectionFeature, type Level, type Intensity, type RecentData, type Viewport } from '@/lib/recent-data';
+import { intensityClass, countColor, TIER_COLOR, TIER_LABEL, type RiskTier, type DetectionFeature, type Level, type Intensity, type RecentData, type Viewport } from '@/lib/recent-data';
 
 export type AreaSelection = { type: 'geojson'; geometry: unknown; name?: string } | { type: 'circle'; latitude: number; longitude: number; radius_km: number } | { type: 'region'; region_id: number };
+// Camada de cor translúcida: deixa o relevo e a vegetação do mapa aparecerem por baixo.
+const HEX_FILL_OPACITY = 0.55;
 export default function AreaMap({ onSelect, selection, immersive = false, active = true, resetForHandoff = false, onReady, initialCountry, recent, onViewport, onCell, focus, layer = 'risk', levels = ['critical','attention','normal'], intensities = ['high','medium','low'], basemap = 'blue', drawMode, operational = false, stateBounds, tiers = ['very_high','high','medium','lower'], quietOnly = false, onMinZoomOut }: { onMinZoomOut?: () => void; tiers?: RiskTier[]; quietOnly?: boolean; onSelect: (area: AreaSelection | null) => void; selection: AreaSelection | null; immersive?: boolean; active?: boolean; resetForHandoff?: boolean; onReady?: () => void; initialCountry?: string; recent?: RecentData | null; onViewport?: (view: Viewport) => void; onCell?: (cell: DetectionFeature) => void; focus?: { center: [number,number]; nonce: number } | undefined; layer?: string; levels?: Level[]; intensities?: Intensity[]; basemap?: string; drawMode?: string; operational?: boolean; stateBounds?: Viewport['bbox'] }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -83,8 +85,8 @@ export default function AreaMap({ onSelect, selection, immersive = false, active
     });
     const styleOf=(f?:{properties?:DetectionFeature['properties']}|undefined) => {
         const p=f?.properties; const severity=recent.alerts ? p?.alert_level ?? 'normal' : 'normal';
-        const near=map.getZoom()>=6; if (layer==='risk' && p?.risk_tier) { const ink=TIER_COLOR[p.risk_tier as RiskTier]; const fire=(p.detections??0)>0; return {color:fire&&near?'#ffffff':ink,fillColor:ink,weight:fire&&near?2.5:near?1:0.4,fillOpacity:0.92}; }
-        if (layer==='intensity') { return {color:near?'#ffffff':countColor(p?.detections??0),fillColor:countColor(p?.detections??0),weight:near?1:0.4,fillOpacity:0.9}; }
+        const near=map.getZoom()>=6; if (layer==='risk' && p?.risk_tier) { const ink=TIER_COLOR[p.risk_tier as RiskTier]; const fire=(p.detections??0)>0; return {color:fire&&near?'#ffffff':ink,fillColor:ink,weight:fire&&near?2.5:near?1:0.4,fillOpacity:HEX_FILL_OPACITY}; }
+        if (layer==='intensity') { return {color:near?'#ffffff':countColor(p?.detections??0),fillColor:countColor(p?.detections??0),weight:near?1:0.4,fillOpacity:HEX_FILL_OPACITY}; }
         const ink=token(layer === 'risk' ? `--risk-${severity}` : '--map-selection'); return {color:ink,fillColor:ink,weight:severity==='critical'?4:severity==='attention'?3:1,fillOpacity:severity==='normal'?0.08:0.32,dashArray:severity==='attention'?'5 3':undefined};
     };
     const marks=L.geoJSON({type:'FeatureCollection',features:visible} as FeatureCollection, {
@@ -102,15 +104,14 @@ export default function AreaMap({ onSelect, selection, immersive = false, active
         const ring=(f.geometry.coordinates[0]??[]) as number[][];
         if (ring.length<3) continue;
         const lng=ring.reduce((a,c)=>a+(c[0]??0),0)/ring.length, lat=ring.reduce((a,c)=>a+(c[1]??0),0)/ring.length;
-        // o círculo acompanha o tamanho do hexágono (60% do raio na tela), com mínimo e máximo
+        // Ícone só quando o hexágono já tem tamanho para abrigá-lo: sem poluir o zoom nacional.
         const c0=map.latLngToContainerPoint([lat,lng]), v0=map.latLngToContainerPoint([ring[0]![1]!,ring[0]![0]!]);
-        const r=Math.max(5,Math.min(18,0.6*Math.hypot(c0.x-v0.x,c0.y-v0.y)));
+        const hexR=Math.hypot(c0.x-v0.x,c0.y-v0.y);
         const lv=f.properties.alert_level;
-        if (recent.alerts && (lv==='critical'||lv==='attention')) {
-          L.circleMarker([lat,lng],{radius:r,color:'#ffffff',weight:r>9?7:5,fill:false,interactive:false}).addTo(rings);
-          L.circleMarker([lat,lng],{radius:r,color:RING_COLOR[lv],weight:r>9?3.5:2.5,fill:false,dashArray:lv==='attention'?'4 4':undefined,interactive:false}).addTo(rings);
+        if (recent.alerts && (lv==='critical'||lv==='attention') && hexR>=8) {
+          const size=Math.round(Math.max(14,Math.min(24,hexR*0.9)));
+          L.marker([lat,lng],{icon:L.divIcon({className:`fs-map-icon fs-map-icon-${lv}`,html:'<span>!</span>',iconSize:[size,size],iconAnchor:[size/2,size/2]}),interactive:false,keyboard:false}).addTo(rings);
         }
-        if ((f.properties.n_high??0)>0) L.circleMarker([lat,lng],{radius:Math.max(2.5,r*0.3),color:'#ffffff',weight:1.5,fillColor:'#101418',fillOpacity:1,interactive:false}).addTo(rings);
       }
     };
     drawRings();

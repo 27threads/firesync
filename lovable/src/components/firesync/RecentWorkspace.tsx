@@ -34,7 +34,7 @@ import {
   TIERS,
   TIER_LABEL,
   TIER_COLOR,
-  COUNT_BINS,
+  COUNT_GRADIENT,
   type Level,
   type Priority,
   type RecentData,
@@ -93,6 +93,7 @@ export default function RecentWorkspace({
   const [intensities, setIntensities] = useState<Intensity[]>(intensityAll);
   const [tiers, setTiers] = useState<RiskTier[]>(TIERS);
   const [quietOnly, setQuietOnly] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(() => typeof window === "undefined" || window.innerHeight >= 760);
   const [filtersOpen, setFiltersOpen] = useState(() => typeof window === "undefined" || window.innerWidth >= 900);
   const [shown, setShown] = useState(10);
   const [groupOpen, setGroupOpen] = useState<Record<string, boolean>>({});
@@ -400,10 +401,10 @@ export default function RecentWorkspace({
                   <i className={`fs-dot fs-dot-${v}`} /> {v[0]!.toUpperCase() + v.slice(1)}
                 </button>
               ))}
-            <p className="fs-group">Compared with usual (ring on the map)</p>
+            <p className="fs-group">Compared with usual (icon on the map)</p>
             {levelsAll.map((v) => (
               <button key={v} className="fs-row" aria-pressed={levels.includes(v)} onClick={() => setLevels((old) => (old.includes(v) ? old.filter((x) => x !== v) : [...old, v]))}>
-                <i className={`fs-ring fs-ring-${v}`} /> {v === "normal" ? "Usual (no ring)" : v[0]!.toUpperCase() + v.slice(1)}
+                {v === "normal" ? <i className="fs-ring fs-ring-normal" /> : <i className={`fs-icon fs-icon-${v}`}>!</i>} {v === "normal" ? "Usual (no icon)" : v[0]!.toUpperCase() + v.slice(1)}
               </button>
             ))}
           </>
@@ -610,26 +611,31 @@ export default function RecentWorkspace({
           </Button>
         </aside>
       )}
-      <section className="fs-legend" aria-label="Legend">
+      <section className={`fs-legend ${legendOpen ? "is-open" : ""}`} aria-label="Legend">
+        <button className="fs-legend-head" aria-expanded={legendOpen} onClick={() => setLegendOpen((v) => !v)}>
+          <span>Legend</span>
+          <ChevronDown size={14} className={legendOpen ? "open" : ""} />
+        </button>
+        {legendOpen && (
+          <>
         {mode === "fire" ? (
           <>
             <h3>
-              <Clock size={13} /> Hot spots per area, last 24 hours
+              <Clock size={13} /> Heat concentration · last 24 h
             </h3>
-            {COUNT_BINS.map((b) => (
-              <p key={b.label}>
-                <i className="fs-swatch" style={{ background: b.color }} /> {b.label}
-              </p>
-            ))}
-            <p className="fs-sym-title">Fire strength (dark centre)</p>
+            <div className="fs-gradient" style={{ background: COUNT_GRADIENT }} />
+            <div className="fs-gradient-labels">
+              <span>1</span>
+              <span>10</span>
+              <span>100+</span>
+            </div>
+            <small>Hot spots per area: the more yellow, the more.</small>
+            <p className="fs-sym-title">More than usual for the season</p>
             <p className="fs-sym">
-              <i className="fs-dot fs-dot-low" /> Low <i className="fs-dot fs-dot-medium" /> Medium <i className="fs-dot fs-dot-high" /> High
+              <i className="fs-icon fs-icon-critical" title="Strongly above the usual for this time of year">!</i> Critical
+              <i className="fs-icon fs-icon-attention" title="Above the usual for this time of year">!</i> Attention
             </p>
-            <p className="fs-sym-title">Compared with usual (ring)</p>
-            <p className="fs-sym">
-              <i className="fs-ring fs-ring-critical" /> Critical <i className="fs-ring fs-ring-attention" /> Attention
-            </p>
-            <small>Compared with the same time of year in past years, using data up to {data?.alerts?.data_through ?? "—"}.</small>
+            <small>No icon = usual. Icons show when you zoom in.</small>
           </>
         ) : (
           <>
@@ -644,6 +650,8 @@ export default function RecentWorkspace({
               );
             })}
             <small>"More than usual" = above this time of year.</small>
+          </>
+        )}
           </>
         )}
       </section>

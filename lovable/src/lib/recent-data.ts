@@ -1,4 +1,5 @@
 import circle from "@turf/circle";
+import { scaleSequentialLog, interpolateCividis } from "d3";
 import type { Feature, Geometry } from "geojson";
 import fixture from "@/data/demo-recent.json";
 export type Level = "critical" | "attention" | "normal";
@@ -7,17 +8,13 @@ export type RiskTier = "very_high" | "high" | "medium" | "lower";
 export const TIERS: RiskTier[] = ["very_high", "high", "medium", "lower"];
 export const TIER_LABEL: Record<RiskTier, string> = { very_high: "Very high", high: "High", medium: "Medium", lower: "Lower" };
 export const TIER_COLOR: Record<RiskTier, string> = { very_high: "#c62828", high: "#ef6c1a", medium: "#f5bf2a", lower: "#cdd2d8" };
-// Faixas de hot spots por área, como no Figma: rampa de claro (poucos) a escuro (muitos).
-// Zero tem cor própria, fora da rampa.
+// Escala logarítmica cividis, acessível a daltonismo (RD03 e RD04): poucos hot spots em azul-escuro,
+// muitos em amarelo. O zero tem cor própria, fora da rampa (a escala logarítmica não representa o zero).
+export const COUNT_DOMAIN: [number, number] = [1, 100];
 export const ZERO_COLOR = "#d9dde3";
-export const COUNT_BINS = [
-  { label: "1–2", min: 1, color: "#fbdca0" },
-  { label: "3–9", min: 3, color: "#f4a74b" },
-  { label: "10–29", min: 10, color: "#d4501c" },
-  { label: "30 or more", min: 30, color: "#8a1c12" },
-];
-export const countColor = (n: number) =>
-  n > 0 ? [...COUNT_BINS].reverse().find((b) => n >= b.min)?.color ?? COUNT_BINS[0]!.color : ZERO_COLOR;
+const countScale = scaleSequentialLog(interpolateCividis).domain(COUNT_DOMAIN).clamp(true);
+export const countColor = (n: number) => (n > 0 ? countScale(n) : ZERO_COLOR);
+export const COUNT_GRADIENT = `linear-gradient(to right, ${[1, 2, 4, 8, 16, 32, 64, 100].map(countColor).join(", ")})`;
 export const RING_COLOR = { critical: "#d62728", attention: "#f2b134" } as const;
 export type Viewport = { bbox: [number, number, number, number]; zoom: number };
 export type DetectionProperties = {
