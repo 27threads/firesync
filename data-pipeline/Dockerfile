@@ -10,6 +10,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY *.py regioes.json ./
 COPY migrations ./migrations
+# o job de risco (risco_celulas.py) importa as funções do experimento desta pasta
+COPY validacao/*.py ./validacao/
 
 # Uma rodada a cada 3 h. A rodada tem trava no banco, então duas nunca rodam ao mesmo tempo,
 # e uma falha não derruba o container: a próxima rodada tenta de novo. A falha já sai no log como
