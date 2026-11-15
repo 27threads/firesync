@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import example from '../../../docs/api-exemplo.json';
-import { ApiClientError, fetchAuditPackage, fetchCalendar, fetchHealth, fetchRegions } from './client';
-import type { CalendarResponse, NoCoverageResponse } from './types';
+import {
+  ApiClientError,
+  fetchAuditPackage,
+  fetchCalendar,
+  fetchHealth,
+  fetchRecentDetections,
+  fetchRegions,
+} from './client';
+import type { CalendarResponse, NoCoverageResponse, RecentDetectionsResponse } from './types';
 
 function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -200,5 +207,118 @@ describe('API client', () => {
       retryAfter: 45,
       message: expect.stringMatching(/45 seconds/i),
     });
+  });
+
+  it('fetches recent detections in hexagons mode from GET /api/v1/detections/recent preserving string H3 IDs', async () => {
+    vi.stubEnv('VITE_API_URL', '');
+    const hexagonsPayload: RecentDetectionsResponse = {
+      type: 'FeatureCollection',
+      mode: 'hexagons',
+      h3_resolution: 5,
+      hours: 168,
+      updated_at: '2026-11-14T15:00:00Z',
+      total_detections: 51588,
+      features: [
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [-60.31, -3.05],
+                [-60.22, -3.14],
+                [-60.09, -3.11],
+                [-60.05, -2.99],
+                [-60.14, -2.9],
+                [-60.27, -2.93],
+                [-60.31, -3.05],
+              ],
+            ],
+          },
+          properties: {
+            h3: '85a8100ffffffff',
+            detections: 37,
+            n_low: 21,
+            n_medium: 12,
+            n_high: 4,
+          },
+        },
+      ],
+    };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(hexagonsPayload));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await fetchRecentDetections({
+      bbox: [-63.5, -6.0, -57.0, 0.5],
+      hours: 168,
+      zoom: 5,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/detections/recent?bbox=-63.5,-6,-57,0.5&hours=168&zoom=5',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(response.mode).toBe('hexagons');
+    if (response.mode === 'hexagons') {
+      expect(typeof response.features[0].properties.h3).toBe('string');
+      expect(response.features[0].properties.h3).toBe('85a8100ffffffff');
+    }
+  });
+
+  it('fetches recent detections in points mode defaulting hours to 24 and passing mode when provided', async () => {
+    vi.stubEnv('VITE_API_URL', '');
+    const pointsPayload: RecentDetectionsResponse = {
+      type: 'FeatureCollection',
+      mode: 'points',
+      hours: 24,
+      updated_at: '2026-11-14T15:00:00Z',
+      total_detections: 3833,
+      features: [
+        {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [-60.21, -3.12] },
+          properties: {
+            satellite: 'N20',
+            acquired_utc: '2026-11-14T05:42:00Z',
+            confidence: 'nominal',
+            intensity: 'medium',
+            daynight: 'N',
+          },
+        },
+      ],
+    };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(pointsPayload));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await fetchRecentDetections({
+      bbox: [-61.0, -4.0, -59.5, -2.5],
+      zoom: 8,
+      mode: 'points',
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/detections/recent?bbox=-61,-4,-59.5,-2.5&hours=24&zoom=8&mode=points',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(response.mode).toBe('points');
+    expect(response.total_detections).toBe(3833);
+  });
+
+  it('preserves contract errors invalid_bbox, invalid_hours, invalid_mode, and 429 on /api/v1/detections/recent', async () => {
+    for (const [status, code, message] of [
+      [400, 'invalid_bbox', 'bbox must have 4 numbers in west,south,east,north order.'],
+      [400, 'invalid_hours', 'hours must be 24, 72, or 168.'],
+      [400, 'invalid_mode', 'mode must be auto, hexagons, or points.'],
+    ] as const) {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ error: { code, message } }, status)));
+      await expect(
+        fetchRecentDetections({ bbox: [-60, -4, -59, -3], hours: 24, zoom: 6 }),
+      ).rejects.toMatchObject({
+        name: 'ApiClientError',
+        status,
+        code,
+        message,
+      });
+    }
   });
 });

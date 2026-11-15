@@ -1,6 +1,13 @@
 import { buildCalendarRequest } from '../controls/areaPeriodModel';
 import { defaultAuditFilenameUtc, parseContentDispositionFilename } from '../export/exportModel';
-import type { CalendarApiResult, CalendarRequest, HealthResponse, RegionOption } from './types';
+import type {
+  CalendarApiResult,
+  CalendarRequest,
+  HealthResponse,
+  RecentDetectionsParams,
+  RecentDetectionsResponse,
+  RegionOption,
+} from './types';
 
 export { buildCalendarRequest };
 
@@ -112,4 +119,20 @@ export async function fetchAuditPackage(
     parseContentDispositionFilename(response.headers.get('content-disposition')) ?? defaultAuditFilenameUtc();
   const blob = await response.blob();
   return { blob, filename };
+}
+
+/** Fetches recent fire detections (hexagons or points) for the visible map bounding box. */
+export function fetchRecentDetections(
+  params: RecentDetectionsParams,
+  signal?: AbortSignal,
+): Promise<RecentDetectionsResponse> {
+  const [west, south, east, north] = params.bbox;
+  const hours = params.hours ?? 24;
+  const zoom = Math.round(params.zoom);
+  const modeParam = params.mode ? `&mode=${encodeURIComponent(params.mode)}` : '';
+  const query = `bbox=${west},${south},${east},${north}&hours=${hours}&zoom=${zoom}${modeParam}`;
+  return requestJson<RecentDetectionsResponse>(`/api/v1/detections/recent?${query}`, {
+    method: 'GET',
+    signal,
+  });
 }
