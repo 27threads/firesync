@@ -246,14 +246,17 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
       const fill = risk ? TIER_COLOR[p.risk_tier!] : countColor(p.detections);
       const fire = p.detections > 0;
       const latlngs = ring.map(([lng, lat]) => [lat!, lng!] as [number, number]);
-      L.polygon(latlngs, {
+      const level = p.alert_level;
+      const polygon = L.polygon(latlngs, {
         color: risk ? (fire && near ? '#ffffff' : fill) : near ? '#ffffff' : fill,
         fillColor: fill,
         weight: risk ? (fire && near ? 2.5 : near ? 1 : 0.4) : near ? 1 : 0.4,
         fillOpacity: HEX_FILL_OPACITY,
       }).addTo(layer);
+      // Ao passar o mouse: o nível de alerta (Fire now) ou a faixa de risco (Risk), como rótulo.
+      const tip = mode === 'risk' ? (p.risk_tier ? `${TIER_LABEL[p.risk_tier]} risk` : null) : level === 'critical' ? '! Critical' : level === 'attention' ? '▲ Attention' : null;
+      if (tip) polygon.bindTooltip(tip, { sticky: true, direction: 'top', className: `hm-tip hm-tip--${level ?? 'tier'}` });
       // Ícone de alerta: só quando o hexágono já comporta o símbolo.
-      const level = p.alert_level;
       if (mode === 'fire' && (level === 'critical' || level === 'attention')) {
         const lat = ring.reduce((sum, c) => sum + (c[1] ?? 0), 0) / ring.length;
         const lng = ring.reduce((sum, c) => sum + (c[0] ?? 0), 0) / ring.length;
