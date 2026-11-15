@@ -194,8 +194,10 @@ Usa a tabela de **contagens diárias** `agregados_diarios` (issue #8, migration 
 | Campo | Significado |
 | --- | --- |
 | `total_detections` | Soma de `detections` no intervalo |
-| `latest_complete_year` | `{ "year", "detections", "reference_mean", "anomaly_pct" }` |
+| `latest_complete_year` | `{ "year", "detections", "reference_median", "anomaly_pct" }` |
 | `last_7_days_vs_typical_pct` | Igual a `recent.last_7_days.difference_pct` |
+
+Em `latest_complete_year`, `reference_median` é a mediana dos totais anuais dos anos de referência, calculada dentro de cada cenário; só depois se calcula a mediana entre cenários. `anomaly_pct` segue a mesma ordem: `total_do_ano / mediana_de_referência − 1` por cenário, mediana no fim. Por isso, a divisão dos dois valores centrais exibidos pode diferir desse percentual. Sem anos de referência, ambos são `null`; se a referência de algum cenário for zero, o percentual é `null`. Sem ano completo no intervalo pedido, `latest_complete_year` é `null`.
 
 **Anos de referência** (decidido, ver "Decisões fechadas"): todos os anos completos da série, de 2003 ao último ano completo, menos o próprio ano do mês. Não depende do intervalo pedido, para a anomalia de um mês não mudar quando o usuário muda o filtro.
 
@@ -437,6 +439,4 @@ A resposta também leva `ETag` com `updated_at`, para o navegador reaproveitar.
 | --- | --- | --- | --- |
 | 1 | Nível de alerta (Normal / Atenção / Crítico) | A regra da submissão é a `v1` do `alert_rules.json` (piso contínuo de 10 detecções, tendência de 3 dias contra 3 dias, Atenção acima de P75), lida pela API. Validada por teste retroativo (solução A + B) em [validacao-alerta.md](validacao-alerta.md). A área queimada da NASA fica como próximo passo (issue #9) | A escolha pelo critério completo está no PR #62. Ela mede detecções, não área queimada |
 | 2 | Anos de referência da anomalia (RF12) | Todos os anos completos da série menos o próprio ano, fixo, independente do intervalo pedido | A anomalia de um mês não muda quando o usuário muda o filtro, e o próprio ano nunca entra no seu normal (o mesmo cuidado do alerta) |
-| 3 | Medida da anomalia | **Um só "normal": a mediana dos anos de referência**, no calendário (`months[].anomaly`), no alerta e nos indicadores. O `indicators.latest_complete_year` troca `reference_mean` por `reference_median` (issue #78, ainda não no código) | A média é puxada pelos anos extremos (Pantanal 2020), e dois "normais" diferentes na mesma tela confundem quem decide. O RD06 ("média de vários anos") é lido como "o típico de vários anos" |
-
-**Até a #78 entrar:** o campo `reference_mean` continua no código e na tabela de `indicators` acima, e é a média dos anos de referência. A tela de Método e o rótulo do indicador não o chamam de "normal".
+| 3 | Medida da anomalia | **Um só "normal": a mediana dos anos de referência**, no calendário (`months[].anomaly`), no alerta e nos indicadores. O `indicators.latest_complete_year` usa `reference_median` (issue #78) | A média é puxada pelos anos extremos (Pantanal 2020), e dois "normais" diferentes na mesma tela confundem quem decide. O RD06 ("média de vários anos") é lido como "o típico de vários anos" |

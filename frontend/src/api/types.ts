@@ -137,7 +137,7 @@ export interface Recent {
 
 export interface Indicators {
   total_detections: number;
-  latest_complete_year: { year: number; detections: number; reference_mean: number; anomaly_pct: number | null };
+  latest_complete_year: { year: number; detections: number; reference_median: number | null; anomaly_pct: number | null } | null;
   last_7_days_vs_typical_pct: number | null;
 }
 

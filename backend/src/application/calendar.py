@@ -77,15 +77,15 @@ class CalendarService:
             year = max(complete_selected)
             own = total([vectors[Month(year, m)] for m in range(1, 13)])
             references = [total([vectors[Month(y, m)] for m in range(1, 13)]) for y in full_years if y != year]
-            reference_mean = percentage = None
+            reference_median = percentage = None
             if references:
                 aligned_values = list(aligned([own, *references]).values())
-                means = [fsum(values[1:]) / len(values[1:]) for values in aligned_values]
-                reference_mean = percentile(means, 50)
-                if all(means):
-                    percentage = percentile([values[0] / mean - 1 for values, mean in zip(aligned_values, means)], 50)
+                medians = [percentile(values[1:], 50) for values in aligned_values]
+                reference_median = percentile(medians, 50)
+                if all(medians):
+                    percentage = percentile([values[0] / median - 1 for values, median in zip(aligned_values, medians)], 50)
             latest = {'year': year, 'detections': percentile(list(own.values()), 50),
-                      'reference_mean': reference_mean, 'anomaly_pct': percentage}
+                      'reference_median': reference_median, 'anomaly_pct': percentage}
         result.update(months=months, years=years, seasonality=seasonality,
                       indicators={'total_detections': fsum(row['detections'] for row in months),
                                   'latest_complete_year': latest})
