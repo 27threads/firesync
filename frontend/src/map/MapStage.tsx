@@ -146,9 +146,9 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
   const basemapRef = useRef<BasemapId>('black-marble');
   const showHotSpotsRef = useRef<boolean>(true);
   const hotSpotsHoursRef = useRef<RecentHours>(24);
-  // Um controlador para a vida do mapa (cancela só ao desmontar) e um contador que descarta respostas
-  // antigas. Cancelar o pedido anterior a cada movimento jogava fora respostas já em trânsito.
-  const detectionsAbortRef = useRef<AbortController>(new AbortController());
+  // Os pedidos de focos recentes nunca são cancelados: um contador descarta respostas antigas.
+  // Cancelar (a cada movimento ou ao desmontar, que o StrictMode faz em dev) jogava fora
+  // respostas já em trânsito.
   const detectionsSeqRef = useRef(0);
   const moveDebounceRef = useRef<number | null>(null);
   const onSelectPolygonRef = useRef(onSelectPolygon);
@@ -176,11 +176,10 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
   const requestRecentDetections = useCallback(
     async (bbox: [number, number, number, number], hours: RecentHours, zoom: number) => {
       const seq = ++detectionsSeqRef.current;
-      const signal = detectionsAbortRef.current.signal;
-      const isStale = () => signal.aborted || seq !== detectionsSeqRef.current;
+      const isStale = () => seq !== detectionsSeqRef.current;
 
       try {
-        const result = await fetchRecentDetections({ bbox, hours, zoom: Math.round(zoom) }, signal);
+        const result = await fetchRecentDetections({ bbox, hours, zoom: Math.round(zoom) });
         if (isStale()) return;
         setRecentDetections(result);
         setDetectionsState('ready');
@@ -342,10 +341,9 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
   }, [ensureMap]);
 
   useEffect(() => {
-    const detectionsController = new AbortController(); // novo a cada montagem (StrictMode remonta em dev)
-    detectionsAbortRef.current = detectionsController;
+    const seqRef = detectionsSeqRef;
     return () => {
-      detectionsController.abort();
+      seqRef.current += 1; // respostas que chegarem depois de desmontar são ignoradas
       if (moveDebounceRef.current !== null) {
         window.clearTimeout(moveDebounceRef.current);
       }
