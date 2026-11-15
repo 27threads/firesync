@@ -172,12 +172,56 @@ export interface RecentDetectionsParams {
   mode?: RecentDetectionsMode;
 }
 
+// Aviso antecipado (RFC 0003, PRs #86 e #97 da API). Tudo opcional: a API no ar pode ainda não mandar.
+export type AlertLevel = 'normal' | 'attention' | 'critical';
+export type RiskTier = 'very_high' | 'high' | 'medium' | 'lower';
+
 export interface RecentHexagonProperties {
   h3: string;
   detections: number;
   n_low: number;
   n_medium: number;
   n_high: number;
+  alert_cell?: string;
+  alert_level?: AlertLevel | null;
+  risk_prob?: number | null;
+  risk_tier?: RiskTier | null;
+}
+
+export interface RiskTierLegend {
+  tier: RiskTier;
+  min_prob: number;
+  historical_share: number | null;
+}
+
+export interface RiskLegend {
+  scored_at: string;
+  data_ref: string;
+  model_version: string;
+  horizon_days: number;
+  rules_version: string;
+  tiers: RiskTierLegend[];
+}
+
+export interface PriorityCell {
+  h3: string;
+  alert_level: AlertLevel | null;
+  detections_7d: number | null;
+  typical_median: number | null;
+  share_followed_by_high: number | null;
+  center: [number, number]; // [lon, lat], como o GeoJSON
+  risk_prob?: number | null;
+  risk_tier?: RiskTier | null;
+}
+
+export interface RecentAlerts {
+  data_through: string;
+  alert_rules_version: string;
+  unit?: string | null;
+  horizon_days?: number | null;
+  overall_share?: number | null;
+  priority: PriorityCell[];
+  risk?: RiskLegend;
 }
 
 export interface RecentHexagonFeature {
@@ -213,6 +257,7 @@ export interface RecentDetectionsHexagonsResponse {
   updated_at: string;
   total_detections: number;
   features: RecentHexagonFeature[];
+  alerts?: RecentAlerts;
 }
 
 export interface RecentDetectionsPointsResponse {
@@ -222,8 +267,40 @@ export interface RecentDetectionsPointsResponse {
   updated_at: string;
   total_detections: number;
   features: RecentPointFeature[];
+  alerts?: RecentAlerts;
 }
 
 export type RecentDetectionsResponse =
   | RecentDetectionsHexagonsResponse
   | RecentDetectionsPointsResponse;
+
+/** Assistant chat (RFC 0004): plain text turns only; the server rejects anything else. */
+export interface AssistantMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AssistantAction {
+  type: 'show_calendar' | 'download_export';
+  area: RegionArea;
+  start?: string;
+  end?: string;
+}
+
+/** Where the answer's figures came from: the API route and request each tool ran, with the data version. */
+export interface AssistantSource {
+  endpoint: string;
+  region?: string;
+  start?: string;
+  end?: string;
+  hours?: number;
+  data_version: string;
+}
+
+export interface AssistantResponse {
+  answer: string;
+  actions: AssistantAction[];
+  notes: string[];
+  sources: AssistantSource[];
+  verified: boolean;
+}

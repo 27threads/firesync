@@ -249,7 +249,7 @@ O modelo treina em anos em que o Aqua ainda estava na órbita original (2019 a 2
 | 2023 | 656.786 | 0,717 | 0,681 | 39,1% | 40,2% |
 | 2024 | 983.350 | 0,746 | 0,699 | 43,9% | 43,7% |
 
-- **O modelo vale em anos que nunca viu.** O AUC do boosting fica entre 0,72 e 0,75, igual ao da etapa A (0,753, com corte no espaço), e a tabela entre 0,68 e 0,70 (0,708 na etapa A). Os dois ficam bem acima da referência de taxa única (0,5).
+- **O modelo vale em anos que nunca viu.** O AUC do boosting fica entre 0,72 e 0,75, **perto** do da etapa A (0,753, com corte no espaço): de 0,007 a 0,036 abaixo, e a maior queda é em 2023, o ano de deriva maior do Aqua. A tabela fica entre 0,68 e 0,70 (0,708 na etapa A). Os dois ficam bem acima da referência de taxa única (0,5).
 - **A deriva do Aqua não o desalinha.** A chance prevista fica a no máximo 1,3 ponto percentual da observada nos três anos (1,3 em 2022, 1,1 em 2023 e −0,2 em 2024).
 - **A curva de detecção quase não muda de ano para ano** ([`curva_por_ano_2019_2024.png`](img/modelo/curva_por_ano_2019_2024.png), dados em [`curva_por_ano_2019_2024.csv`](img/modelo/curva_por_ano_2019_2024.csv)). De dia, o MODIS vê de 12% a 15% dos fogos abaixo de 2 MW e de 60% a 71% dos de 25 MW ou mais. De noite, de 18% a 23% e de 83% a 92%. As curvas de 2022 e 2023 ficam de 3 a 5 pontos abaixo das de 2019 a 2021 de dia, e a de 2024 fica acima (71% em 25 MW ou mais, o mesmo número da etapa A). Isso é compatível com a deriva, mas **não separa** a sensibilidade do sensor da mudança do fogo na hora entre as passagens: os 90 minutos continuam misturando as duas coisas.
 - **Medidas completas:** [`medidas_etapa_b_2022_2024.csv`](img/modelo/medidas_etapa_b_2022_2024.csv).
@@ -260,6 +260,8 @@ O modelo treina em anos em que o Aqua ainda estava na órbita original (2019 a 2
 - **O nível da curva depende da janela, e a forma não.** De dia, para fogos de 25 MW ou mais, o MODIS vê 73% a 74% com 10 minutos e 65% com 90 minutos (os mesmos três anos). Com 90 minutos, o fogo tem mais tempo para mudar entre as passagens, e a chance de ver cai. Por isso os números da curva (71% em 2024) valem **para a janela de 90 minutos** e não devem ser lidos como a sensibilidade pura do sensor.
 
 **O que a etapa B diz para a tela de Método:** a curva de detecção não é um acaso de 2024. Ela se repete, com variações pequenas, em seis anos seguidos, e o modelo treinado no passado a reproduz nos anos seguintes. O limite declarado continua: o viés da regra dos 50 km e a janela de 90 minutos.
+
+**Observação sobre a prova cruzada (revisão do Eduardo, PR #87):** com a janela de 10 minutos em 2019 a 2021, a razão da prova cruzada fica **acima de 1**, ao contrário dos 0,29 a 1,05 de 2024 com 90 minutos. A explicação da diferença de unidade (cada foco do Aqua cobre vários fogos do VIIRS) empurraria a razão para **abaixo** de 1, então ela não explica tudo. A prova cruzada não é apresentada em nenhum texto; se ela voltar a aparecer, conferir isso antes.
 
 ## 6. Limites a declarar no método
 

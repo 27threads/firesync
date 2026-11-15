@@ -37,18 +37,20 @@ Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele
 - [x] **RD03:** **Rampa de cores** no calendário, para mostrar as diferenças entre meses como um heatmap. ✅ escala logarítmica no calendário e nos hexágonos do mapa (`frontend/src/calendar/colorScale.ts`).
 - [x] **RD04:** Cores **acessíveis**, legíveis para quem tem daltonismo (por exemplo, viridis ou cividis). ✅ paleta `cividis` em escala logarítmica no calendário e nos hexágonos H3, hachura/borda nos meses estimados e incompletos, e diferenciação por raio e espessura/estilo de borda além da cor nos pontos de intensidade (`low`, `medium`, `high`) no mapa.
 - [x] **RD05:** **Exportar um CSV** com os focos de calor encontrados na busca. ✅ `detections.csv` no ZIP até 500.000 focos inclusive; acima disso, omissão e contagem total nos metadados. Caso com 500.001 focos verificado em PostGIS sintético.
-- [x] **RD06:** **Indicadores principais** em destaque: ✅ Indicadores históricos e `last_7_days_vs_typical_pct` servidos pela API e exibidos no front.
+- [x] **RD06:** **Indicadores principais** em destaque: ✅ Indicadores servidos pela API e exibidos no front numa fileira logo abaixo da área escolhida: total de focos no período, último ano completo contra o ano típico e últimos 7 dias contra o típico (`frontend/src/summary/IndicatorRow.tsx`).
   - número total de focos detectados e registrados
   - anomalia em relação ao típico de vários anos (mediana, conforme decisão da equipe na issue #75 e no [contrato da API](api.md))
 - [x] **RD07:** Interface pensada para o **público-alvo**: equipes de alerta precoce, resposta a emergências, cientistas, gestores de terras e bombeiros. Precisa ser rápida de ler e de usar. ✅ Janela recente e mapa com 24/72/168 h, hexágonos ou pontos e classes `low`/`medium`/`high`, integrados à API; limite de 50.000 pontos troca para hexágonos sem truncamento.
+- [ ] **RD08:** **Risco dos próximos 14 dias por célula** (modelo treinado, RFC 0003): em quais regiões tende a haver fogo relevante (10 ou mais detecções VIIRS) nos 14 dias seguintes, em quatro faixas (muito alto, alto, médio, menor), com **aviso antecipado**: as células de faixa alta entram na lista de prioridade mesmo sem fogo agora. ⏳ **parcial:** o modelo roda fora da API (`risco_celulas.py`, PR 91 mergeado) e grava `risco_celulas`; a API lê a tabela (`risk_prob`, `risk_tier`, `alerts.risk` no `GET /detections/recent`, PRs 86 e 97 mergeados em 15/11); a tela mostra a lista, as faixas e a legenda quando a API manda as notas (D10). Conferido no site no ar em 15/11, com notas calculadas no mesmo dia. Faltam o job agendado na VPS e os testes que dependem do banco (troca de S-NPP para NOAA-20, 2025 e 2026, NRT contra SP; issue 102). Resultados medidos em 2021 a 2024, com treino só em anos anteriores: na Amazônia, precisão de 78% e cobertura de 74% no corte de 50%; no Brasil, 76% e 66%. É a **frequência do passado, não uma previsão garantida** ([RFC 0003](rfcs/0003-modelo-risco.md)).
+  - Limites que a tela deve dizer: só detecções (não área queimada), sem clima previsto, Pantanal com poucos dados, fora da temporada de fogo a cobertura cai (62% na Amazônia), e os testes usaram S-NPP.
 
 ## 3. Requisitos não funcionais (implícitos no texto)
 
-- [ ] **RNF01:** Ser uma **aplicação web**, acessada pelo navegador. ⏳ **parcial:** app integrado localmente (front → proxy → API → PostGIS sintético); carga real aguarda Eduardo e deploy público segue em C7.
+- [x] **RNF01:** Ser uma **aplicação web**, acessada pelo navegador. ✅ no ar em https://firesync.nogranlabs.com.br, com a API e a carga real; os 5 endpoints conferidos no site em 15/11, no desktop e no celular (D7, C7).
 - [x] **RNF02:** **Fonte de dados:** o texto sugere o **NASA FIRMS** (Earthdata), que fornece os dados do MODIS e do VIIRS. ✅ NASA FIRMS: resumos anuais por país (SP) e API (SP e NRT).
-- [ ] **RNF03:** **Atualização contínua.** O calendário precisa estar "atualizado", então os dados novos devem entrar periodicamente. ⏳ **parcial:** job NRT a cada 3 h pronto e testado (`job_nrt.py` + `Dockerfile`); falta rodar na VPS.
+- [x] **RNF03:** **Atualização contínua.** O calendário precisa estar "atualizado", então os dados novos devem entrar periodicamente. ✅ job NRT a cada 3 h rodando na VPS (`job_nrt.py` + `Dockerfile`); rodada de 15/11 14:54 UTC buscou 2 dias e inseriu 3.023 focos.
 - [x] **RNF04:** **Desempenho.** São mais de 20 anos de focos no mundo inteiro, então as consultas por área e período precisam ser rápidas. Isso pede pré-agregação e indexação espacial. ✅ pré-agregação (`agregados`, `agregados_diarios`) e índice espacial H3: calendário de 100 × 100 km em 2–9 ms, Amazônia inteira em ~0,8 s, focos recentes em 19 ms (medido no banco de teste).
-- [x] **RNF05:** **Usabilidade e acessibilidade**, porque o usuário pode estar numa situação de emergência. ✅ controles de área/período e camada de focos recentes com labels, `aria-pressed`, `aria-describedby`, alertas em `role="alert"`, calendário em `cividis` com hachura/borda, pontos diferenciados por raio e borda além da cor, navegação por teclado e downloads acessíveis no front (D1–D7, validado nas 18 jornadas E2E J1–J9 em desktop e celular).
+- [x] **RNF05:** **Usabilidade e acessibilidade**, porque o usuário pode estar numa situação de emergência. ✅ controles de área/período e camada de focos recentes com labels, `aria-pressed`, `aria-describedby`, alertas em `role="alert"`, calendário em `cividis` com hachura/borda, pontos diferenciados por raio e borda além da cor, navegação por teclado e downloads acessíveis no front (D1–D7, validado nas 22 jornadas E2E J1–J11 em desktop e celular).
 
 ### Definidos pela equipe
 
@@ -58,6 +60,7 @@ Não vêm do texto do desafio. São necessários porque o sistema é público e 
   - Limite por IP, com valores em configuração. Padrões implementados: 60 pedidos por minuto no geral, 10 por minuto em `POST /calendar` e 2 por minuto em `POST /export` ([variáveis](../backend/README.md)).
   - Acima do limite: HTTP `429` com o código `rate_limited` e o cabeçalho `Retry-After`.
   - Um segundo limite no Cloudflare (WAF), antes de o pedido chegar à API.
+- [x] **RNF09:** **Frescor do risco.** A nota de risco só aparece se for recente: a API ignora notas mais velhas que `RISK_MAX_AGE_DAYS` dias (padrão 2) e o mapa fica como antes. ✅ implementado na API (PR 97) e o `job-risco` grava uma nota por dia na VPS desde 15/11; lá o valor é 10, para o mapa segurar a última nota se o job parar ([deploy.md](deploy.md)).
 - [ ] **RNF07:** **Monitoramento.** ⏳ **parcial:** front avisa sobre dados com mais de 6 h; API registra endpoint, duração, células e status; pipeline e job NRT gravam logs estruturados em JSON ([pipeline-dados.md](pipeline-dados.md), seção "Logs estruturados"). Canal de aviso à equipe aguarda deploy.
   - **Dado velho:** se o `updated_at` passar de **6 horas** (duas rodadas do job NRT perdidas), a equipe recebe um aviso, e a tela mostra ao usuário que os dados podem estar desatualizados. Para o público de emergência, mostrar dado velho como se fosse atual é pior do que avisar.
   - **Logs da API:** cada pedido registra o endpoint, o tempo de resposta, o número de células da área e o status HTTP.
@@ -81,14 +84,16 @@ A submissão fecha no domingo, 15/11, às 23h59 no horário do evento local. Dá
 
 ### Página do projeto (tudo em inglês)
 
-- [ ] Project Name
-- [ ] High-Level Project Summary: o que foi feito, como resolve o desafio, por que importa
-- [ ] Link to Project Demo (público, sem login)
-- [ ] Link to Final Project: app no ar e/ou repositório (público, sem login)
-- [ ] Detailed Project Description: o que faz, como funciona, benefícios, ferramentas e linguagens
-- [ ] NASA Data: FIRMS (MODIS e VIIRS) e GIBS (mapa base). Mínimo de um recurso da NASA para concorrer ao prêmio global
-- [ ] Space Agency Partner Data and Other References: todas as fontes, bibliotecas e imagens. Considerar dados de parceiras (INPE/AEB, CONAE)
-- [ ] Use of Super Intelligence: declarar onde e como IA foi usada
+Texto de cada campo em [pagina-projeto.md](pagina-projeto.md). Marcado = texto pronto para colar; falta colar na página e enviar.
+
+- [x] Project Name
+- [x] High-Level Project Summary: o que foi feito, como resolve o desafio, por que importa
+- [ ] Link to Project Demo (público, sem login) ⏳ espera a demo (D8)
+- [x] Link to Final Project: app no ar e/ou repositório (público, sem login)
+- [x] Detailed Project Description: o que faz, como funciona, benefícios, ferramentas e linguagens
+- [x] NASA Data: FIRMS (MODIS e VIIRS) e GIBS (mapa base). Mínimo de um recurso da NASA para concorrer ao prêmio global
+- [x] Space Agency Partner Data and Other References: todas as fontes, bibliotecas e imagens. Considerar dados de parceiras (INPE/AEB, CONAE)
+- [x] Use of Super Intelligence: declarar onde e como IA foi usada
 - [ ] Marcar "Terms and Conditions" e "Confirm All Work is Original" e clicar em "Submit for Judging"
 
 ### Demo
@@ -105,7 +110,7 @@ A submissão fecha no domingo, 15/11, às 23h59 no horário do evento local. Dá
 - [ ] Interface em inglês
 - [ ] Crédito ao FIRMS visível no app
 - [ ] Identificar código gerado com IA em texto descritivo ou metadados (ex.: README)
-- [ ] Pedir a classificação FortiGuard do site para os jurados não terem o acesso bloqueado (recomendado, não obrigatório)
+- [x] Pedir a classificação FortiGuard do site para os jurados não terem o acesso bloqueado (recomendado, não obrigatório). ✅ site e API classificados como Business; reclassificação para Information Technology pedida em 15/11 (C8)
 
 ### Elegibilidade
 

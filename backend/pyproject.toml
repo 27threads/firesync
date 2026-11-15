@@ -17,7 +17,7 @@ packages = [
   "backend", "backend.domain", "backend.domain.models", "backend.domain.calculations",
   "backend.application", "backend.ports", "backend.adapters", "backend.adapters.inbound",
   "backend.adapters.inbound.http", "backend.adapters.outbound", "backend.adapters.outbound.postgres",
-  "backend.adapters.outbound.config_file",
+  "backend.adapters.outbound.config_file", "backend.adapters.outbound.llm",
 ]
 
 [tool.pytest.ini_options]

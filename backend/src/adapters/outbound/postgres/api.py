@@ -1,4 +1,5 @@
 """PostGIS read unit of work. Portuguese column/value translation lives here."""
+import os
 from collections import OrderedDict
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta, UTC
@@ -7,13 +8,22 @@ from threading import Lock
 import h3
 from psycopg.rows import dict_row
 
+from backend.adapters.outbound.postgres.cell_level_cache import CellLevelCache
 from backend.adapters.outbound.postgres.history import PostgresHistoryRepository
 from backend.application.audit import DETECTION_LIMIT
 from backend.domain.models.error import CalendarError
 from backend.domain.models.month import SATELLITE_SWITCHES, Month
 from backend.domain.intensity import intensity_class
+from backend.domain.calculations.cell_alerts import cell_alerts, history_ranges
+from backend.domain.calculations.map_features import ALERT_RESOLUTION
 
 POINT_LIMIT = 50_000
+DATABASE_RESOLUTION = 6
+# Above this many resolution 4 cells with recent fire in view, the map skips alert levels instead of slowing down.
+# The worst 7-day week of 2012-2024 had 3,069 cells with fire in Brazil (P95 2,770, median 1,378).
+MAX_ALERT_CELLS = 4_000
+# Risk scores older than this many days are not shown (env `RISK_MAX_AGE_DAYS`): the job writes them every day.
+DEFAULT_RISK_MAX_AGE_DAYS = 2
 VALID_DETECTION = "confianca IN ('nominal','alta') AND (tipo = 0 OR tipo IS NULL) AND frp > 0"
 VIIRS_START = SATELLITE_SWITCHES[0][0]
 
@@ -69,6 +79,8 @@ class PostgresApiRepository:
         self.pool, self.rules = pool, rules
         self.factor_versions = OrderedDict()
         self.factor_lock = Lock()
+        self.cell_levels = CellLevelCache()
+        self.cell_history = CellLevelCache()      # reference years of each cell, once per day
 
     @contextmanager
     def read(self):
@@ -177,4 +189,81 @@ class PostgresApiReader(PostgresHistoryRepository):
         # sliding window. Empty results are rechecked after one minute.
         expires_at = (min(row['first_acquired'] for row in grouped) + timedelta(hours=query.hours)
                       if grouped else now + timedelta(minutes=1))
-        return {'total': total, 'hexagons': grouped, 'points': points, 'expires_at': expires_at}
+        return {'total': total, 'hexagons': grouped, 'points': points, 'expires_at': expires_at,
+                **self._cell_history(grouped, now), 'risk': self._risk_scores(grouped, now, query.bbox)}
+
+    def _risk_scores(self, grouped, now, bbox):
+        """Scores of the trained model (`risco_celulas`) for the resolution 4 cells in view, or None without a fresh day.
+
+        Early warning (PR #97 review): the risk of the next 14 days matters most where there is no fire yet, so the
+        search starts from the table and not from the recent detections: every scored cell whose center is inside the
+        view, plus the cells that have fire."""
+        parents = {h3.cell_to_parent(h3.int_to_str(row['h3']), ALERT_RESOLUTION) for row in grouped}
+        if len(parents) > MAX_ALERT_CELLS:
+            return None
+        self.cursor.execute("SELECT to_regclass('risco_celulas') IS NOT NULL AS present")
+        if not self.cursor.fetchone()['present']:       # migration 005 not applied yet: the map works without risk
+            return None
+        newest = now.date() - timedelta(days=int(os.environ.get('RISK_MAX_AGE_DAYS', DEFAULT_RISK_MAX_AGE_DAYS)))
+        self.cursor.execute("""SELECT data_ref, max(calculado_em) AS scored_at,
+            (array_agg(modelo_versao ORDER BY calculado_em DESC))[1] AS model_version FROM risco_celulas
+            WHERE data_ref = (SELECT max(data_ref) FROM risco_celulas WHERE data_ref <= %s AND data_ref >= %s)
+            GROUP BY data_ref""", (now.date(), newest))
+        head = self.cursor.fetchone()
+        if head is None:
+            return None
+        self.cursor.execute("SELECT h3, prob FROM risco_celulas WHERE data_ref = %s", (head['data_ref'],))   # at most ~4,600 cells
+        west, south, east, north = bbox
+        by_cell = {}
+        for row in self.cursor.fetchall():
+            cell = h3.int_to_str(row['h3'])
+            lat, lon = h3.cell_to_latlng(cell)
+            if cell in parents or (west <= lon <= east and south <= lat <= north):
+                by_cell[cell] = float(row['prob'])
+        return {**head, 'by_cell': by_cell}
+
+    def _cell_history(self, grouped, now):
+        """Daily VIIRS counts of each resolution 4 cell with recent fire, for its alert level (RFC 0003)."""
+        parents = {h3.cell_to_parent(h3.int_to_str(row['h3']), ALERT_RESOLUTION) for row in grouped}
+        # The last covered day, not the last day with detections: `agregados_diarios` has no row for a day without fire.
+        # A coverage row that is still running (it ends after today) counts up to today, so cap the end at the clock.
+        self.cursor.execute("SELECT least(max(data_fim), %s::date) AS through FROM cobertura "
+                            "WHERE satelite = ANY(%s) AND data_inicio <= %s",
+                            (now.date(), list(VIIRS_DAYS), now.date()))
+        through = self.cursor.fetchone()['through']
+        if through is None:  # no coverage rows: fall back to the last day with detections
+            self.cursor.execute(f"SELECT max(data) AS through FROM agregados_diarios WHERE data <= %s AND {satellite_sql('data', 'date')}",
+                                (now.date(),))
+            through = self.cursor.fetchone()['through']
+        if not parents or through is None or len(parents) > MAX_ALERT_CELLS:
+            return {'cell_levels': None, 'cell_daily': None, 'data_through': through, 'coverage_start': VIIRS_START}
+        # The level of a cell depends on the data, not on the viewport: keep it per data version (PR #86 review),
+        # so dragging or zooming the map only computes the cells not seen yet.
+        meta = self.meta()
+        levels = self.repository.cell_levels.levels((meta['updated_at'], meta['data_version'], through), sorted(parents),
+                                                    lambda missing: self._compute_levels(missing, through))
+        return {'cell_levels': levels, 'cell_daily': None, 'data_through': through, 'coverage_start': VIIRS_START}
+
+    def _compute_levels(self, parents, through):
+        """Levels of the cells. The reference years change once a day and are kept per day; the current window, which
+        grows with each NRT round, is read at each data version. Same input to `cell_alerts` as one single query."""
+        ranges = history_ranges(through, self.repository.rules)
+        past = self.repository.cell_history.levels(
+            (through, self.repository.rules['version']), sorted(parents), lambda missing: self._query_daily(missing, ranges[:-1]))
+        recent = self._query_daily(parents, ranges[-1:])
+        cell_daily = {parent: {**past[parent], **recent[parent]} for parent in parents}
+        return cell_alerts(through, cell_daily, self.repository.rules, VIIRS_START)
+
+    def _query_daily(self, parents, ranges):
+        """{resolution 4 cell: {day: VIIRS detections}} for the date ranges, from the daily counts of its children."""
+        cell_daily = {parent: {} for parent in parents}
+        child_to_parent = {h3.str_to_int(child): parent for parent in parents
+                           for child in h3.cell_to_children(parent, DATABASE_RESOLUTION)}
+        between = ' OR '.join('data BETWEEN %s AND %s' for _ in ranges) or 'FALSE'  # no range: no rows
+        self.cursor.execute(f"""SELECT h3, data AS day, sum(focos_brutos)::bigint AS detections FROM agregados_diarios
+            WHERE h3=ANY(%s::bigint[]) AND ({between}) AND {satellite_sql('data', 'date')} GROUP BY h3, data""",
+                            (list(child_to_parent), *[day for pair in ranges for day in pair]))
+        for row in self.cursor.fetchall():
+            daily = cell_daily[child_to_parent[row['h3']]]
+            daily[row['day']] = daily.get(row['day'], 0) + row['detections']
+        return cell_daily

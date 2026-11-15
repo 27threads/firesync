@@ -117,7 +117,7 @@ O app não precisa rankear no Google. Precisa abrir bem quando o link for colado
 
 ### Qualidade mínima
 
-- Responsivo de 360 px a 1440 px+. No celular, o calendário rola na horizontal dentro do próprio bloco ou troca para uma visão por ano, sem rolagem horizontal da página.
+- Responsivo de 360 px a 1440 px+. No celular (até 560 px), o calendário e os gráficos usam uma geometria estreita: os 12 meses cabem na largura da tela, o texto não encolhe e as notas do calendário vão para baixo da grade. Sem rolagem horizontal da página.
 - Foco de teclado visível. Calendário navegável pelo teclado (setas entre células, leitura da célula pelo leitor de tela). O desenho de área tem alternativa por teclado (lat/lon digitado ou bioma da lista).
 - Contraste acessível (WCAG AA) em texto e nos rótulos sobre o heatmap.
 - Os dados do calendário também existem como tabela acessível (escondida visualmente ou atrás de um botão "View as table").

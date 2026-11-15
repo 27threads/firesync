@@ -1,11 +1,9 @@
 import { useId } from 'react';
 import { interpolateCividis } from 'd3-scale-chromatic';
 import { formatCount } from '../format';
-import type { CalendarTheme } from './CalendarSvg';
 
 interface LegendProps {
   extent: [number, number] | null;
-  theme: CalendarTheme;
   className?: string;
 }
 
@@ -15,12 +13,11 @@ function geometricMid([min, max]: [number, number]): number {
   return Math.sqrt(min * max);
 }
 
-export function Legend({ extent, theme, className = '' }: LegendProps) {
+export function Legend({ extent, className = '' }: LegendProps) {
   const uid = useId().replace(/:/g, '');
-  const dark = theme === 'dark';
-  const stroke = dark ? '#eef1f4' : '#15181b';
+  const stroke = '#15181b';
   return (
-    <div className={`legend theme-${theme} ${className}`} aria-label="Calendar legend" role="group">
+    <div className={`legend ${className}`} aria-label="Calendar legend" role="group">
       {extent && (
         <div className="legend__ramp">
           <span>Detections per month (log scale)</span>
@@ -34,8 +31,8 @@ export function Legend({ extent, theme, className = '' }: LegendProps) {
       )}
       <span className="legend__item">
         <svg className="legend__swatch" viewBox="0 0 16 12" aria-hidden="true">
-          <rect width="16" height="12" fill={dark ? '#22282e' : '#fff'} stroke={dark ? '#939ca6' : '#4b535c'} />
-          <line x1="5" x2="11" y1="6" y2="6" stroke={dark ? '#939ca6' : '#4b535c'} />
+          <rect width="16" height="12" fill="#fff" stroke="#4b535c" />
+          <line x1="5" x2="11" y1="6" y2="6" stroke="#4b535c" />
         </svg>
         Zero
       </span>
@@ -43,8 +40,8 @@ export function Legend({ extent, theme, className = '' }: LegendProps) {
         <svg className="legend__swatch" viewBox="0 0 16 12" aria-hidden="true">
           <defs>
             <pattern id={`lg-nd-${uid}`} width="6" height="6" patternUnits="userSpaceOnUse">
-              <rect width="6" height="6" fill={dark ? '#1d2227' : '#eceeef'} />
-              <path d="M0 0L6 6M6 0L0 6" stroke={dark ? '#5b646e' : '#9aa1a8'} strokeWidth="0.8" />
+              <rect width="6" height="6" fill="#eceeef" />
+              <path d="M0 0L6 6M6 0L0 6" stroke="#9aa1a8" strokeWidth="0.8" />
             </pattern>
           </defs>
           <rect width="16" height="12" fill={`url(#lg-nd-${uid})`} />
@@ -74,7 +71,7 @@ export function Legend({ extent, theme, className = '' }: LegendProps) {
       <span className="legend__item">
         <svg className="legend__swatch" viewBox="0 0 16 12" aria-hidden="true">
           <rect width="16" height="12" fill={interpolateCividis(0.6)} />
-          <circle cx="11.5" cy="4.5" r="2.4" fill={stroke} stroke={dark ? '#0d0f11' : '#fbfbfa'} strokeWidth="1.2" />
+          <circle cx="11.5" cy="4.5" r="2.4" fill={stroke} stroke="#fbfbfa" strokeWidth="1.2" />
         </svg>
         Provisional
       </span>

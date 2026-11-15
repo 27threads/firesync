@@ -20,12 +20,23 @@ def test_niveis_do_alerta(alert_rules):
 
 
 def test_decisao_da_issue_59(alert_rules):
-    assert alert_rules['version'] == '1.0'
+    # A 1.1 só acrescenta as taxas históricas; as regras de nível da issue #59 não mudam.
     assert alert_rules['levels']['critical'] == {
         'min_ratio_to_median': 2.0, 'min_detections': 10,
         'trend_days': 3, 'requires_rising_trend': True,
     }
     assert alert_rules['levels']['attention']['above_percentile'] == 75
+
+
+def test_taxas_historicas_por_nivel(alert_rules):
+    """RFC 0003: com que frequência cada nível foi seguido de muito fogo nos 14 dias seguintes."""
+    assert alert_rules['version'] == '1.1'
+    hist = alert_rules['historical_outcome']
+    share = hist['share_followed_by_high']
+    assert set(share) == {'normal', 'attention', 'critical'}
+    assert 0 < share['normal'] < hist['overall_share'] < share['attention'] < share['critical'] < 1
+    assert hist['horizon_days'] == 14
+    assert hist['unit'] and hist['period'] and hist['source']
 
 
 def test_classe_de_intensidade(alert_rules):

@@ -3,8 +3,8 @@ import { useId } from 'react';
 import type { YearTotal } from '../api/types';
 import { formatCount } from '../format';
 import { buildRanking } from '../summary/summaryModel';
+import { NARROW_QUERY, useMediaQuery } from '../ui/useMediaQuery';
 
-const W = 520;
 const ROW = 17;
 const LEFT = 64;
 const RIGHT = 70;
@@ -17,6 +17,8 @@ interface YearRankingProps {
 // A ordem e o rank vêm da API. Anos incompletos ficam fora do ranking, listados à parte.
 export function YearRanking({ years, highlightYear }: YearRankingProps) {
   const uid = useId().replace(/:/g, '');
+  // No celular o SVG tem quase a largura da tela, e o texto fica no tamanho do CSS.
+  const W = useMediaQuery(NARROW_QUERY) ? 340 : 520;
   const rows = buildRanking(years);
   const ranked = rows.filter((r) => r.rankLabel !== null);
   const unranked = rows.filter((r) => r.rankLabel === null);

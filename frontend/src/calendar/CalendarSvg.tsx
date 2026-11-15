@@ -4,27 +4,43 @@ import { gridGeometry, type GridSpec } from './calendarLayout';
 import { buildCalendar, MONTH_NAMES, type CalendarCell } from './calendarModel';
 import { makeColorScale } from './colorScale';
 
-export type CalendarTheme = 'dark' | 'light';
 
-// Largura total = margem dos anos + 12 colunas + coluna de notas à direita.
+// wide: largura = margem dos anos + 12 colunas + coluna de notas à direita.
+// narrow (celular): o SVG tem quase a largura da tela, então o texto não encolhe; as notas vão para baixo da grade.
 export interface CalendarGeometry {
   width: number;
   grid: GridSpec;
+  layout: 'wide' | 'narrow';
 }
 
 export const HERO_GEOMETRY: CalendarGeometry = {
   width: 652,
   grid: { left: 38, top: 22, cellWidth: 38.5, cellHeight: 16, gap: 2 },
+  layout: 'wide',
 };
 
 export const FULL_GEOMETRY: CalendarGeometry = {
   width: 960,
   grid: { left: 46, top: 24, cellWidth: 60, cellHeight: 20, gap: 2 },
+  layout: 'wide',
 };
+
+export const HERO_NARROW_GEOMETRY: CalendarGeometry = {
+  width: 350,
+  grid: { left: 36, top: 20, cellWidth: 24, cellHeight: 13, gap: 2 },
+  layout: 'narrow',
+};
+
+export const FULL_NARROW_GEOMETRY: CalendarGeometry = {
+  width: 350,
+  grid: { left: 36, top: 22, cellWidth: 24, cellHeight: 18, gap: 2 },
+  layout: 'narrow',
+};
+
+const BELOW_NOTES_HEIGHT = 32;
 
 interface CalendarSvgProps {
   months: CalendarMonth[];
-  theme: CalendarTheme;
   geometry: CalendarGeometry;
   label: string;
   interactive: boolean; // true: grade navegável por teclado (role="grid")
@@ -45,8 +61,8 @@ export function gridBottomOf(spec: GridSpec, rows: number): number {
   return rowY(spec, rows) - spec.gap;
 }
 
-export function calendarHeight(spec: GridSpec, rows: number): number {
-  return gridBottomOf(spec, rows) + 14;
+export function calendarHeight(geometry: CalendarGeometry, rows: number): number {
+  return gridBottomOf(geometry.grid, rows) + 14 + (geometry.layout === 'narrow' ? BELOW_NOTES_HEIGHT : 0);
 }
 
 function rowY(spec: GridSpec, row: number): number {
@@ -60,7 +76,6 @@ function colX(spec: GridSpec, col: number): number {
 export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function CalendarSvg(
   {
     months,
-    theme,
     geometry,
     label,
     interactive,
@@ -82,8 +97,9 @@ export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function 
   const rows = model.years.length;
   const gw = gridWidth(grid);
   const gridBottom = gridBottomOf(grid, rows);
-  const height = calendarHeight(grid, rows);
+  const height = calendarHeight(geometry, rows);
   const noteX = grid.left + gw + 14;
+  const narrow = geometry.layout === 'narrow';
 
   const allCells = model.years.flatMap((row) => row.cells);
   const firstRealKey = allCells.find((c) => c.month)?.key ?? null;
@@ -157,13 +173,14 @@ export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function 
   return (
     <svg
       ref={ref}
-      className={`calendar-svg-root theme-${theme}`}
+      className="calendar-svg-root"
       viewBox={`0 0 ${geometry.width} ${height}`}
       role={interactive ? 'grid' : 'img'}
       aria-label={label}
       aria-rowcount={interactive ? rows + 1 : undefined}
       data-first-year={firstYear}
       data-rows={rows}
+      data-layout={geometry.layout}
     >
       <defs>
         <pattern id={hatchId} width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
@@ -171,8 +188,8 @@ export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function 
           <line className="cal-hatch-b" x1="1.6" y1="0" x2="1.6" y2="5" />
         </pattern>
         <pattern id={noDataId} width="6" height="6" patternUnits="userSpaceOnUse">
-          <rect width="6" height="6" fill={theme === 'dark' ? '#1d2227' : '#eceeef'} />
-          <path d="M0 0L6 6M6 0L0 6" stroke={theme === 'dark' ? '#5b646e' : '#9aa1a8'} strokeWidth="0.8" />
+          <rect width="6" height="6" fill="#eceeef" />
+          <path d="M0 0L6 6M6 0L0 6" stroke="#9aa1a8" strokeWidth="0.8" />
         </pattern>
       </defs>
 
@@ -231,15 +248,17 @@ export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function 
                 preserveAspectRatio="none"
                 overflow="visible"
                 className="cal-cellbox"
+                data-key={cell.key}
                 data-strip-i={index >= 0 ? index : undefined}
+                style={interactive ? { pointerEvents: 'none' } : undefined}
               >
                 <rect className={className} width={w} height={h} fill={fill} />
                 {cell.state === 'zero' && <line className="cal-zero-mark" x1={w / 2 - 4} x2={w / 2 + 4} y1={h / 2} y2={h / 2} />}
                 {cell.estimated && cell.state !== 'no_data' && <rect width={w} height={h} fill={`url(#${hatchId})`} />}
                 {cell.incomplete && <rect className="cal-incomplete" x={1.25} y={1.25} width={w - 2.5} height={h - 2.5} />}
                 {cell.provisional && <circle className="cal-provisional" cx={w - 4.5} cy={4.5} r={2.4} />}
-                <rect className="cal-hover" x={0.75} y={0.75} width={w - 1.5} height={h - 1.5} />
-                <rect className="cal-focus" x={1.25} y={1.25} width={w - 2.5} height={h - 2.5} />
+                {!interactive && <rect className="cal-hover" x={0.75} y={0.75} width={w - 1.5} height={h - 1.5} />}
+                {!interactive && <rect className="cal-focus" x={1.25} y={1.25} width={w - 2.5} height={h - 2.5} />}
               </svg>
             );
 
@@ -259,25 +278,29 @@ export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function 
             }
 
             return (
-              <g
-                key={cell.key}
-                className="cal-gridcell"
-                role="gridcell"
-                data-key={cell.key}
-                aria-label={cell.label}
-                aria-selected={cell.key === selectedKey}
-                tabIndex={cell.key === activeKey ? 0 : -1}
-                onPointerEnter={(e) => hover(e, cell)}
-                onPointerLeave={() => hover(null, null)}
-                onFocus={(e) => {
-                  onFocusKeyChange?.(cell.key);
-                  onHover?.(cell, (e.currentTarget as SVGGElement).getBoundingClientRect());
-                }}
-                onBlur={() => onHover?.(null, null)}
-                onClick={() => onSelect?.(cell)}
-                onKeyDown={(e) => handleKeyDown(e, cell)}
-              >
+              <g key={cell.key}>
                 {content}
+                <g
+                  className="cal-gridcell"
+                  role="gridcell"
+                  data-key={cell.key}
+                  aria-label={cell.label}
+                  aria-selected={cell.key === selectedKey}
+                  tabIndex={cell.key === activeKey ? 0 : -1}
+                  onPointerEnter={(e) => hover(e, cell)}
+                  onPointerLeave={() => hover(null, null)}
+                  onFocus={(e) => {
+                    onFocusKeyChange?.(cell.key);
+                    onHover?.(cell, (e.currentTarget as SVGGElement).getBoundingClientRect());
+                  }}
+                  onBlur={() => onHover?.(null, null)}
+                  onClick={() => onSelect?.(cell)}
+                  onKeyDown={(e) => handleKeyDown(e, cell)}
+                >
+                  <rect x={box.x} y={box.y} width={w} height={h} fill="transparent" />
+                  <rect className="cal-hover" x={box.x + 0.75} y={box.y + 0.75} width={w - 1.5} height={h - 1.5} />
+                  <rect className="cal-focus" x={box.x + 1.25} y={box.y + 1.25} width={w - 2.5} height={h - 2.5} />
+                </g>
               </g>
             );
           })}
@@ -312,7 +335,18 @@ export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function 
 
       <g className="cal-decor" data-decor="notes" aria-hidden="true">
         {switchPath && <path className="cal-switch" d={switchPath} data-decor="switch" />}
-        {hasEstimated && sw && (
+        {narrow && hasEstimated && sw && (
+          <text className="cal-note" x={grid.left} y={gridBottom + 22}>
+            <tspan className="cal-note--strong">Above the line:</tspan> estimated from MODIS Aqua
+          </text>
+        )}
+        {narrow && hasObserved && (
+          <text className="cal-note" x={grid.left} y={gridBottom + (sw && hasEstimated ? 38 : 22)}>
+            <tspan className="cal-note--strong">{sw && hasEstimated ? `From ${MONTH_NAMES[sw.monthIndex]} ${sw.year}:` : 'Observed'}</tspan>
+            {sw && hasEstimated ? ' observed by VIIRS' : ' by VIIRS'}
+          </text>
+        )}
+        {!narrow && hasEstimated && sw && (
           <>
             <path className="cal-bracket" d={`M${noteX} ${grid.top} H${noteX + 6} V${rowY(grid, switchRow) + grid.cellHeight - 2} H${noteX}`} />
             <text className="cal-note cal-note--strong" x={noteX + 12} y={grid.top + 10}>
@@ -329,7 +363,7 @@ export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function 
             </text>
           </>
         )}
-        {hasObserved && (
+        {!narrow && hasObserved && (
           <>
             <path
               className="cal-bracket"

@@ -31,9 +31,10 @@ test('uses all five real endpoints and downloads the audit ZIP', async ({ page }
   expect(bytes.includes(Buffer.from('metadata.json'))).toBe(true);
   expect(bytes.includes(Buffer.from('detections.csv'))).toBe(true);
 
+  await page.getByText(/more options/i).click();
   await page.getByLabel(/latitude/i).fill('48.8');
   await page.getByLabel(/longitude/i).fill('2.3');
-  await page.getByRole('button', { name: /search|show/i }).click();
+  await page.getByRole('button', { name: /search|show this area/i }).click();
   await expect(page.getByRole('grid', { name: /fire calendar/i })).toHaveCount(0);
   await expect(page.getByText(/Current coverage: Brazil/)).toBeVisible();
 });

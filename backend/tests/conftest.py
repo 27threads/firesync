@@ -15,3 +15,8 @@ def api_example():
 @pytest.fixture(scope="session")
 def alert_rules():
     return json.loads((ROOT / "config" / "alert_rules.json").read_text(encoding="utf-8"))
+
+
+@pytest.fixture(scope="session")
+def risk_rules():
+    return json.loads((ROOT / "config" / "risk_rules.json").read_text(encoding="utf-8"))

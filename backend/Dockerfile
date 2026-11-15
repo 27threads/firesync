@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir ./backend
 COPY config ./config
 # Instalado como pacote, o caminho padrão das regras não aponta mais para a raiz do repo.
 ENV ALERT_RULES_PATH=/app/config/alert_rules.json
+ENV RISK_RULES_PATH=/app/config/risk_rules.json
 
 RUN useradd --create-home --uid 10001 api
 USER api

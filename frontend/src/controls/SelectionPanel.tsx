@@ -86,7 +86,7 @@ export function SelectionPanel({
           >
             Explore the example
           </button>
-          <p className="controls__hint">Or choose a region, enter coordinates, or draw on the map.</p>
+          <p className="controls__hint">Or pick a region below, or draw on the map.</p>
         </div>
 
         <div className="field">
@@ -111,49 +111,54 @@ export function SelectionPanel({
           </select>
         </div>
 
-        <form className="controls__group" onSubmit={submitPoint} noValidate>
-          <span className="controls__legend">Point and radius</span>
-          <div className="controls__row">
-            <div className="field">
-              <label htmlFor={`${uid}-lat`}>Latitude</label>
-              <input id={`${uid}-lat`} inputMode="decimal" placeholder="-3.10" value={lat} onChange={(e) => setLat(e.target.value)} aria-invalid={!!pointErrors.lat} />
-            </div>
-            <div className="field">
-              <label htmlFor={`${uid}-lon`}>Longitude</label>
-              <input id={`${uid}-lon`} inputMode="decimal" placeholder="-60.00" value={lon} onChange={(e) => setLon(e.target.value)} aria-invalid={!!pointErrors.lon} />
-            </div>
-          </div>
-          <div className="field">
-            <label htmlFor={`${uid}-radius`}>Radius (km, 1 to 200)</label>
-            <input id={`${uid}-radius`} inputMode="decimal" value={radius} onChange={(e) => setRadius(e.target.value)} aria-invalid={!!pointErrors.radius} />
-          </div>
-          {Object.values(pointErrors).map((msg) => (
-            <span key={msg} className="field__error">
-              {msg}
-            </span>
-          ))}
-          <button type="submit" className="ctl-btn ctl-btn--primary">
-            Show this area
-          </button>
-        </form>
+        <details className="controls__more">
+          <summary>More options: coordinates and period</summary>
+          <div className="controls__more-body">
+            <form className="controls__group" onSubmit={submitPoint} noValidate>
+              <span className="controls__legend">Point and radius</span>
+              <div className="controls__row">
+                <div className="field">
+                  <label htmlFor={`${uid}-lat`}>Latitude</label>
+                  <input id={`${uid}-lat`} inputMode="decimal" placeholder="-3.10" value={lat} onChange={(e) => setLat(e.target.value)} aria-invalid={!!pointErrors.lat} />
+                </div>
+                <div className="field">
+                  <label htmlFor={`${uid}-lon`}>Longitude</label>
+                  <input id={`${uid}-lon`} inputMode="decimal" placeholder="-60.00" value={lon} onChange={(e) => setLon(e.target.value)} aria-invalid={!!pointErrors.lon} />
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor={`${uid}-radius`}>Radius (km, 1 to 200)</label>
+                <input id={`${uid}-radius`} inputMode="decimal" value={radius} onChange={(e) => setRadius(e.target.value)} aria-invalid={!!pointErrors.radius} />
+              </div>
+              {Object.values(pointErrors).map((msg) => (
+                <span key={msg} className="field__error">
+                  {msg}
+                </span>
+              ))}
+              <button type="submit" className="ctl-btn ctl-btn--primary">
+                Show this area
+              </button>
+            </form>
 
-        <form className="controls__group" onSubmit={submitPeriod} noValidate>
-          <span className="controls__legend">Period (UTC)</span>
-          <div className="controls__row">
-            <div className="field">
-              <label htmlFor={`${uid}-start`}>From</label>
-              <input id={`${uid}-start`} type="month" min={DEFAULT_START_MONTH} max={lastMonth} value={start} onChange={(e) => setStart(e.target.value)} />
-            </div>
-            <div className="field">
-              <label htmlFor={`${uid}-end`}>To</label>
-              <input id={`${uid}-end`} type="month" min={DEFAULT_START_MONTH} max={lastMonth} value={end} onChange={(e) => setEnd(e.target.value)} />
-            </div>
+            <form className="controls__group" onSubmit={submitPeriod} noValidate>
+              <span className="controls__legend">Period (UTC)</span>
+              <div className="controls__row">
+                <div className="field">
+                  <label htmlFor={`${uid}-start`}>From</label>
+                  <input id={`${uid}-start`} type="month" min={DEFAULT_START_MONTH} max={lastMonth} value={start} onChange={(e) => setStart(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor={`${uid}-end`}>To</label>
+                  <input id={`${uid}-end`} type="month" min={DEFAULT_START_MONTH} max={lastMonth} value={end} onChange={(e) => setEnd(e.target.value)} />
+                </div>
+              </div>
+              {periodError && <span className="field__error">{periodError}</span>}
+              <button type="submit" className="ctl-btn">
+                Apply period
+              </button>
+            </form>
           </div>
-          {periodError && <span className="field__error">{periodError}</span>}
-          <button type="submit" className="ctl-btn">
-            Apply period
-          </button>
-        </form>
+        </details>
       </div>
     </section>
   );

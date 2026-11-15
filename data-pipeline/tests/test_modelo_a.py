@@ -306,6 +306,38 @@ def test_linha_de_comando_temporal_reaproveita_o_cache_dos_pares(tmp_path, monke
     assert (tmp_path / "saida" / "medidas_por_ano.csv").read_text() == primeiro
 
 
+def test_pares_do_ano_acha_os_arquivos_com_os_nomes_que_o_pipeline_baixa(tmp_path):
+    """Revisão do PR #87: `pipeline.py download` grava modis_{ano}.csv e viirs-snpp_{ano}.csv (data/raw/country/)."""
+    aqua, snpp = raw_ano(2019)
+    aqua.to_csv(tmp_path / "modis_2019.csv", index=False)
+    snpp.to_csv(tmp_path / "viirs-snpp_2019.csv", index=False)
+    r = m.pares_do_ano(tmp_path, 2019, m.preparar_biomas(biomas_de_teste()), 10)
+    assert r["totais"]["ano"] == 2019 and r["totais"]["olhando"] > 0
+    with pytest.raises(FileNotFoundError, match="modis_2020"):
+        m.pares_do_ano(tmp_path, 2020, m.preparar_biomas(biomas_de_teste()), 10)
+
+
+def test_o_cache_dos_pares_e_refeito_quando_os_biomas_ou_a_janela_mudam(tmp_path, monkeypatch):
+    """Revisão do PR #87: o cache só vale para os mesmos biomas, a mesma janela e as mesmas regras de limpeza."""
+    csvs_por_ano(tmp_path, (2019,))
+    chamadas = []
+    original = m.preparar_ano
+    monkeypatch.setattr(m, "preparar_ano", lambda *a, **k: chamadas.append(1) or original(*a, **k))
+    biomas = m.preparar_biomas(biomas_de_teste())
+    outros = m.preparar_biomas(gpd.GeoDataFrame({"CD_Bioma": [1, 3]}, geometry=[box(-60.0, -10.0, -59.2, -9.0), box(-59.2, -10.0, -59.0, -9.0)], crs=4326))
+    cache = tmp_path / "cache"
+    m.pares_do_ano(tmp_path, 2019, biomas, 10, cache)
+    m.pares_do_ano(tmp_path, 2019, biomas, 10, cache)
+    assert len(chamadas) == 1                                       # mesmos biomas e janela: reaproveita
+    m.pares_do_ano(tmp_path, 2019, outros, 10, cache)
+    assert len(chamadas) == 2                                       # biomas diferentes: refaz, sem aviso silencioso
+    m.pares_do_ano(tmp_path, 2019, outros, 10, cache)
+    assert len(chamadas) == 2                                       # e o cache novo passa a valer
+    monkeypatch.setattr(m, "OLHANDO_KM", 30.0)                      # uma regra do pareamento mudou
+    m.pares_do_ano(tmp_path, 2019, outros, 10, cache)
+    assert len(chamadas) == 3
+
+
 def test_linha_de_comando_grava_os_arquivos(tmp_path, monkeypatch):
     aqua, snpp = raw_aqua_e_snpp()
     aqua.to_csv(tmp_path / "aqua.csv", index=False)
