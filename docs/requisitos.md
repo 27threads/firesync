@@ -86,7 +86,7 @@ A submissão fecha no domingo, 15/11, às 23h59 no horário do evento local. Dá
 - [ ] Link to Project Demo (público, sem login)
 - [ ] Link to Final Project: app no ar e/ou repositório (público, sem login)
 - [ ] Detailed Project Description: o que faz, como funciona, benefícios, ferramentas e linguagens
-- [ ] NASA Data: FIRMS (MODIS e VIIRS) e o que mais usarmos (GIBS, POWER). Mínimo de um recurso da NASA para concorrer ao prêmio global
+- [ ] NASA Data: FIRMS (MODIS e VIIRS) e GIBS (mapa base). Mínimo de um recurso da NASA para concorrer ao prêmio global
 - [ ] Space Agency Partner Data and Other References: todas as fontes, bibliotecas e imagens. Considerar dados de parceiras (INPE/AEB, CONAE)
 - [ ] Use of Super Intelligence: declarar onde e como IA foi usada
 - [ ] Marcar "Terms and Conditions" e "Confirm All Work is Original" e clicar em "Submit for Judging"
