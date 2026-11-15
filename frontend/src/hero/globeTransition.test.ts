@@ -1,6 +1,14 @@
-import { chapterAt, journeyProgress, litDiffuseGain, mercatorLatitude, smoothPhase, SPACECRAFT_LIGHT, tilePosition } from './globeTransition';
+import { chapterAt, journeyProgress, litDiffuseGain, mercatorLatitude, openingLayout, smoothPhase, SPACECRAFT_LIGHT, tilePosition } from './globeTransition';
 
 describe('globe opening geometry', () => {
+  it('stacks the copy over the globe below the tablet width and puts it beside the globe above', () => {
+    expect(openingLayout(375)).toBe('stacked');
+    expect(openingLayout(768)).toBe('stacked');
+    expect(openingLayout(959)).toBe('stacked');
+    expect(openingLayout(960)).toBe('side');
+    expect(openingLayout(1280)).toBe('side');
+  });
+
   it('eases between two points of the scroll and stays flat outside them', () => {
     expect(smoothPhase(0.1, 0.2, 0.6)).toBe(0);
     expect(smoothPhase(0.4, 0.2, 0.6)).toBeCloseTo(0.5);
