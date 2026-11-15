@@ -1,5 +1,7 @@
 # firesync
 
+**[Documentação do Sistema](docs/documentacao-sistema.md):** requisitos, arquitetura, integração, operação e qualidade em uma visão resumida.
+
 Calendário harmonizado de focos de calor (MODIS + VIIRS) para o NASA Space Apps 2026, desafio [MODIS and VIIRS Hot Spots](https://www.spaceappschallenge.org/2026/challenges/modis-and-viirs-hot-spots/).
 
 O usuário escolhe uma área e um período e vê um calendário meses × anos com o número de focos de calor. A série junta MODIS (2003 em diante) e VIIRS (2012 em diante) numa escala única, então o sensor de origem não importa mais para quem lê o calendário.
@@ -39,6 +41,7 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 23 | [Deploy](docs/deploy.md) | Front no Cloudflare, banco/API/job NRT na VPS pelo Cloudflare Tunnel, variáveis e segurança da VPS | Antes de publicar ou mexer em `infra/` |
 | 24 | [Página do projeto](docs/pagina-projeto.md) | Texto em inglês de cada campo da página do projeto no Space Apps (C9) | Antes de preencher ou mudar a página da submissão |
 | 25 | [RFC 0004: assistente virtual](docs/rfcs/0004-assistente-virtual.md) | Chat no site que responde perguntas com tool-use sobre os casos de uso da API: ferramentas, contrato `/ask`, front, riscos e plano | Antes de mexer no assistente |
+| 26 | [Documentação do Sistema](docs/documentacao-sistema.md) | Síntese formal dos requisitos, arquitetura, operação e qualidade | Para uma visão geral do sistema e revisão documental |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
@@ -126,6 +129,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 
 | Parte | Ferramenta | Como foi usada |
 | --- | --- | --- |
+| Documentação formal (`docs/documentacao-sistema.md`) | OpenAI Codex | Síntese das fontes do repositório, diagramas e revisão documental conforme comentários do PR #141; revisão da equipe pendente. |
 | Integração do PR #26 com a `main`, resolução de `data-pipeline/.coveragerc` e limpeza das pendências da B6 em `docs/` | OpenAI Codex | Preservação do mínimo de cobertura de 71% e atualização dos documentos conforme a issue #68; sem alteração das contas |
 | `data-pipeline/pipeline.py`, `agregar.py`, `eda.py`, `test_pipeline.py`, `test_banco.py`, `job_nrt.py`, `Dockerfile`, `migrations/` | Claude Code (Claude Opus 5.5) | Código gerado a partir das especificações de filtro escritas pelo time de dados. Revisado pela equipe |
 | `docs/banco.md`, `data-pipeline/migrations/001_inicial.sql` | Claude Code (Claude Opus 5.5) | Schema e documento de decisões gerados a partir dos docs do repo e de um benchmark local. Revisado pela equipe |
@@ -170,6 +174,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | Assistente virtual: `backend/src/application/assistant.py`, `assistant_tools.py`, `backend/src/ports/llm.py`, `backend/src/adapters/outbound/llm/openai.py`, rota `/ask` no `app.py`, bucket `ask` no `limits.py`, `frontend/src/assistant/`, `askAssistant` no cliente, testes `test_assistant.py`, `test_ask_route.py` e `AssistantBubble.test.tsx` | Claude Code (Claude Opus 5.5) | Implementação do RFC 0004 com TDD: ferramentas sobre os casos de uso existentes, validação do `messages[]`, cadeia de provedores, teto diário e bolinha atrás de `VITE_ENABLE_ASSISTANT`. Depois da auditoria: fontes e checagem dos números na resposta, prazo total por pergunta, leitura curta no banco por ferramenta e foco preso no painel. Testado com Cerebras, Groq, Gemini e OpenRouter no banco local |
 | Toque no mapa no celular (`frontend/src/map/MapStage.tsx`, `MapStage.test.tsx`, `src/hero/OrbitalScene.tsx`, `src/styles.css`, `e2e/responsivo.spec.ts`) | Antigravity | Rolagem da página com 1 dedo sobre o mapa (com aviso temporário `"Use two fingers to move the map."`), arrasto e zoom do mapa com 2 dedos via `L.Handler.TouchZoom`, desenho de retângulo com 1 dedo quando o modo de desenho está ativo e preservação de `touch-action: pan-y` no canvas 3D da abertura. A equipe revisa no PR |
 | Crédito de IA completo em Data & credits (`frontend/index.html`, `src/index-html.test.ts`) | Claude Code (Claude Opus 5.5) | Alinhamento da linha de IA do site com esta tabela (Claude Code, OpenAI Codex, Antigravity e Lovable), conforme a regra 7 do `docs/premiacao.md`. Teste escrito com a lista das quatro ferramentas. A equipe revisa no PR |
+| Botão do assistente só depois do hero (`frontend/src/hero/useLeftHero.ts`, `src/assistant/AssistantBubble.tsx`, `src/App.tsx`, testes) | Claude Code (Claude Sonnet 5.5) | O botão flutuante do assistente só aparece quando a abertura com o globo já saiu da tela, para não tomar espaço do hero. Hook com IntersectionObserver e teste antes do código; conferido no navegador em quatro pontos do scroll. A equipe revisa no PR |
 
 ## Dados e créditos
 

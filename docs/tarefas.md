@@ -93,6 +93,12 @@ Ler antes: [requisitos.md](requisitos.md), [importacao-regioes.md](importacao-re
 | C10 | Completar a tabela "Uso de IA" do README | — | a fazer | Cada parte com IA registrada |
 | C11 | Assistente virtual, backend: `POST /api/v1/ask`, ferramentas e cadeia de provedores ([RFC 0004](rfcs/0004-assistente-virtual.md)) | C7 | a fazer | As 5 perguntas dos chips respondem com os números do calendário; validação de `messages[]`, teto diário e fallback testados |
 
+## Documentação formal (Rafael)
+
+| ID | Tarefa | Status | Pronto quando |
+| --- | --- | --- | --- |
+| DOC1 | Consolidar a documentação formal em `docs/documentacao-sistema.md` | fazendo — documentação preparada, aguardando revisão | Capítulos principais com fontes rastreáveis, links conferidos e branch enviada para revisão da equipe |
+
 ## D. Frontend e demo
 
 Ler antes: [requisitos.md](requisitos.md), `docs/api.md`.
