@@ -36,6 +36,7 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 20 | [Validação da API com a carga real](docs/validacao-api-eduardo.md) | Roteiro para o Eduardo conferir números, cobertura, ZIP e latência antes de fechar D7/M2 | Ao integrar a API com a carga real |
 | 21 | [Simulação e auditoria pelos logs](docs/simulacao.md) | Como rodar o sistema de ponta a ponta num banco descartável e auditar pelos logs se ele entrega o que os critérios cobram | Antes de rodar a simulação ou investigar um problema |
 | 22 | [Restrições para o mundo](docs/escala-mundial.md) | O que muda quando a cobertura passar do Brasil para o mundo, com a saída proposta para cada ponto | Antes de mexer em cobertura, seleção de área ou camada de focos |
+| 23 | [Auditoria do repositório](docs/auditoria.md) | Achados da auditoria de 15/11 (pipeline, API e front), com frente, correção e situação de cada um | Antes de corrigir um achado ou de mexer no deploy |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
@@ -131,6 +132,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | Estrutura e documentação do `backend/`, ajustes em `docs/arquitetura.md`, `docs/tarefas.md`, `docs/importacao-regioes.md` e `docs/api.md` | OpenAI Codex | Organização das camadas e revisão da documentação; atualização dos READMEs, requisitos, tarefas, testes e roteiro `docs/validacao-api-eduardo.md`. Decisões de método referenciadas nos registros da equipe |
 | `docs/prompt-frontend.md` | Claude Code (Claude Opus 5.5) | Prompt do front escrito a partir dos docs do repo. A equipe aprova antes de usar |
 | `docs/api.md`, `docs/api-exemplo.json` (issues #22 e #29) | Claude Code (Claude Opus 5.5) | Correções do contrato escritas a partir das issues da auditoria. Revisado pela equipe |
+| `docs/auditoria.md` | Claude Code (Claude Opus 5.5) | Auditoria do repositório com medições no banco de teste. Revisado pela equipe |
 | `docs/validacao-alerta.md`, `docs/rfcs/0001-backtest-alerta.md` | Claude Code (Claude Opus 5.5) | Proposta de validação do alerta e RFC de implementação, escritos a partir da issue #9 e da revisão do PR #42. Revisado pela equipe |
 | `data-pipeline/validacao/backtest_alerta.py`, `data-pipeline/tests/test_backtest_alerta.py`, `data-pipeline/referencia/eventos_conhecidos.csv` | Claude Code (Claude Opus 5.5) | Backtest do alerta escrito a partir do RFC 0001, com TDD; correção dos eventos conhecidos e da regra atual para o piso contínuo da `v1` (issue #66) e achados da revisão do PR #71 (piso da grade pelo JSON, limite e continuidade da antecedência). As fontes dos eventos foram conferidas nas páginas oficiais. Revisado pela equipe |
 | Limpeza dos `.md` (README, CLAUDE.md, `docs/`, READMEs das pastas) | Claude Code (Claude Opus 5.5) | Levantamento do que estava desatualizado, comparando os docs com o código da `main`, e correção dos trechos. Revisado pela equipe no PR |
