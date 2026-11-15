@@ -16,6 +16,7 @@ import {
   styleForIntensityPoint,
 } from '../controls/recentDetectionsModel';
 import type { MapShape } from '../state/useExplorer';
+import { EarlyWarning } from './EarlyWarning';
 import { shapeView } from './shapeView';
 
 export type BasemapId = 'black-marble' | 'blue-marble';
@@ -38,6 +39,9 @@ type DetectionsState = 'idle' | 'ready' | 'unavailable';
 // Contorno da seleção: linha escura larga por baixo e âmbar por cima, legível em qualquer mapa base.
 const HALO = { color: '#0d0f11', weight: 5, opacity: 0.85, fill: false, pmIgnore: true } as const;
 const OUTLINE = { color: '#e9a23b', weight: 2.5, fillColor: '#e9a23b', fillOpacity: 0.08, pmIgnore: true } as const;
+
+// Zoom em que uma célula H3 de resolução 4 (cerca de 1.770 km²) ocupa boa parte do mapa.
+const FOCUS_ZOOM = 8;
 
 function isCoarsePointer(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -100,6 +104,7 @@ function renderRecentDetections(
 
   if (data.mode === 'hexagons') {
     const domain = computeHexagonDomain(data.features);
+    const riskHorizonDays = data.alerts?.risk?.horizon_days;
     for (const feature of data.features) {
       const ring = feature.geometry.coordinates[0];
       if (!ring || ring.length < 3) continue;
@@ -109,7 +114,7 @@ function renderRecentDetections(
         ...style,
         pmIgnore: true,
       })
-        .bindTooltip(formatHexagonTooltip(feature.properties))
+        .bindTooltip(formatHexagonTooltip(feature.properties, riskHorizonDays))
         .addTo(group);
     }
     return;
@@ -156,6 +161,7 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
   const initPromiseRef = useRef<Promise<void> | null>(null);
   const dragStartRef = useRef<{ clientX: number; clientY: number } | null>(null);
   const shapeRef = useRef<MapShape>(shape);
+  const pendingFocusRef = useRef<[number, number] | null>(null);
 
   const [basemap, setBasemap] = useState<BasemapId>('black-marble');
   const [drawMode, setDrawMode] = useState<DrawMode>(null);
@@ -166,6 +172,7 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
   const [hotSpotsHours, setHotSpotsHours] = useState<RecentHours>(24);
   const [recentDetections, setRecentDetections] = useState<RecentDetectionsResponse | null>(null);
   const [detectionsState, setDetectionsState] = useState<DetectionsState>('idle');
+  const [focusRequest, setFocusRequest] = useState(0);
 
   onSelectPolygonRef.current = onSelectPolygon;
   drawModeRef.current = drawMode;
@@ -402,6 +409,15 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
     if (bounds) map.fitBounds(bounds, { padding: [48, 48], maxZoom: 7, animate: false });
   }, [shape, mapReady, requestRecentDetections]);
 
+  // Depois do efeito acima: se o clique na lista carregou o mapa, o enquadramento da área não desfaz o foco.
+  useEffect(() => {
+    const map = mapRef.current;
+    const latLng = pendingFocusRef.current;
+    if (!map || !latLng) return;
+    pendingFocusRef.current = null;
+    map.setView(latLng, Math.max(map.getZoom(), FOCUS_ZOOM), { animate: false });
+  }, [focusRequest, mapReady]);
+
   const clientToLngLat = useCallback((clientX: number, clientY: number): [number, number] => {
     const viewport = viewportRef.current;
     const L = leafletRef.current;
@@ -534,6 +550,14 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
     setDrawMode(nextMode);
     setPolygonPoints([]);
     syncDrawModeToMap(nextMode);
+  };
+
+  // Item da lista "Where to look first": traz o mapa para a tela e centra na célula de resolução 4.
+  const focusCell = (latLng: [number, number]) => {
+    viewportRef.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' as ScrollBehavior });
+    pendingFocusRef.current = latLng;
+    void ensureMap();
+    setFocusRequest((n) => n + 1);
   };
 
   const switchBasemap = (next: BasemapId) => {
@@ -677,6 +701,10 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
           </>
         )}
       </div>
+
+      {showHotSpots && detectionsState === 'ready' && (
+        <EarlyWarning alerts={recentDetections?.alerts} onFocusCell={focusCell} />
+      )}
     </div>
   );
 }

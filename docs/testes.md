@@ -37,7 +37,7 @@ Os dois, com papéis diferentes. **Não vale trocar os testes de unidade por cai
 Os testes da API e do front foram escritos no repositório antes das telas e dos endpoints:
 
 - **`backend/tests/domain/` e `backend/tests/application/`:** a especificação do núcleo da API (faixa P5–P95, origem e satélite do mês, intensidade, alerta, janelas, IDs H3, calendário). Os valores foram calculados à mão. As especificações implementadas, incluindo o alerta da issue #59, executam sem `xfail`. Novas especificações ainda não implementadas podem usar `xfail(strict=True)`; ao implementar, remova o marcador.
-- **`frontend/e2e/jornadas.spec.ts`:** 9 jornadas (J1–J9), todas ativas e passando com a API simulada no desktop e no celular. `backend/tests/e2e/` acrescenta duas jornadas (desktop/celular) com front, proxy, API HTTP e PostGIS sintético, sem interceptar endpoints.
+- **`frontend/e2e/jornadas.spec.ts`:** 11 jornadas (J1–J11), todas ativas e passando com a API simulada no desktop e no celular. `backend/tests/e2e/` acrescenta duas jornadas (desktop/celular) com front, proxy, API HTTP e PostGIS sintético, sem interceptar endpoints.
 
 ### Jornadas de usuário
 
