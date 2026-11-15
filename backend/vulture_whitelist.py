@@ -5,6 +5,11 @@ by static analysis; it is not part of the installed backend package.
 """
 from backend.adapters.outbound.postgres.history import PostgresHistoryRepository
 from backend.application.calendar import CalendarService
+from backend.adapters.inbound.http.app import create_app
 
 PostgresHistoryRepository  # Instantiated in PostGIS integration tests.
 CalendarService.calculate  # Called by application, unit and integration tests.
+create_app  # Uvicorn --factory entry point, also used by TestClient.
+guard  # noqa: F821 - FastAPI middleware registration calls this closure.
+health  # noqa: F821 - FastAPI GET /health registration calls this closure.
+export  # noqa: F821 - FastAPI POST /export registration calls this closure.

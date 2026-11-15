@@ -4,7 +4,7 @@ Nov 13, 2026 · @Mateus Nogueira
 
 Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele só **sugere** (aparece como "pode considerar"). Assim fica claro o mínimo para entregar e o que dá pontos extras.
 
-**Situação em 14/11/2026:** ✅ feito e verificado · ⏳ falta ou é parcial (a nota diz onde está). A frente A (dados e banco) está pronta; no front, D1–D6 já cobrem área e período, calendário, indicadores, janela recente, sazonalidade, ranking e downloads (falta ligar na API real em D7); na API, faltam os endpoints em código ([api.md](api.md)).
+**Situação em 14/11/2026:** ✅ implementado e verificado no escopo indicado · ⏳ parcial. C1–C6 e a integração técnica D7 passaram com PostGIS sintético e navegador, além dos testes unitários/HTTP. A carga científica real não foi acessada nesta entrega: Eduardo executa o [roteiro de validação](validacao-api-eduardo.md) antes de fechar D7/M2. Deploy público segue pendente.
 
 ## 1. Requisitos obrigatórios
 
@@ -12,7 +12,7 @@ Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele
 
 - [x] **RF01:** Buscar os focos de calor do **MODIS** (Terra e Aqua). É a série histórica, do início dos anos 2000 em diante. ✅ MODIS Terra (desde 01/11/2000) e Aqua (desde 04/07/2002) até hoje, Brasil inteiro, na tabela `focos` ([pipeline-dados.md](pipeline-dados.md)).
 - [x] **RF02:** Buscar os focos de calor do **VIIRS**. É o sensor que continua a série, com mais detalhe. ✅ VIIRS S-NPP (2012 até 02/11/2026), NOAA-20 e NOAA-21, na tabela `focos`.
-- [ ] **RF03:** Harmonizar as duas fontes numa **série temporal única e consistente**. Depois dessa etapa, "o sensor de origem não importa mais". O processo precisa compensar as diferenças entre os dois sensores: ⏳ **parcial:** método decidido ([decisoes-harmonizacao.md](decisoes-harmonizacao.md)), contagem bruta por satélite em `agregados` e 1.860 fatores Aqua → S-NPP gravados (13 cenários, cobertura P5–P95 medida). Falta a API aplicar os fatores.
+- [x] **RF03:** Harmonizar as duas fontes numa **série temporal única e consistente**. Depois dessa etapa, "o sensor de origem não importa mais". O processo precisa compensar as diferenças entre os dois sensores: ✅ API aplica os fatores por cenário e só depois calcula mediana/P5–P95; reconstrução pelo ZIP testada com PostGIS sintético. Conferência da carga real no M2 com Eduardo.
   - resolução espacial (VIIRS \~375 m, MODIS \~1 km)
   - sensibilidade de detecção (o VIIRS detecta mais focos pequenos)
   - horário em que cada satélite passa
@@ -21,44 +21,44 @@ Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele
 
 ### Parte B: Aplicação web (frontend + API)
 
-- [ ] **RF06:** Deixar o usuário **escolher uma região / área de interesse**. ⏳ **parcial:** contrato no [api.md](api.md) (região, GeoJSON, lat/lon) e **front pronto** em `frontend/src/controls/` (com fallback demo); falta a API.
-- [ ] **RF07:** Deixar o usuário **escolher um intervalo de datas**. ⏳ **parcial:** contrato no [api.md](api.md) e **front pronto** em `frontend/src/controls/` (`2003-01` a `last_month`, UTC); falta a API.
-- [ ] **RF08:** Mostrar um **calendário de atividade de queimadas** com o **número de focos de calor** da área escolhida, no formato meses × anos. ⏳ contrato no [api.md](api.md) e dados prontos (`agregados`); falta a API e o front.
-- [ ] **RF09:** Mostrar **quais meses do ano têm mais fogo** (o padrão sazonal). ⏳ contrato no [api.md](api.md); falta a API e o front.
-- [ ] **RF10:** Mostrar **quais anos tiveram mais fogo**. ⏳ contrato no [api.md](api.md); falta a API e o front.
-- [ ] **RF11:** Comparar o **mês atual com a mediana histórica** da área. ⏳ contrato no [api.md](api.md) (janela recente); dados prontos (`agregados_diarios`, normal de ±15 dias em 7–40 ms); falta a API e o front.
-- [ ] **RF12:** Mostrar **como a atividade atual se compara a períodos anteriores**, ou seja, as anomalias. ⏳ contrato no [api.md](api.md); falta a API e o front.
-- [ ] **RF13:** Permitir **baixar as análises e visualizações** da busca. ⏳ **parcial:** contrato do pacote de auditoria no [api.md](api.md) (`POST /export`) e **front pronto** em `frontend/src/export/` (pacote de auditoria ZIP via `POST /api/v1/export`, CSV local `result.csv` / `years.csv` / `seasonality.csv` e PNG do calendário gerado no front a partir do SVG; jornada J7 passando); falta a API.
+- [x] **RF06:** Deixar o usuário **escolher uma região / área de interesse**. ✅ Front e `POST /api/v1/calendar` integrados: região, GeoJSON ou ponto/raio, com cobertura e erros do contrato.
+- [x] **RF07:** Deixar o usuário **escolher um intervalo de datas**. ✅ Intervalo UTC de `2003-01` a `last_month`, valores padrão e `invalid_period` testados por HTTP.
+- [x] **RF08:** Mostrar um **calendário de atividade de queimadas** com o **número de focos de calor** da área escolhida, no formato meses × anos. ✅ Calendário histórico servido pela API e renderizado pelo front; integração com PostGIS sintético passou no desktop e celular.
+- [x] **RF09:** Mostrar **quais meses do ano têm mais fogo** (o padrão sazonal). ✅ Sazonalidade calculada pela API com anos completos e cenários preservados; exibida no front.
+- [x] **RF10:** Mostrar **quais anos tiveram mais fogo**. ✅ Totais anuais/ranking servidos por HTTP, com faixa de incerteza e anos incompletos sem posição.
+- [x] **RF11:** Comparar o **mês atual com a mediana histórica** da área. ✅ `recent.month_to_date` e `last_7_days` sobre `agregados_diarios`, comparados a janelas históricas de mesmo tamanho em ±15 dias; testes com valores manuais.
+- [x] **RF12:** Mostrar **como a atividade atual se compara a períodos anteriores**, ou seja, as anomalias. ✅ Anomalias históricas independentes do filtro e comparação recente expostas; a proposta metodológica continua registrada em `api.md`.
+- [x] **RF13:** Permitir **baixar as análises e visualizações** da busca. ✅ `POST /api/v1/export` gera ZIP auditável em memória; download real pelo navegador testado. CSVs locais e PNG permanecem no front.
 
 ## 2. Requisitos desejáveis (diferenciais)
 
-- [ ] **RD01:** **Mapa interativo** em que o usuário desenha a área de interesse (polígono ou retângulo). ⏳ **parcial:** front pronto em `frontend/src/controls/` (Leaflet `preferCanvas` + Leaflet-Geoman; desenho vira GeoJSON Polygon e passa na jornada J2 com API simulada); falta ligar na API real (D7).
-- [ ] **RD02:** Opção de **digitar latitude e longitude**, como alternativa ao desenho no mapa. ⏳ **parcial:** contrato no [api.md](api.md) (`point` com raio) e **front pronto** em `frontend/src/controls/` (campos lat/lon/raio de 1 a 200 km); falta a API.
-- [ ] **RD03:** **Rampa de cores** no calendário, para mostrar as diferenças entre meses como um heatmap. ⏳ decidido: escala logarítmica ([arquitetura.md](arquitetura.md)); falta o front.
-- [ ] **RD04:** Cores **acessíveis**, legíveis para quem tem daltonismo (por exemplo, viridis ou cividis). ⏳ decidido: cividis ([arquitetura.md](arquitetura.md)); falta o front.
-- [ ] **RD05:** **Exportar um CSV** com os focos de calor encontrados na busca. ⏳ **parcial:** `detections.csv` no pacote de auditoria (`POST /api/v1/export`, até 500.000 focos) e **front pronto** em `frontend/src/export/` (chamada ao ZIP de auditoria, exportação local da série visível em CSV e aviso sobre o limite de 500.000 focos); `focos` vai para produção; falta a API.
-- [ ] **RD06:** **Indicadores principais** em destaque: ⏳ contrato no [api.md](api.md) (`indicators`); falta a API e o front.
+- [x] **RD01:** **Mapa interativo** em que o usuário desenha a área de interesse (polígono ou retângulo). ✅ Desenho do front integrado à seleção H3 e à rota HTTP, com `invalid_geometry` e `area_too_large`.
+- [x] **RD02:** Opção de **digitar latitude e longitude**, como alternativa ao desenho no mapa. ✅ Ponto/raio de 1 a 200 km integrado à API; área fora da cobertura testada no navegador.
+- [x] **RD03:** **Rampa de cores** no calendário, para mostrar as diferenças entre meses como um heatmap. ✅ escala logarítmica no calendário e nos hexágonos do mapa (`frontend/src/calendar/colorScale.ts`).
+- [x] **RD04:** Cores **acessíveis**, legíveis para quem tem daltonismo (por exemplo, viridis ou cividis). ✅ paleta `cividis` em escala logarítmica no calendário e nos hexágonos H3, hachura/borda nos meses estimados e incompletos, e diferenciação por raio e espessura/estilo de borda além da cor nos pontos de intensidade (`low`, `medium`, `high`) no mapa.
+- [x] **RD05:** **Exportar um CSV** com os focos de calor encontrados na busca. ✅ `detections.csv` no ZIP até 500.000 focos inclusive; acima disso, omissão e contagem total nos metadados. Caso com 500.001 focos verificado em PostGIS sintético.
+- [x] **RD06:** **Indicadores principais** em destaque: ✅ Indicadores históricos e `last_7_days_vs_typical_pct` servidos pela API e exibidos no front.
   - número total de focos detectados e registrados
   - anomalia em relação à média de vários anos
-- [ ] **RD07:** Interface pensada para o **público-alvo**: equipes de alerta precoce, resposta a emergências, cientistas, gestores de terras e bombeiros. Precisa ser rápida de ler e de usar. ⏳ janela recente e camada de focos recentes no contrato; dados e índice prontos (19 ms); falta a API e o front.
+- [x] **RD07:** Interface pensada para o **público-alvo**: equipes de alerta precoce, resposta a emergências, cientistas, gestores de terras e bombeiros. Precisa ser rápida de ler e de usar. ✅ Janela recente e mapa com 24/72/168 h, hexágonos ou pontos e classes `low`/`medium`/`high`, integrados à API; limite de 50.000 pontos troca para hexágonos sem truncamento.
 
 ## 3. Requisitos não funcionais (implícitos no texto)
 
-- [ ] **RNF01:** Ser uma **aplicação web**, acessada pelo navegador. ⏳ falta a API, o front e o deploy.
+- [ ] **RNF01:** Ser uma **aplicação web**, acessada pelo navegador. ⏳ **parcial:** app integrado localmente (front → proxy → API → PostGIS sintético); carga real aguarda Eduardo e deploy público segue em C7.
 - [x] **RNF02:** **Fonte de dados:** o texto sugere o **NASA FIRMS** (Earthdata), que fornece os dados do MODIS e do VIIRS. ✅ NASA FIRMS: resumos anuais por país (SP) e API (SP e NRT).
 - [ ] **RNF03:** **Atualização contínua.** O calendário precisa estar "atualizado", então os dados novos devem entrar periodicamente. ⏳ **parcial:** job NRT a cada 3 h pronto e testado (`job_nrt.py` + `Dockerfile`); falta rodar na VPS.
 - [x] **RNF04:** **Desempenho.** São mais de 20 anos de focos no mundo inteiro, então as consultas por área e período precisam ser rápidas. Isso pede pré-agregação e indexação espacial. ✅ pré-agregação (`agregados`, `agregados_diarios`) e índice espacial H3: calendário de 100 × 100 km em 2–9 ms, Amazônia inteira em ~0,8 s, focos recentes em 19 ms (medido no banco de teste).
-- [ ] **RNF05:** **Usabilidade e acessibilidade**, porque o usuário pode estar numa situação de emergência. ⏳ **parcial:** controles de área/período com labels, `aria-describedby`, alertas em `role="alert"`, calendário em `cividis` com hachura/borda, navegação por teclado e downloads acessíveis no front (D2–D6); falta a integração final com a API (D7).
+- [x] **RNF05:** **Usabilidade e acessibilidade**, porque o usuário pode estar numa situação de emergência. ✅ controles de área/período e camada de focos recentes com labels, `aria-pressed`, `aria-describedby`, alertas em `role="alert"`, calendário em `cividis` com hachura/borda, pontos diferenciados por raio e borda além da cor, navegação por teclado e downloads acessíveis no front (D1–D7, validado nas 18 jornadas E2E J1–J9 em desktop e celular).
 
 ### Definidos pela equipe
 
 Não vêm do texto do desafio. São necessários porque o sistema é público e precisa estar sempre atualizado para o público de emergência (RD07).
 
-- [ ] **RNF06:** **Limite de requisições na API.** A API é pública, e uma área grande (até 250 mil células) custa caro. Sem limite, uma pessoa ou um robô consegue derrubar o servidor. ⏳ contrato no [api.md](api.md) (`429 rate_limited`); falta a API.
-  - Limite por IP, com valores em configuração. Proposta inicial: 60 pedidos por minuto no geral, 10 por minuto em `POST /calendar` e 2 por minuto em `POST /export`.
+- [ ] **RNF06:** **Limite de requisições na API.** A API é pública, e uma área grande (até 250 mil células) custa caro. Sem limite, uma pessoa ou um robô consegue derrubar o servidor. ⏳ **parcial:** limite por IP implementado na API, configurável, com `429 rate_limited` e `Retry-After` testados. Segundo limite no servidor web aguarda C7.
+  - Limite por IP, com valores em configuração. Padrões implementados: 60 pedidos por minuto no geral, 10 por minuto em `POST /calendar` e 2 por minuto em `POST /export` ([variáveis](../backend/README.md)).
   - Acima do limite: HTTP `429` com o código `rate_limited` e o cabeçalho `Retry-After`.
   - Um segundo limite no servidor web (ver `infra/`), antes de o pedido chegar à API.
-- [ ] **RNF07:** **Monitoramento.** ⏳ **parcial:** `config.atualizado_em` gravado pelo job e logs estruturados em JSON no pipeline e no job NRT ([pipeline-dados.md](pipeline-dados.md), seção "Logs estruturados"); falta o aviso de dado velho e os logs da API.
+- [ ] **RNF07:** **Monitoramento.** ⏳ **parcial:** front avisa sobre dados com mais de 6 h; API registra endpoint, duração, células e status; pipeline e job NRT gravam logs estruturados em JSON ([pipeline-dados.md](pipeline-dados.md), seção "Logs estruturados"). Canal de aviso à equipe aguarda deploy.
   - **Dado velho:** se o `updated_at` passar de **6 horas** (duas rodadas do job NRT perdidas), a equipe recebe um aviso, e a tela mostra ao usuário que os dados podem estar desatualizados. Para o público de emergência, mostrar dado velho como se fosse atual é pior do que avisar.
   - **Logs da API:** cada pedido registra o endpoint, o tempo de resposta, o número de células da área e o status HTTP.
   - **Logs do job NRT:** cada rodada registra quantos focos entraram, quanto tempo levou e os erros.

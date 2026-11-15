@@ -165,13 +165,23 @@ jobs:
       - run: python -m pip install -r backend/requirements-dev.txt
       - run: python -m pip check
       - name: Contrato, domínio e integração (linhas e ramos)
-        run: python -m pytest backend/tests -v -rxX --cov=backend/src --cov-branch --cov-report=term-missing --cov-fail-under=94.2
+        run: python -m pytest backend/tests -v -rxX --cov=backend/src --cov-branch --cov-report=term-missing --cov-fail-under=97.0
 
   jornadas:
     name: Front · jornadas de usuário (E2E)
     needs: mudancas
     if: ${{ !cancelled() && needs.mudancas.outputs.codigo != 'false' }}
     runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: firesync_http_demo
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d firesync_http_demo"
+          --health-interval 5s --health-timeout 5s --health-retries 20
     defaults:
       run:
         working-directory: frontend/e2e
@@ -196,3 +206,24 @@ jobs:
           npx playwright test
         env:
           FRONTEND_URL: http://localhost:5173
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Front → proxy → HTTP → PostGIS (dados sintéticos)
+        env:
+          DATABASE_URL: postgresql://postgres@127.0.0.1:5432/firesync_http_demo
+          DEMO_DATABASE_URL: postgresql://postgres@127.0.0.1:5432/firesync_http_demo
+          VITE_DEV_API_PROXY: http://127.0.0.1:8000
+          FRONTEND_URL: http://127.0.0.1:5174
+          API_URL: http://127.0.0.1:8000
+          RATE_LIMIT_GENERAL: "1000"
+          RATE_LIMIT_CALENDAR: "1000"
+          RATE_LIMIT_EXPORT: "1000"
+        run: |
+          python -m pip install -e '../../backend[test]'
+          python ../../backend/scripts/demo_data.py --apply
+          python -m uvicorn backend.adapters.inbound.http.app:create_app --factory --host 127.0.0.1 --port 8000 > /tmp/firesync-api.log 2>&1 &
+          npm --prefix .. run dev -- --host 127.0.0.1 --port 5174 --strictPort > /tmp/firesync-front.log 2>&1 &
+          npx wait-on http-get://127.0.0.1:8000/api/v1/health http://127.0.0.1:5174 --timeout 60000
+          python -m pytest ../../backend/tests/contract/test_api_contract.py -k live_api -q
+          npx playwright test -c ../../backend/tests/e2e/playwright.config.cjs
