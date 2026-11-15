@@ -72,6 +72,7 @@ Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases,
 | `FIRMS_MAP_KEY` | API do FIRMS (download e job NRT) | `.env` da VPS, nunca no git ([banco.md](banco.md)) |
 | `DATABASE_URL` | Pipeline e API | `.env` da VPS, nunca no git ([banco.md](banco.md)) |
 | `POSTGRES_PASSWORD` | Serviço `db` do compose | `.env` da VPS, nunca no git |
+| `API_DB_PASSWORD` | Usuário só de leitura `firesync_api` do serviço `api` | `.env` da VPS, nunca no git ([deploy.md](deploy.md)) |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Serviço `tunnel` do compose | `.env` da VPS, nunca no git ([deploy.md](deploy.md)) |
 | `VITE_API_URL` | Build do front no Cloudflare (pública, vai no JavaScript) | Variável de build do Cloudflare ([deploy.md](deploy.md)) |
 

@@ -37,7 +37,10 @@ Tudo em [`infra/docker-compose.yml`](../infra/docker-compose.yml). Nenhum servi�
 1. Copie `infra/.env.example` para `infra/.env` e preencha. O `.env` nunca vai para o git.
 2. No Cloudflare, em **Zero Trust → Networks → Tunnels**, crie um túnel, copie o token para `CLOUDFLARE_TUNNEL_TOKEN` e adicione o public hostname `api.<domínio>` → `http://api:8000`.
 3. `FRONTEND_ORIGIN` é a origem exata do front, sem barra no fim. É a única que o CORS aceita.
-4. Na VPS, a partir de `infra/`: `docker compose up -d --build`. A carga do banco segue o roteiro de [banco.md](banco.md#carga-na-vps-roteiro).
+4. **Na primeira vez**, siga o roteiro de carga do [banco.md](banco.md#carga-na-vps-roteiro), que sobe só o `db`, restaura o dump e cria o usuário `firesync_api`. Com a API e o job no ar, o `pg_restore --clean` disputaria o banco com as conexões, o job rodaria no banco vazio e a API, que confere os metadados ao subir, ficaria reiniciando.
+5. Depois da carga, na VPS, a partir de `infra/`: `docker compose up -d --build`.
+
+**API só com leitura:** a API usa o usuário `firesync_api` (só `SELECT`, `statement_timeout` de 30 s), criado no roteiro de carga. Um erro na API não apaga dados, e uma consulta pesada não segura o pool. O pipeline e o job NRT usam o `firesync`, que escreve.
 
 **Rate limit atrás do túnel:** todo pedido chega na API vindo do container do `cloudflared`. Por isso o compose define `CLIENT_IP_HEADER=CF-Connecting-IP`, e a API conta os pedidos pelo IP real do usuário. Só use essa variável atrás de um proxy que sobrescreve o header. Sem proxy, qualquer cliente escolheria o próprio IP.
 

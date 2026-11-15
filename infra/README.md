@@ -11,6 +11,6 @@ Tudo o que põe o sistema no ar na VPS ([docs/arquitetura.md](../docs/arquitetur
 
 Regras que valem aqui:
 
-- Segredos (`POSTGRES_PASSWORD`, `FIRMS_MAP_KEY`, `CLOUDFLARE_TUNNEL_TOKEN`) só no `.env` da VPS, nunca no git.
+- Segredos (`POSTGRES_PASSWORD`, `API_DB_PASSWORD`, `FIRMS_MAP_KEY`, `CLOUDFLARE_TUNNEL_TOKEN`) só no `.env` da VPS, nunca no git.
 - As migrations ficam em `data-pipeline/migrations/` e são montadas no serviço `db`.
 - **O rate limit tem que ver o IP real do usuário:** atrás do túnel, todo pedido chega vindo do `cloudflared`. O compose define `CLIENT_IP_HEADER=CF-Connecting-IP` no serviço `api` ([deploy.md](../docs/deploy.md)). Sem isso, todos os usuários dividem o mesmo limite.
