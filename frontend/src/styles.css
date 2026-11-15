@@ -2561,3 +2561,8 @@ select {
   color: var(--ink-soft);
   font-size: 11px;
 }
+
+.assistant-msg__list {
+  margin: 4px 0;
+  padding-left: 18px;
+}

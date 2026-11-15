@@ -20,6 +20,40 @@ export function describeSource(source: AssistantSource): string {
   return `NASA FIRMS via firesync ${what}${where}${when} · data version ${source.data_version}`;
 }
 
+/** Bold spans in a line of the answer; the model writes light markdown and React escapes the rest. */
+function inline(line: string) {
+  return line.split(/\*\*(.+?)\*\*/g).map((part, index) => (index % 2 ? <strong key={index}>{part}</strong> : part));
+}
+
+/** Paragraphs and '-' / '*' bullet lists only: enough for the answers, no markdown dependency or raw HTML. */
+export function AnswerText({ text }: { text: string }) {
+  const blocks: { bullets: boolean; lines: string[] }[] = [];
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    const bullet = /^[-*•]\s+/.test(line);
+    const content = line.replace(/^[-*•]\s+/, '');
+    const last = blocks[blocks.length - 1];
+    if (last && last.bullets === bullet && bullet) last.lines.push(content);
+    else blocks.push({ bullets: bullet, lines: [content] });
+  }
+  return (
+    <>
+      {blocks.map((block, index) =>
+        block.bullets ? (
+          <ul key={index} className="assistant-msg__list">
+            {block.lines.map((line, item) => (
+              <li key={item}>{inline(line)}</li>
+            ))}
+          </ul>
+        ) : (
+          <p key={index}>{inline(block.lines[0])}</p>
+        ),
+      )}
+    </>
+  );
+}
+
 interface Turn {
   message: AssistantMessage;
   reply?: AssistantResponse;
@@ -145,7 +179,7 @@ export function AssistantBubble({ onShowCalendar }: Props) {
             <p className="assistant-msg assistant-msg--user">{turn.message.content}</p>
             {turn.reply && (
               <div className="assistant-msg">
-                <p>{turn.reply.answer}</p>
+                <AnswerText text={turn.reply.answer} />
                 {turn.reply.sources.length > 0 && (
                   <ul className="assistant-msg__sources" aria-label="Sources">
                     {turn.reply.sources.map((source) => (

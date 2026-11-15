@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AssistantBubble, SUGGESTED_QUESTIONS, describeSource } from './AssistantBubble';
+import { AnswerText, AssistantBubble, SUGGESTED_QUESTIONS, describeSource } from './AssistantBubble';
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -81,4 +81,14 @@ test('tab stays inside the open panel', () => {
   expect(close).toHaveFocus();
   fireEvent.keyDown(close, { key: 'Tab', shiftKey: true });
   expect(send).toHaveFocus();
+});
+
+test('answer markdown becomes paragraphs, bullets and bold without raw HTML', () => {
+  const { container } = render(
+    <AnswerText text={'Yes, **above** normal.\n\n- Peak: **September**\n- Low: February\n<img src=x onerror=alert(1)>'} />,
+  );
+  expect(container.querySelectorAll('li')).toHaveLength(2);
+  expect(container.querySelector('li strong')).toHaveTextContent('September');
+  expect(container.querySelector('p strong')).toHaveTextContent('above');
+  expect(container.querySelector('img')).toBeNull();
 });

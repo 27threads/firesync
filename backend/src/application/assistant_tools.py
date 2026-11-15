@@ -131,7 +131,7 @@ class Toolbox:
             return failure(error.code, str(error))
         except (TypeError, ValueError):
             return failure('invalid_arguments', 'Arguments do not match the tool parameters.')
-        for items, new in ((self.actions, actions), (self.notes, notes), (self.sources, [source])):
+        for items, new in ((self.actions, actions), (self.notes, notes), (self.sources, [source] if source else [])):
             items += [item for item in new if item not in items]
         self.results.append(result)
         return result
@@ -147,7 +147,7 @@ class Toolbox:
     def list_regions(self):
         with self.repository.read() as reader:
             regions = [pick(region, ('region_id', 'name')) for region in reader.regions()]
-        return regions, [], [], self.source('GET /api/v1/regions')
+        return regions, [], [], None  # a lookup of names: no figure in an answer comes from it
 
     def calendar(self, region_id, start=None, end=None):
         request = {'area': {'type': 'region', 'region_id': region_id},
