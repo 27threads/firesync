@@ -205,7 +205,7 @@ A fórmula é a de [importacao-regioes.md](importacao-regioes.md). Resumo do que
    - **`observed_viirs`:** `detections = soma das contagens brutas`. Sem faixa. De 2012-02 a 2026-10 é o S-NPP. De 2026-11 em diante é o NOAA-20, também somado **sem fator** (fator 1, decisão da frente B).
    - **`estimated_modis`:** para cada cenário `c` (ano de calibração), `detections_c = Σ bruto[bioma, periodo] × fator[bioma, Aqua→S-NPP, mes, periodo, c]`.
 4. Totais por ano, sazonalidade e anomalias são calculados **por cenário**. Só no fim: valor central = mediana dos cenários, faixa = percentis 5 e 95 por **interpolação linear** (o padrão do `numpy.percentile`). Com 13 cenários, o método muda o número, então ele vai escrito também no `metadata.json`.
-   - **O número de cenários não é fixo.** A API usa os anos de calibração que existem em `fatores_harmonizacao` (10 ou 13, conforme a validação, e janeiro tem um a menos). Nada no código assume uma quantidade.
+   - A quantidade de cenários e a regra para combinar meses com fatores ausentes, incluindo janeiro e os totais anuais, seguem [importacao-regioes.md, "Fórmula do calendário", itens 6 e 7](importacao-regioes.md#fórmula-do-calendário-para-refazer-a-partir-do-export-de-auditoria).
 5. Preenche com zero os meses sem linha e junta os dias sem dado.
 6. Para `recent`, soma as contagens diárias da área na janela atual e em todas as janelas de mesmo tamanho num raio de ±15 dias da mesma data, em cada ano de referência, e tira a mediana e o P25–P75 entre essas janelas.
 
@@ -431,7 +431,7 @@ A resposta também leva `ETag` com `updated_at`, para o navegador reaproveitar.
 
 | # | Ponto | Situação ou proposta | Quem decide |
 | --- | --- | --- | --- |
-| 1 | Nível de alerta (Normal / Atenção / Crítico) | Regra num `alert_rules.json` versionado, lido pela API. Validação com área queimada da NASA na issue #9 | Equipe, frentes B e C |
+| 1 | Nível de alerta (Normal / Atenção / Crítico) | Regra num `alert_rules.json` versionado, lido pela API. Validação por teste retroativo (solução A + B) em [validacao-alerta.md](validacao-alerta.md); área queimada da NASA fica como próximo passo (issue #9) | Equipe, frentes B e C |
 | 2 | Anos de referência da anomalia (RF12) | Todos os anos completos menos o próprio ano, fixo, independente do intervalo pedido | Equipe |
 | 3 | Medida da anomalia | Diferença absoluta e percentual contra a mediana. O RD06 pede "média de vários anos", então `indicators` usa a média | Equipe |
 | 4 | Linguagem e framework da API | Python, pela biblioteca `h3` e pelo código de consulta do [banco.md](banco.md) | Equipe (arquitetura, ponto 4) |
