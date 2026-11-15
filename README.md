@@ -113,7 +113,7 @@ Detalhes de cada etapa: [importacao-regioes.md](docs/importacao-regioes.md).
 - [x] Histórico do FIRMS baixado e análise por satélite ([pipeline-dados.md](docs/pipeline-dados.md))
 - [x] Importador, pipeline, agregação, job NRT e série do INPE ([pipeline-dados.md](docs/pipeline-dados.md))
 - [x] API HTTP C1–C6 (validação com dados sintéticos; conferência da carga real pelo Eduardo em [validacao-api-eduardo.md](docs/validacao-api-eduardo.md))
-- [x] Frontend (D1–D7 prontos e conferidos com a carga real no site no ar em 15/11; aviso antecipado D10 pronto no front, aguardando o deploy da API na VPS; a demo D8 segue pendente)
+- [x] Frontend (D1–D7 prontos e conferidos com a carga real no site no ar em 15/11; aviso antecipado D10 no ar, conferido com a API real em 15/11; a demo D8 segue pendente)
 - [ ] Deploy público
 - [ ] Demo e página do projeto
 
