@@ -29,7 +29,7 @@ O vídeo segue o arco **Problema → Decisão → Entrega (harmonização MODIS 
 | Ato | Tempo | O que aparece na tela (Ação do Comandante no App + Overlays em Inglês) | Fala em Português | Legenda em Inglês |
 | :--- | :--- | :--- | :--- | :--- |
 | **1. Problema** | **`0–4 s`** | Globo da NASA descendo para a Amazônia tomada por focos de calor.<br>**Topo:** `firesync · Team [Nome] · [Integrantes] · NASA Space Apps 2026: MODIS and VIIRS Hot Spots` | "O fogo avança na Amazônia. Com poucas brigadas, o comandante precisa decidir: onde agir primeiro?" | "Fire is spreading across the Amazon. With few brigades, the commander must decide: where to act first?" |
-| **2. Decisão (Hoje)** | **`4–9 s`** | Na aba `Fire now`, o comandante clica na área crítica em `Where to look first` e vê o alerta **`▲ More fire than usual`**. | "No firesync, um clique mostra onde o fogo de hoje já foge do normal." | "In firesync, one click shows where today's fire is already above normal." |
+| **2. Decisão (Hoje)** | **`4–9 s`** | Na aba `Fire now`, o comandante clica na área crítica em `Where to look first` e vê o alerta **`▲ More fire than usual`**. | "No firesync, um clique aponta na hora quais áreas estão em estado crítico hoje." | "In firesync, one click immediately pinpoints which areas are in critical state today." |
 | **3. Entrega (Harmonização MODIS+VIIRS + Risco 14d)** | **`9–18 s`** | • **`9–14 s`:** Abre o **Calendário de 24 anos** com a faixa de incerteza visível.<br>• **`14–18 s`:** Clica na aba `Risk, next 14 days`, destacando onde posicionar as equipes. | "Isso só é possível porque harmonizamos 24 anos dos satélites MODIS e VIIRS da NASA numa série única — que alimenta o calendário histórico e o risco para 14 dias." | "That's possible because we harmonized 24 years of NASA's MODIS and VIIRS sensors into one series—powering the historical calendar and 14-day risk map." |
 | **4. Prova** | **`18–23 s`** | Zoom nas áreas `Very high risk` da Amazônia.<br>**Selo na tela:** `Tested on Amazon 2021–2024 (trained only on past years)` | "Nos testes, esse mapa avisou, em geral 10 dias antes, metade dos começos de fogo importante da Amazônia — dando tempo de agir antes que o fogo espalhe." | "In tests, this map warned usually 10 days ahead on half of the Amazon's significant fire outbreaks—giving time to act before fire spreads." |
 | **5. Impacto (Aspiracional Global)** | **`23–30 s`** | Mapa de risco escurecido abrindo para o globo terrestre.<br>**Centro (grande):** `Could mean ~290,000 ha & 3.8M t CO₂ less`<br>**Abaixo:** `in a year like 2024 (June–August) · pilot hypothesis · built to scale worldwide`<br>**Rodapé:** `Team [Nome]: [Integrantes] · Data: NASA FIRMS (MODIS, VIIRS), GIBS, INPE/AEB · firesync.nogranlabs.com.br` | "Com brigadas em campo, isso pode significar 290 mil hectares a menos queimados — começando na Amazônia para proteger florestas no mundo inteiro." | "With brigades on the ground, that could mean 290,000 fewer hectares burned—starting in the Amazon to help protect forests worldwide." |
@@ -38,7 +38,7 @@ O vídeo segue o arco **Problema → Decisão → Entrega (harmonização MODIS 
 
 > **[0–4 s · Problema]** "O fogo avança na Amazônia. Com poucas brigadas, o comandante precisa decidir: onde agir primeiro?"
 >
-> **[4–9 s · Decisão]** "No firesync, um clique mostra onde o fogo de hoje já foge do normal."
+> **[4–9 s · Decisão]** "No firesync, um clique aponta na hora quais áreas estão em estado crítico hoje."
 >
 > **[9–18 s · Entrega]** "Isso só é possível porque harmonizamos 24 anos dos satélites MODIS e VIIRS da NASA numa série única — que alimenta o calendário histórico e o risco para 14 dias."
 >
@@ -51,7 +51,7 @@ O vídeo segue o arco **Problema → Decisão → Entrega (harmonização MODIS 
 A voz nunca lê o que está escrito nos botões: ela narra a decisão do comandante enquanto o cursor mostra a resposta acontecendo na tela:
 
 - **`0–4 s` (Problema):** A descida do globo 3D (`OrbitalOpening`, camada `BlueMarble` do NASA GIBS com os modelos do Aqua e do Suomi NPP) até o mapa prende a atenção visual enquanto o cabeçalho já entrega o nome da equipe, os integrantes e o desafio sem gastar tempo de locução.
-- **`4–9 s` (Decisão):** O clique em `"Where to look first"` (`EarlyWarning.tsx`) centraliza o mapa na célula crítica e exibe o veredito simples `"▲ More fire than usual"` (`Verdict.tsx`), provando que a interface responde em segundos para quem está sob pressão (RD07).
+- **`4–9 s` (Decisão):** O clique em `"Where to look first"` (`EarlyWarning.tsx`) centraliza o mapa na célula `Critical` e exibe o veredito simples `"▲ More fire than usual"` (`Verdict.tsx`), provando que a interface responde em segundos para quem está sob pressão (RD07).
 - **`9–18 s` (Entrega):** Mostra a conexão direta entre o núcleo do desafio (o calendário harmonizado `CalendarSvg.tsx` em paleta `cividis` com hachura e faixa P5–P95 nos meses do MODIS) e a preparação para as próximas duas semanas (as faixas de risco de 14 dias).
 - **`18–23 s` (Prova):** Coloca a antecedência (`10 dias antes`) na frente, explicando por que o aviso antecipado permite à brigada agir antes que o fogo se espalhe.
 - **`23–30 s` (Impacto Global):** O mapa de risco permanece ao fundo (escurecido para leitura) enquanto os números de potencial (`~290,000 ha & 3.8M t CO₂ less`) ficam grandes no centro da tela e o rodapé fecha os créditos dos dados abertos da NASA (`FIRMS`, `GIBS`) e da agência parceira (`INPE/AEB`).
@@ -68,8 +68,8 @@ the commander must decide: where to act first?
 
 2
 00:00:04,000 --> 00:00:09,000
-In firesync, one click shows where today's fire
-is already above normal.
+In firesync, one click immediately pinpoints
+which areas are in critical state today.
 
 3
 00:00:09,000 --> 00:00:18,000
