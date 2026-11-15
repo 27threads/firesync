@@ -457,29 +457,29 @@ select {
   }
 }
 
-@media (max-width: 700px) {
-  .opening__copy {
-    top: 100px;
-  }
-  .opening__kicker {
-    display: none;
-  }
-  /* No celular o crédito cai em cima do globo: fundo claro para continuar legível. */
-  .opening__credit {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: var(--radius);
-    background: rgba(255, 255, 255, 0.88);
-  }
-  .opening__brand {
-    margin-top: 0;
-  }
-  .opening__chapter {
-    min-height: 0;
-  }
-  .opening__foot {
-    left: var(--gutter);
-  }
+/* Celular e tablet em pé: texto em cima, globo embaixo. O data-layout vem de openingLayout (globeTransition.ts),
+   a mesma regra que enquadra o globo na cena. */
+.opening[data-layout='stacked'] .opening__copy {
+  top: 100px;
+}
+.opening[data-layout='stacked'] .opening__kicker {
+  display: none;
+}
+/* O crédito cai em cima do globo: fundo claro para continuar legível. */
+.opening[data-layout='stacked'] .opening__credit {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.88);
+}
+.opening[data-layout='stacked'] .opening__brand {
+  margin-top: 0;
+}
+.opening[data-layout='stacked'] .opening__chapter {
+  min-height: 0;
+}
+.opening[data-layout='stacked'] .opening__foot {
+  left: var(--gutter);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1102,6 +1102,10 @@ select {
 
 .ctl-btn--primary:hover {
   background: #f3b452;
+}
+
+.ctl-btn[type='submit'] {
+  text-align: center;
 }
 
 .controls__hint {
@@ -1731,7 +1735,7 @@ select {
   overflow: visible;
 }
 
-.calendar-scroll .calendar-svg-root {
+.calendar-scroll .calendar-svg-root[data-layout='wide'] {
   min-width: 660px;
 }
 
@@ -2038,6 +2042,13 @@ select {
   background: #fff;
 }
 
+.method__figure-full {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
 .dia-axis line {
   stroke: var(--rule-strong);
 }
@@ -2200,6 +2211,20 @@ select {
 
 /* ---------- Responsivo ---------- */
 
+/* Tela de toque: botões pequenos com pelo menos 44 px de área de toque. */
+@media (pointer: coarse) {
+  .opening__controls button,
+  .story__dot {
+    width: 44px;
+    height: 44px;
+  }
+  .leaflet-container.leaflet-touch .leaflet-bar a {
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+  }
+}
+
 @media (max-width: 1180px) {
   .ws-top {
     grid-template-columns: minmax(0, 1fr);
@@ -2314,6 +2339,112 @@ select {
   .method__diagram {
     padding: 16px;
   }
+}
+
+/* Modo simples: a resposta em uma frase, antes de qualquer número técnico. */
+.verdict {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 20px var(--gutter);
+  border-bottom: 1px solid var(--graphite-700);
+  border-left: 8px solid var(--verdict-color);
+  background: var(--verdict-bg);
+}
+
+.verdict--above {
+  --verdict-color: #c2410c;
+  --verdict-bg: #fff4ec;
+}
+
+.verdict--within {
+  --verdict-color: #4b535c;
+  --verdict-bg: var(--graphite-850);
+}
+
+.verdict--below {
+  --verdict-color: #1d5f8a;
+  --verdict-bg: #eef5fa;
+}
+
+.verdict__icon {
+  flex: none;
+  font-size: 32px;
+  line-height: 1.1;
+  color: var(--verdict-color);
+}
+
+.verdict__body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.verdict__area {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.verdict__headline {
+  margin: 0;
+  font-size: clamp(26px, 4vw, 38px);
+  line-height: 1.1;
+  color: var(--verdict-color);
+}
+
+.verdict__sentence {
+  margin: 0;
+  max-width: 60ch;
+  font-size: 17px;
+  color: var(--ink);
+}
+
+.verdict__why {
+  justify-self: start;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--amber-ink);
+}
+
+.controls__more {
+  border-top: 1px solid var(--rule);
+  padding-top: 8px;
+}
+
+.controls__more > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.controls__more-body {
+  display: grid;
+  gap: 16px;
+  padding-top: 8px;
+}
+
+.controls__more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.controls__more > summary::before {
+  content: '+';
+  width: 1.2em;
+  font-size: 18px;
+  color: var(--amber-ink);
+}
+
+.controls__more[open] > summary::before {
+  content: '−';
 }
 
 /* Assistant (RFC 0004): floating button and panel, bottom right, above the map. */

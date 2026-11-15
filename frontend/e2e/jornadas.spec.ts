@@ -88,6 +88,7 @@ test.describe('Jornadas do usuário', () => {
     await simularApi(page);
     const pedido = page.waitForRequest('**/api/v1/calendar');
     await page.goto('/');
+    await page.getByText(/more options/i).click();
     await page.getByLabel(/latitude/i).fill('-3.1');
     await page.getByLabel(/longitude/i).fill('-60.0');
     await page.getByLabel(/radius/i).fill('25');
@@ -100,6 +101,7 @@ test.describe('Jornadas do usuário', () => {
       coverage: { status: 'none', covered_fraction: 0, message: 'No data for this area yet. Current coverage: Brazil.' } };
     await simularApi(page, fora);
     await page.goto('/');
+    await page.getByText(/more options/i).click();
     await page.getByLabel(/latitude/i).fill('48.8');
     await page.getByLabel(/longitude/i).fill('2.3');
     await page.getByRole('button', { name: /search|show this area/i }).click();

@@ -5,21 +5,39 @@ import { buildCalendar, MONTH_NAMES, type CalendarCell } from './calendarModel';
 import { makeColorScale } from './colorScale';
 
 
-// Largura total = margem dos anos + 12 colunas + coluna de notas à direita.
+// wide: largura = margem dos anos + 12 colunas + coluna de notas à direita.
+// narrow (celular): o SVG tem quase a largura da tela, então o texto não encolhe; as notas vão para baixo da grade.
 export interface CalendarGeometry {
   width: number;
   grid: GridSpec;
+  layout: 'wide' | 'narrow';
 }
 
 export const HERO_GEOMETRY: CalendarGeometry = {
   width: 652,
   grid: { left: 38, top: 22, cellWidth: 38.5, cellHeight: 16, gap: 2 },
+  layout: 'wide',
 };
 
 export const FULL_GEOMETRY: CalendarGeometry = {
   width: 960,
   grid: { left: 46, top: 24, cellWidth: 60, cellHeight: 20, gap: 2 },
+  layout: 'wide',
 };
+
+export const HERO_NARROW_GEOMETRY: CalendarGeometry = {
+  width: 350,
+  grid: { left: 36, top: 20, cellWidth: 24, cellHeight: 13, gap: 2 },
+  layout: 'narrow',
+};
+
+export const FULL_NARROW_GEOMETRY: CalendarGeometry = {
+  width: 350,
+  grid: { left: 36, top: 22, cellWidth: 24, cellHeight: 18, gap: 2 },
+  layout: 'narrow',
+};
+
+const BELOW_NOTES_HEIGHT = 32;
 
 interface CalendarSvgProps {
   months: CalendarMonth[];
@@ -43,8 +61,8 @@ export function gridBottomOf(spec: GridSpec, rows: number): number {
   return rowY(spec, rows) - spec.gap;
 }
 
-export function calendarHeight(spec: GridSpec, rows: number): number {
-  return gridBottomOf(spec, rows) + 14;
+export function calendarHeight(geometry: CalendarGeometry, rows: number): number {
+  return gridBottomOf(geometry.grid, rows) + 14 + (geometry.layout === 'narrow' ? BELOW_NOTES_HEIGHT : 0);
 }
 
 function rowY(spec: GridSpec, row: number): number {
@@ -79,8 +97,9 @@ export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function 
   const rows = model.years.length;
   const gw = gridWidth(grid);
   const gridBottom = gridBottomOf(grid, rows);
-  const height = calendarHeight(grid, rows);
+  const height = calendarHeight(geometry, rows);
   const noteX = grid.left + gw + 14;
+  const narrow = geometry.layout === 'narrow';
 
   const allCells = model.years.flatMap((row) => row.cells);
   const firstRealKey = allCells.find((c) => c.month)?.key ?? null;
@@ -161,6 +180,7 @@ export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function 
       aria-rowcount={interactive ? rows + 1 : undefined}
       data-first-year={firstYear}
       data-rows={rows}
+      data-layout={geometry.layout}
     >
       <defs>
         <pattern id={hatchId} width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
@@ -309,7 +329,18 @@ export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function 
 
       <g className="cal-decor" data-decor="notes" aria-hidden="true">
         {switchPath && <path className="cal-switch" d={switchPath} data-decor="switch" />}
-        {hasEstimated && sw && (
+        {narrow && hasEstimated && sw && (
+          <text className="cal-note" x={grid.left} y={gridBottom + 22}>
+            <tspan className="cal-note--strong">Above the line:</tspan> estimated from MODIS Aqua
+          </text>
+        )}
+        {narrow && hasObserved && (
+          <text className="cal-note" x={grid.left} y={gridBottom + (sw && hasEstimated ? 38 : 22)}>
+            <tspan className="cal-note--strong">{sw && hasEstimated ? `From ${MONTH_NAMES[sw.monthIndex]} ${sw.year}:` : 'Observed'}</tspan>
+            {sw && hasEstimated ? ' observed by VIIRS' : ' by VIIRS'}
+          </text>
+        )}
+        {!narrow && hasEstimated && sw && (
           <>
             <path className="cal-bracket" d={`M${noteX} ${grid.top} H${noteX + 6} V${rowY(grid, switchRow) + grid.cellHeight - 2} H${noteX}`} />
             <text className="cal-note cal-note--strong" x={noteX + 12} y={grid.top + 10}>
@@ -326,7 +357,7 @@ export const CalendarSvg = forwardRef<SVGSVGElement, CalendarSvgProps>(function 
             </text>
           </>
         )}
-        {hasObserved && (
+        {!narrow && hasObserved && (
           <>
             <path
               className="cal-bracket"

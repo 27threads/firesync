@@ -29,8 +29,8 @@ Em **Workers & Pages → firesync-prd → Settings → Build**:
 
 - O `VITE_API_URL` é uma variável de **build**, não de runtime: ela entra no JavaScript na hora do `vite build`. Mudou o valor, faça um novo deploy.
 - Toda variável `VITE_` fica pública no JavaScript. Segredo nunca vai em `VITE_`.
+- Os headers de segurança (CSP, HSTS, `nosniff`) ficam em `frontend/public/_headers`. Uma origem nova no front (outro servidor de tiles, por exemplo) precisa entrar no CSP desse arquivo. O `connect-src` tem `blob:` porque o GLTFLoader busca as texturas dos satélites da abertura por URLs `blob:`; sem ele os modelos saem brancos. O `npm run dev` não aplica esse arquivo, então erro de CSP só aparece no site no ar.
 - `VITE_ENABLE_ASSISTANT=true` mostra a bolinha do assistente ([RFC 0004](rfcs/0004-assistente-virtual.md)). Sem ela, o site sai igual. Só ligue depois de pôr `ASSISTANT_PROVIDERS` no `.env` da VPS.
-- Os headers de segurança (CSP, HSTS, `nosniff`) ficam em `frontend/public/_headers`. Uma origem nova no front (outro servidor de tiles, por exemplo) precisa entrar no CSP desse arquivo.
 
 ## Banco, API e jobs na VPS
 

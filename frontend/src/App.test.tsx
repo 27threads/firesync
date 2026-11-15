@@ -52,6 +52,26 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: /audit package/i })).toBeDisabled();
   });
 
+  it('answers in plain words first: more, about the same or less fire than usual', async () => {
+    offline();
+    render(<App />);
+    // Exemplo do contrato: 61 detecções contra a faixa típica de 35,2 a 45,5.
+    const verdict = await screen.findByRole('region', { name: /fire right now/i });
+    expect(within(verdict).getByRole('heading', { name: 'More fire than usual' })).toBeInTheDocument();
+    expect(verdict).toHaveTextContent('satellites spotted 61 hot spots');
+  });
+
+  it('keeps coordinates and period under More options, closed at first, and the region choice in sight', async () => {
+    offline();
+    render(<App />);
+    const more = (await screen.findByLabelText(/latitude/i)).closest('details');
+    expect(more).not.toBeNull();
+    expect(more).not.toHaveAttribute('open');
+    expect(within(more!).getByText(/more options/i)).toBeInTheDocument();
+    expect(within(more!).getByLabelText(/^from$/i)).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /region/i }).closest('details')).toBeNull();
+  });
+
   it('draws the opening preview with the same months, outside the calendar grid', async () => {
     offline();
     render(<App />);
