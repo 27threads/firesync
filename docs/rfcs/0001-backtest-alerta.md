@@ -71,21 +71,22 @@ Tudo em `numpy`, vetorizado por unidade. Para cada semana, `t` é o último dia 
 | Função | Entrada → saída |
 | --- | --- |
 | `somas_moveis(m, k)` | matriz diária → soma dos `k` dias terminando em cada dia (`cumsum`) |
-| `indices_normal(t, anos, raio=15)` | dia `t` → índices do mesmo dia do ano, deslocado de −15 a +15, **nos outros anos** (exclui o ano de `t`) |
+| `indices_normal(t, raio, anos, ano_excluido)` | dia `t` → índices do mesmo dia do ano, deslocado de −15 a +15, **nos outros anos** (o nível exclui o ano de `t`) |
+| `indices_gabarito(t, raio, anos)` | o mesmo para o normal do gabarito, centrado em `t+14` e excluindo o ano de `t+14` (no fim de dezembro, é o ano seguinte; issue #59) |
 | `normal(s, idx)` | somas móveis + índices → mediana, P75, P90 por unidade |
 | `nivel(s7, s3, s3_antes, normal7, regra)` | → 0 Normal, 1 Atenção, 2 Crítico |
 | `gabarito(s14_depois, p90_14, minimo=10)` | → bool "muito fogo" |
 | `medidas(niveis, gabarito)` | → frequência, acerto, cobertura, alarme falso, estabilidade |
-| `ingenua_mesma_frequencia(s7, normal7, gabarito, freq_alvo)` | percentil da ingênua ajustado até dar a frequência da regra → acerto |
+| `alerta_mesma_frequencia(score, freq_alvo)` | a ingênua com o mesmo número de alertas da regra: as `k` semanas de maior `(s7 + 1) / (P90 + 1)`. **Mudança na implementação:** o RFC previa ajustar o percentil da ingênua, mas com empates o percentil não chega à frequência exata; ordenar pelo score dá exatamente `k` alertas |
 
 **Janelas:** as definidas em "Janelas" no [validacao-alerta.md](../validacao-alerta.md). Na matriz de somas móveis, o nível lê `s7[t]`, a tendência compara `s3[t] > s3[t−3]` e o gabarito lê `s14[t+14]`. A soma de 14 dias que termina em `t+14` começa em `t+1`.
 
 **Nível** (regra `0.2`, com os parâmetros vindos da grade):
-- **Crítico:** `s7 ≥ razao × mediana` **e** (se a tendência estiver ligada) `s3[t] > s3[t−3]`. Com mediana zero, vale `s7 ≥ 10` (mesmo piso do gabarito; ver "Perguntas em aberto").
+- **Crítico:** `s7 ≥ razao × mediana` **e** (se a tendência estiver ligada) `s3[t] > s3[t−3]`. O piso de 10 detecções (o mesmo do gabarito) roda em duas versões: **só na mediana zero** (`s7 ≥ 10` onde a mediana é zero) e **contínuo** (`s7 ≥ max(razao × mediana, 10)` sempre, sem o degrau da mediana baixa; issue #59).
 - **Atenção:** não é Crítico e `s7 > P75` (ou P90, conforme a grade).
 - **Normal:** o resto.
 
-**Grade:** razão em {1,5; 2; 2,5; 3} × tendência {ligada, desligada} × Atenção em {P75, P90} = 16 regras, mais a `0.2` marcada. O P90 e o piso de 10 do gabarito também rodam com {P80, P95} e {5, 20}, para mostrar a sensibilidade.
+**Grade:** razão em {1,5; 2; 2,5; 3} × tendência {ligada, desligada} × Atenção em {P75, P90} × piso {só na mediana zero, contínuo} = 32 regras, mais a `0.2` marcada (piso só na mediana zero). O P90 e o mínimo de 10 do gabarito também rodam com {P80, P95} e {5, 20} nas duas versões do piso da regra atual, para mostrar a sensibilidade.
 
 **Medidas por regra** (sobre todas as semanas × unidades):
 - frequência de cada nível;
@@ -117,7 +118,7 @@ nome,regiao,inicio,fim,fonte_url,fonte_descricao
 - Lugar = `regiao`, o nome do bioma em `regioes` (o id muda de um banco para outro). UF ou polígono menor ficam para depois.
 - **Nenhuma linha sem `fonte_url` oficial** (INPE, decreto de emergência, relatório do governo). O script recusa linha sem fonte.
 - Candidatos: Pantanal 2020, Amazônia ago/2019, Pantanal 2024 (início antecipado), Amazônia e Cerrado 2024.
-- Antecedência = semanas entre a primeira semana em Atenção ou Crítico (nas 8 semanas antes do `inicio`) e o `inicio`.
+- Antecedência = dias (e semanas cheias) entre o primeiro domingo em Atenção ou Crítico (nas 8 semanas antes do `inicio`) e o `inicio`. **Vazia** quando não houve alerta, para não se confundir com "menos de 7 dias" (issue #59).
 
 ### 5. Autoteste (`test_backtest_alerta.py`, sem banco)
 
@@ -164,5 +165,5 @@ Branch nova `a-backtest-alerta`, a partir da `main` depois do merge do PR #42 e 
 
 1. **Ganho mínimo** (frente B): qual o tamanho do ganho para a `v1` valer? O documento já fixa "positivo no total e em pelo menos 7 dos 12 anos", mas falta o valor mínimo.
 2. **Definição da tendência** (frentes B e C): o `alert_rules.json` diz `trend_days: 3` e `requires_rising_trend: true`, mas não diz contra o quê. Este RFC usa "últimos 3 dias > 3 dias anteriores". A API precisa usar a mesma conta.
-3. **Mediana zero** (frente B): Crítico só com `s7 ≥ 10` é aceitável, ou o lugar fica sempre Normal?
+3. **Piso** (frente B, issue #59): piso só na mediana zero ou contínuo? As duas versões estão na grade.
 4. **Semana fixa (domingo) ou deslizante:** o RFC usa o domingo para não contar semanas sobrepostas duas vezes. Se a frente B preferir dia a dia, o custo sobe 7 vezes.

@@ -37,6 +37,7 @@ PISO_MEDIANA_ZERO = 10  # Crítico onde o normal é zero: mesmo piso do gabarito
 RAZOES = (1.5, 2.0, 2.5, 3.0)
 TENDENCIAS = (True, False)
 ATENCOES = (75, 90)
+PISOS_CONTINUOS = (False, True)  # piso só na mediana zero ou contínuo (issue #59)
 GABARITO = (90, 10)  # percentil do normal de 14 dias e mínimo de detecções
 SENSIBILIDADE = ((80, 10), (95, 10), (90, 5), (90, 20))
 ANOS_COM_GANHO_MIN = 7  # regra de decisão: ganho positivo no total e em pelo menos 7 dos 12 anos
@@ -83,6 +84,12 @@ def indices_normal(t, raio, anos, ano_excluido):
     return np.array(idx)
 
 
+def indices_gabarito(t, raio, anos):
+    """Normal do gabarito (14 dias até t+14). Exclui o ano de t+14: no fim de dezembro ele é o ano seguinte."""
+    fim = t + timedelta(JANELA_GABARITO)
+    return indices_normal(fim, raio, anos, fim.year)
+
+
 def avaliar(m, regra):
     """Somas e normal de cada domingo e unidade -> (semanas, dict de arrays semana x unidade)."""
     base, crit = regra["baseline"], regra["levels"]["critical"]
@@ -95,8 +102,7 @@ def avaliar(m, regra):
     for w, t in enumerate(semanas):
         i, j = (t - INICIO).days, (t - INICIO).days + JANELA_GABARITO
         ref7 = s7[:, [k for k in indices_normal(t, raio, anos, t.year) if not np.isnan(s7[0, k])]]
-        ref14 = s14[:, [k for k in indices_normal(t + timedelta(JANELA_GABARITO), raio, anos, t.year)
-                        if not np.isnan(s14[0, k])]]
+        ref14 = s14[:, [k for k in indices_gabarito(t, raio, anos) if not np.isnan(s14[0, k])]]
         a["s7"][w] = s7[:, i]
         a["med7"][w], a["p75"][w], a["p90"][w] = np.percentile(ref7, [50, 75, 90], axis=1)
         a["sobe"][w] = s3[:, i] > s3[:, i - kt]
@@ -107,9 +113,16 @@ def avaliar(m, regra):
     return semanas, a
 
 
-def nivel(a, razao, tendencia, atencao, piso):
-    """0 Normal, 1 Atenção, 2 Crítico (regra do alert_rules.json com os parâmetros da grade)."""
-    critico = np.where(a["med7"] > 0, a["s7"] >= razao * a["med7"], a["s7"] >= piso)
+def nivel(a, razao, tendencia, atencao, piso, piso_continuo=False):
+    """0 Normal, 1 Atenção, 2 Crítico (regra do alert_rules.json com os parâmetros da grade).
+
+    Piso só na mediana zero: Crítico com s7 >= piso onde o normal é zero e s7 >= razao x mediana no resto.
+    Piso contínuo (issue #59): s7 >= max(razao x mediana, piso) sempre, sem o degrau da mediana baixa.
+    """
+    if piso_continuo:
+        critico = a["s7"] >= np.maximum(razao * a["med7"], piso)
+    else:
+        critico = np.where(a["med7"] > 0, a["s7"] >= razao * a["med7"], a["s7"] >= piso)
     if tendencia:
         critico &= a["sobe"]
     return np.where(critico, 2, np.where(a["s7"] > a[f"p{atencao}"], 1, 0))
@@ -152,9 +165,10 @@ def regras(regra):
     """A grade, com a regra atual do alert_rules.json marcada."""
     crit = regra["levels"]["critical"]
     atual = (crit["min_ratio_to_median"], crit["requires_rising_trend"], regra["levels"]["attention"]["above_percentile"])
-    for r, t, at in itertools.product(RAZOES, TENDENCIAS, ATENCOES):
-        yield {"regra": f"razao{r}_tend{int(t)}_atencao_p{at}", "razao": r, "tendencia": t, "atencao": at,
-               "regra_atual": (r, t, at) == atual}
+    for r, t, at, pc in itertools.product(RAZOES, TENDENCIAS, ATENCOES, PISOS_CONTINUOS):
+        yield {"regra": f"razao{r}_tend{int(t)}_atencao_p{at}" + ("_piso_continuo" if pc else ""), "razao": r,
+               "tendencia": t, "atencao": at, "piso_continuo": pc, "regra_atual": (r, t, at, pc) == (*atual, False),
+               "variante_da_atual": (r, t, at) == atual}
 
 
 def tabela(semanas, a, regra, colunas=None):
@@ -166,10 +180,10 @@ def tabela(semanas, a, regra, colunas=None):
         sub = {k: v[:, sel] for k, v in a.items()}
         gab = gabarito(sub, *GABARITO)
         for r in regras(regra):
-            niv = nivel(sub, r["razao"], r["tendencia"], r["atencao"], PISO_MEDIANA_ZERO)
+            niv = nivel(sub, r["razao"], r["tendencia"], r["atencao"], PISO_MEDIANA_ZERO, r["piso_continuo"])
             linhas.append({"unidade": nome, **r, "p_gabarito": GABARITO[0], "minimo": GABARITO[1],
                            **medidas(niv, gab, sub["score"], anos[:, sel])})
-            if r["regra_atual"] and colunas is None:
+            if r["variante_da_atual"] and colunas is None:  # sensibilidade nas duas versões do piso
                 for p, mn in SENSIBILIDADE:
                     linhas.append({"unidade": nome, **r, "p_gabarito": p, "minimo": mn,
                                    **medidas(niv, gabarito(sub, p, mn), sub["score"], anos[:, sel])})
@@ -192,14 +206,17 @@ def eventos(ev, unidades, semanas, a, niv):
     """Nível semana a semana em cada evento (bioma inteiro) e a antecedência do primeiro alerta antes do início."""
     linhas = []
     for e in ev.itertuples():
+        if e.regiao not in list(unidades):
+            raise ValueError(f"evento {e.nome}: região {e.regiao!r} não está em `regioes`")
         j = list(unidades).index(e.regiao)
         ini, fim = e.inicio.date(), e.fim.date()
         sel = [(w, t) for w, t in enumerate(semanas) if ini - timedelta(weeks=SEMANAS_ANTES_DO_EVENTO) <= t <= fim]
         alertas = [t for w, t in sel if t < ini and niv[w, j] >= 1]
-        antecedencia = (ini - min(alertas)).days // 7 if alertas else 0
+        dias = (ini - min(alertas)).days if alertas else None  # vazio = nenhum alerta nas semanas antes
         linhas += [{"evento": e.nome, "regiao": e.regiao, "semana": t, "nivel": int(niv[w, j]),
                     "detections": float(a["s7"][w, j]), "typical_median": float(a["med7"][w, j]),
-                    "antecedencia_semanas": antecedencia} for w, t in sel]
+                    "antecedencia_dias": dias, "antecedencia_semanas": None if dias is None else dias // 7}
+                   for w, t in sel]
     return pd.DataFrame(linhas)
 
 

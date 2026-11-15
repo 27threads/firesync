@@ -116,3 +116,35 @@ def test_antecedencia_conta_semanas_entre_o_primeiro_alerta_e_o_inicio():
     linhas = bt.eventos(ev, np.array(["Pantanal"]), semanas, a, niv)
     assert len(linhas) == 12
     assert set(linhas["antecedencia_semanas"]) == {3}
+
+
+def test_normal_do_gabarito_nao_vaza_em_dezembro():
+    """Issue #59, item 1: com t no fim de dezembro, t+14 cai no ano seguinte, e esse ano tem que sair do normal."""
+    t = date(2018, 12, 23)
+    for i in bt.indices_gabarito(t, 15, range(2012, 2025)):
+        assert i < dia(t) + 1 or i - 13 > dia(t) + 14   # janela de 14 dias de referência fora de t+1..t+14
+
+
+def test_piso_continuo_tira_o_degrau_da_mediana_baixa():
+    """Issue #59, item 2: com mediana 1 e razão 2, bastavam 2 detecções; com o piso contínuo, precisa de 10."""
+    a = {"s7": np.array([[2.0, 10.0]]), "med7": np.ones((1, 2)), "p75": np.full((1, 2), 99.0),
+         "p90": np.full((1, 2), 99.0), "sobe": np.ones((1, 2), bool)}
+    assert bt.nivel(a, 2.0, True, 75, 10, piso_continuo=False).tolist() == [[2, 2]]
+    assert bt.nivel(a, 2.0, True, 75, 10, piso_continuo=True).tolist() == [[0, 2]]
+
+
+def test_evento_sem_alerta_tem_antecedencia_vazia_e_regiao_errada_avisa_o_evento():
+    """Issue #59, item 3: 0 semanas (alerta menos de 7 dias antes) não pode ser igual a "nenhum alerta"."""
+    inicio = date(2020, 7, 5)
+    semanas = [inicio + timedelta(weeks=i) for i in range(-8, 2)]
+    a = {"s7": np.ones((10, 1)), "med7": np.ones((10, 1))}
+    ev = pd.DataFrame({"nome": ["X"], "regiao": ["Pantanal"], "inicio": [pd.Timestamp(inicio)],
+                       "fim": [pd.Timestamp(inicio + timedelta(weeks=1))]})
+    linhas = bt.eventos(ev, np.array(["Pantanal"]), semanas, a, np.zeros((10, 1), int))
+    assert linhas["antecedencia_semanas"].isna().all() and linhas["antecedencia_dias"].isna().all()
+    niv = np.zeros((10, 1), int)
+    niv[7] = 2  # 1 semana antes = 7 dias
+    linhas = bt.eventos(ev, np.array(["Pantanal"]), semanas, a, niv)
+    assert set(linhas["antecedencia_dias"]) == {7} and set(linhas["antecedencia_semanas"]) == {1}
+    with pytest.raises(ValueError, match="X"):
+        bt.eventos(ev, np.array(["Cerrado"]), semanas, a, niv)
