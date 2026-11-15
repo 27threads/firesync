@@ -2,7 +2,7 @@
 
 Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir" precisa de um responsável e de uma escolha antes de alguém escrever código naquela parte.
 
-**Status:** falta só o cálculo da anomalia (ponto 13).
+**Status:** decisões dos pontos 1–13 registradas na tabela abaixo.
 
 ## Já decidido (vem dos outros documentos)
 
@@ -32,7 +32,7 @@ Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir"
 | 10 | Granularidade mostrada no calendário | mensal ou diária | Mensal no calendário; diária só na janela recente e no alerta ([requisitos.md](requisitos.md), seção 4) | equipe |
 | 11 | Onde roda o job NRT e a recarga SP | | Job NRT no serviço `job-nrt` do `docker compose` da VPS ([banco.md](banco.md)). A recarga SP ficou fora da submissão | frente A |
 | 12 | Hospedagem pública (front, API e banco) | VPS; Postgres gerenciado | VPS com `docker compose`, incluindo `focos` (decidido no PR #2, ver [banco.md](banco.md)) | frentes A e C |
-| 13 | Cálculo da anomalia (RF11, RF12) | mediana histórica, média de vários anos | mediana dos anos de referência, em todo lugar, com todos os anos completos menos o próprio ano (decidido em 15/11/2026, [api.md](api.md), "Decisões fechadas", itens 2 e 3; o ajuste do `indicators` é a issue #78) | equipe |
+| 13 | Cálculo da anomalia (RF11, RF12) | mediana histórica, média de vários anos | mediana dos anos de referência, em todo lugar, com todos os anos completos menos o próprio ano (decidido em 15/11/2026, [api.md](api.md), "Decisões fechadas", itens 2 e 3; implementação do indicador na issue #78) | equipe |
 
 Ao decidir um ponto, preencha a escolha e escreva abaixo, em uma ou duas frases, por que ela foi escolhida.
 

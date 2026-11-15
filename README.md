@@ -106,7 +106,7 @@ Detalhes de cada etapa: [importacao-regioes.md](docs/importacao-regioes.md).
 - [x] Levantamento do FIRMS e plano de extração
 - [x] Modelo de dados e processo de importação
 - [x] Dados de teste (Brasil, 2024)
-- [x] Stack e arquitetura definidas (pipeline, banco, API, front, mapa e gráficos decididos em [arquitetura.md](docs/arquitetura.md); falta só o ponto 13)
+- [x] Stack e arquitetura definidas (pipeline, banco, API, front, mapa e gráficos decididos em [arquitetura.md](docs/arquitetura.md))
 - [ ] Contrato da API ([api.md](docs/api.md) na `main`; falta A e D confirmarem, tarefa T02)
 - [x] Histórico do FIRMS baixado e análise por satélite ([pipeline-dados.md](docs/pipeline-dados.md))
 - [x] Importador, pipeline, agregação, job NRT e série do INPE ([pipeline-dados.md](docs/pipeline-dados.md))

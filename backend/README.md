@@ -55,7 +55,7 @@ Cada pedido lê metadados e dados em uma transação `REPEATABLE READ READ ONLY`
 
 - Área por região, Polygon/MultiPolygon ou ponto com raio geodésico, H3 6 e limite de 250.000 células. Frações usam áreas reais das células. `none` retorna somente `meta`, `area` e `coverage`; `partial` calcula apenas a parte coberta.
 - Histórico: satélite definido pela data, fatores somente no MODIS e cenários preservados até a mediana/P5–P95. A combinação segue a [decisão da equipe](../docs/importacao-regioes.md#fórmula-do-calendário-para-refazer-a-partir-do-export-de-auditoria).
-- Anomalias seguem a proposta vigente do contrato: referência independente do filtro, excluindo o próprio ano. Ausência de referência e denominador zero são `null`. `indicators.total_detections` soma os valores centrais mensais; o total anual preserva cenários e pode diferir.
+- Anomalias seguem a decisão do contrato: referência independente do filtro, excluindo o próprio ano. O indicador anual usa `reference_median`, com mediana dos anos de referência e percentual calculados por cenário antes do resumo final. Ausência de referência e denominador zero são `null`. `indicators.total_detections` soma os valores centrais mensais; o total anual preserva cenários e pode diferir.
 - Recente: `data_through` é o último dia de cobertura VIIRS comum aos biomas selecionados, inclusive dias cobertos com zero focos. Soma `agregados_diarios`, usa janelas de mesmo tamanho deslocadas de −15 a +15 dias, apenas anos anteriores com VIIRS, e interpolação linear para mediana/P25–P75. 29/02 usa 28/02 em ano comum. Janelas de referência que atravessam dias sem cobertura ou `dias_sem_dados` não entram; `n_windows` e `n_years` registram o suporte efetivo. Sem amostras, as estatísticas são `null`, não zero.
 - `n_high` vem de `focos`, porque a tabela diária não contém intensidade, na mesma transação e com os mesmos filtros/satélite. `high_share` é `null` com zero detecções. Falta de cobertura temporal no período histórico solicitado ou de cobertura VIIRS gera `500 internal_error`, sem detalhes internos.
 - Mapa: somente NRT, confiança nominal/alta, tipo 0 ou ausente no NRT, FRP positivo e um VIIRS por período. Pontos acima de 50.000 viram hexágonos H3 6, sem truncar; zoom escolhe H3 4/5/6 conforme o contrato. H3 sempre string e geometria GeoJSON em lon/lat. Limites de intensidade vêm do arquivo de regras; FRP não sai no JSON do mapa.
@@ -69,7 +69,7 @@ Na raiz, com o pacote instalado:
 # Unidade e contratos HTTP não precisam de servidor externo.
 python -m pytest backend/tests -q
 # Para incluir integração, configure TEST_DATABASE_URL com um PostGIS descartável.
-python -m pytest backend/tests -q --cov=backend/src --cov-branch --cov-fail-under=97.0
+python -m pytest backend/tests -q --cov=backend/src --cov-branch --cov-fail-under=97.1
 ruff check .
 vulture data-pipeline backend/src backend/vulture_whitelist.py --exclude 'tests,test_*.py' --min-confidence 60
 ```

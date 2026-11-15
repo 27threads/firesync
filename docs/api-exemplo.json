@@ -4111,7 +4111,7 @@
   "latest_complete_year": {
    "year": 2025,
    "detections": 4406.0,
-   "reference_mean": 7460.2,
+   "reference_median": 7460.2,
    "anomaly_pct": -0.409
   },
   "last_7_days_vs_typical_pct": 0.544

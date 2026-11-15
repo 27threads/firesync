@@ -39,7 +39,7 @@ Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele
 - [x] **RD05:** **Exportar um CSV** com os focos de calor encontrados na busca. ✅ `detections.csv` no ZIP até 500.000 focos inclusive; acima disso, omissão e contagem total nos metadados. Caso com 500.001 focos verificado em PostGIS sintético.
 - [x] **RD06:** **Indicadores principais** em destaque: ✅ Indicadores históricos e `last_7_days_vs_typical_pct` servidos pela API e exibidos no front.
   - número total de focos detectados e registrados
-  - anomalia em relação à média de vários anos
+  - anomalia em relação ao típico de vários anos (mediana, conforme decisão da equipe na issue #75 e no [contrato da API](api.md))
 - [x] **RD07:** Interface pensada para o **público-alvo**: equipes de alerta precoce, resposta a emergências, cientistas, gestores de terras e bombeiros. Precisa ser rápida de ler e de usar. ✅ Janela recente e mapa com 24/72/168 h, hexágonos ou pontos e classes `low`/`medium`/`high`, integrados à API; limite de 50.000 pontos troca para hexágonos sem truncamento.
 
 ## 3. Requisitos não funcionais (implícitos no texto)
