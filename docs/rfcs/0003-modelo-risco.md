@@ -219,7 +219,7 @@ O modelo é treinado só em domingos e usado em qualquer dia. Apliquei o modelo 
 | Sexta | 0,9484 | 0,0597 | 78,4% e 75,4% |
 | Sábado | 0,9481 | 0,0600 | 79,1% e 75,1% |
 
-A pior queda de AUC é de 0,0014 e a pior alta de Brier é de 1,4% (sábado), dentro dos limites: **o dia da semana não importa**. Sexta e sábado ficam um pouco piores, e sábado é o que mais se aproxima do limite de Brier.
+Ressalva: são 69 datas por dia da semana, de 3 em 3 semanas, **as mesmas semanas para os sete dias**; por isso a comparação entre os dias é justa, mas o AUC do domingo desta tabela (0,9495) não deve ser comparado com o das outras tabelas (por exemplo, 0,9479). A pior queda de AUC é de 0,0014 e a pior alta de Brier é de 1,4% (sábado), dentro dos limites: **o dia da semana não importa**. Sexta e sábado ficam um pouco piores, e sábado é o que mais se aproxima do limite de Brier.
 
 ### O dia de hoje, ainda incompleto
 
@@ -244,8 +244,8 @@ Na manhã, 0,92% das células descem uma faixa. Usar ontem é um pouco pior que 
 - Escala de célula H3 res 4, avaliação semanal, horizonte de 14 dias. Em escala mais fina ou horizonte mais longo, o resultado pode ser outro.
 - O gabarito mede detecções do VIIRS, não área queimada.
 - Só quatro anos de teste (2021 a 2024), com domingos. Falta testar 2025 e 2026 fora da amostra.
-- **Troca de satélite (S-NPP para NOAA-20):** o modelo foi treinado só com S-NPP. O banco guarda um satélite por mês e usa o NOAA-20 a partir de 01/11/2026, então a série que o job lê tem os dias mais recentes (os que mais pesam nas variáveis de 7, 14 e 30 dias) vindos do N20. **Não foi testado** se os dois contam o fogo do mesmo jeito. Os resultados de 2021 a 2024 valem para S-NPP. Pendente, com o Eduardo (issue 102).
-- **Dado em tempo real (NRT) contra dado de arquivo (SP):** o modelo foi treinado com arquivo e o job pontua com NRT, que é provisório. Não foi testado. Pendente (issue 102).
+- **Troca de satélite (S-NPP para NOAA-20): testada, sem prejuízo** (Eduardo, issue 102). O modelo foi treinado só com S-NPP, e o banco usa o NOAA-20 desde 01/11/2026. De abril de 2018 a 2024, o NOAA-20 vê 0,99 vez o S-NPP (0,97 a 1,03 por ano). Pontuando 69 domingos de 2021 a 2024 com o modelo treinado até 2020: só S-NPP, AUC 0,9490 e Brier 0,0592; **últimos 30 dias do NOAA-20 e o resto S-NPP (como na produção)**, AUC 0,9496 (+0,0007) e Brier 0,0586 (−0,9%); só NOAA-20, AUC 0,9483 e Brier 0,0600 (perde um pouco por não ter os anos antes de 2018). Dentro do critério (AUC −0,005 ou Brier +2%). Limite: o gabarito vem do S-NPP; não foi testado com o alvo pelo NOAA-20.
+- **Dado em tempo real (NRT) contra dado de arquivo (SP): não dá para testar hoje.** O modelo foi treinado com arquivo e o job pontua com NRT, que é provisório. O banco apaga o NRT quando o SP chega, e o SP do FIRMS só vai até 31/07/2026, onde o NRT começa (01/08). Não há período com os dois. Para testar, é preciso esperar o SP de agosto em diante, ou guardar o NRT de um período antes de o SP chegar.
 - **Atribuição de célula:** a série de teste usa `latlng_to_cell` e o banco usa o pai da célula de resolução 6, e cerca de 6% das detecções caem em célula diferente (achado da auditoria). As faixas e as taxas (82%, 46%, 27% e 3%) vêm da atribuição de teste e serão recalculadas com a do banco.
 - **Pantanal:** poucos dados (88 células) e um ano anômalo no treino. Interpretar com cautela.
 - O clima do NASA POWER tem grade de 0,5° × 0,625° (cerca de 55 km), maior que a célula.
