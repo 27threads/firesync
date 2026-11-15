@@ -25,7 +25,7 @@ class PostgresHistoryRepository:
                 with connection.cursor(row_factory=dict_row) as cursor:
                     return self._load(cursor, area)
 
-    def _load(self, cursor, area):
+    def _metadata(self, cursor):
         cursor.execute("SELECT chave, valor FROM config")
         config = {r['chave']: r['valor'] for r in cursor.fetchall()}
         try:
@@ -50,6 +50,11 @@ class PostgresHistoryRepository:
             raise CalendarError('invalid_data', 'No dataset coverage is available.')
         meta = {'data_version': config['data_version'], 'updated_at': config['atualizado_em'],
                 'h3_resolution': resolution, 'last_month': last_day.strftime('%Y-%m'), 'scale': 'VIIRS'}
+        return meta, config
+
+    def _load(self, cursor, area):
+        meta, config = self._metadata(cursor)
+        resolution = meta['h3_resolution']
         if area.type == 'region':
             cursor.execute('SELECT id FROM regioes WHERE id = %s', (area.region_id,))
             if cursor.fetchone() is None:
@@ -88,10 +93,7 @@ class PostgresHistoryRepository:
             sum(frp_soma) AS frp_sum FROM agregados WHERE h3 = ANY(%s::bigint[])
             GROUP BY regiao_id, ano, mes, satelite, periodo''', (covered_ids,))
         counts = tuple(cursor.fetchall())
-        cursor.execute('''SELECT regiao_id AS region_id, mes AS month, periodo AS daynight,
-            ano_calibracao AS calibration_year, fator AS factor FROM fatores_harmonizacao
-            WHERE regiao_id = ANY(%s::int[]) AND satelite_origem = 'Aqua' AND satelite_destino = 'SNPP' ''', (regions,))
-        factors = tuple(cursor.fetchall())
+        factors = self._factors(cursor, regions, meta['data_version'])
         cursor.execute('''SELECT regiao_id AS region_id, satelite AS satellite,
             data_inicio AS start, data_fim AS end FROM cobertura WHERE regiao_id = ANY(%s::int[])''', (regions,))
         periods = tuple(cursor.fetchall())
@@ -103,4 +105,11 @@ class PostgresHistoryRepository:
             FROM focos WHERE qualidade = 'NRT' AND h3 = ANY(%s::bigint[])
             AND confianca IN ('nominal','alta') AND (tipo = 0 OR tipo IS NULL) AND frp > 0''', (covered_ids,))
         provisional = frozenset((r['year'], r['month'], r['satellite']) for r in cursor.fetchall())
-        return HistorySnapshot(meta, selection, coverage, counts, factors, periods, missing, provisional)
+        return HistorySnapshot(meta, selection, coverage, counts, factors, periods, missing, provisional,
+                               tuple(h3.int_to_str(cell) for cell in covered_ids))
+
+    def _factors(self, cursor, regions, version):
+        cursor.execute('''SELECT regiao_id AS region_id, mes AS month, periodo AS daynight,
+            ano_calibracao AS calibration_year, fator AS factor FROM fatores_harmonizacao
+            WHERE regiao_id = ANY(%s::int[]) AND satelite_origem = 'Aqua' AND satelite_destino = 'SNPP' ''', (regions,))
+        return tuple(cursor.fetchall())

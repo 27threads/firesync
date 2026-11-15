@@ -434,4 +434,3 @@ A resposta também leva `ETag` com `updated_at`, para o navegador reaproveitar.
 | 1 | Nível de alerta (Normal / Atenção / Crítico) | Regra num `alert_rules.json` versionado, lido pela API. Validação por teste retroativo (solução A + B) em [validacao-alerta.md](validacao-alerta.md); área queimada da NASA fica como próximo passo (issue #9) | Equipe, frentes B e C |
 | 2 | Anos de referência da anomalia (RF12) | Todos os anos completos menos o próprio ano, fixo, independente do intervalo pedido | Equipe |
 | 3 | Medida da anomalia | Diferença absoluta e percentual contra a mediana. O RD06 pede "média de vários anos", então `indicators` usa a média | Equipe |
-| 4 | Linguagem e framework da API | Python, pela biblioteca `h3` e pelo código de consulta do [banco.md](banco.md) | Equipe (arquitetura, ponto 4) |
