@@ -22,17 +22,17 @@ Regras que tiram o projeto do julgamento se não forem cumpridas (ver [requisito
 
 ## Roteiro (30 s)
 
-Os nomes dos membros aparecem **escritos na tela**, não falados, para caber no tempo. A fala em inglês tem 63 palavras, perto do limite para 30 s num ritmo claro. A versão em português é um pouco mais longa, então fale sem pausas longas ou corte a última frase.
+Os nomes dos membros aparecem **escritos na tela**, não falados, para caber no tempo. A fala em inglês tem 60 palavras, perto do limite para 30 s num ritmo claro. A versão em português é um pouco mais longa, então fale sem pausas longas ou corte a última frase.
 
 | Tempo | Tela | Fala (inglês) | Fala (português) |
 | --- | --- | --- | --- |
-| 0–4 s | Título: **firesync** · nome da equipe · "NASA Space Apps 2026 · MODIS and VIIRS Hot Spots" | "When fires spread, response teams ask one question: is this normal?" | "Quando o fogo se espalha, as equipes de resposta perguntam uma coisa: isso é normal?" |
+| 0–4 s | Título: **firesync** · nome da equipe · "NASA Space Apps 2026 · MODIS and VIIRS Hot Spots" | "When fires spread, response teams ask: is this normal, and where next?" | "Quando o fogo se espalha, as equipes perguntam: isso é normal, e onde vai ser o próximo?" |
 | 4–10 s | Alguém desenha uma área na Amazônia, no mapa | "firesync answers in seconds. Draw any area in Brazil…" | "O firesync responde em segundos. Desenhe qualquer área do Brasil…" |
-| 10–18 s | O calendário aparece, de 2003 a 2026. Passar o mouse num mês estimado mostra a faixa | "…and see 24 years of fire activity: MODIS and VIIRS merged into one consistent series, with the uncertainty shown." | "…e veja 24 anos de fogo: MODIS e VIIRS unidos numa série só, com a incerteza à mostra." |
-| 18–25 s | Cartão "Last 7 days: +54% vs. typical" e o alerta | "The last seven days are compared with the same season in past years, so teams know when to act." | "Os últimos sete dias são comparados com a mesma época dos outros anos, para a equipe saber quando agir." |
-| 25–30 s | Créditos: nomes dos membros, "Data: NASA FIRMS (MODIS, VIIRS)", link do site | "Built on NASA FIRMS open data." | "Feito com os dados abertos do NASA FIRMS." |
+| 10–18 s | O calendário aparece, de 2003 a 2026. Passar o mouse num mês estimado mostra a faixa | "…and see 24 years of MODIS and VIIRS merged into one consistent calendar, uncertainty shown." | "…e veja 24 anos de MODIS e VIIRS unidos num calendário só, com a incerteza à mostra." |
+| 18–25 s | Mapa de risco dos próximos 14 dias, com as células "very high" em destaque. Rodapé na tela: "Amazon, 2021–2024 · top 5% of cells each week · NASA MCD64A1 burned area" | "Its 14-day risk map, tested on NASA burned-area data, put 40% of what burned in just 5% of cells." | "O mapa de risco de 14 dias, testado com a área queimada da NASA, achou 40% do que queimou em só 5% das células." |
+| 25–30 s | Créditos: nomes dos membros, "Data: NASA FIRMS (MODIS, VIIRS), NASA MCD64A1", link do site | "Built on NASA open data." | "Feito com dados abertos da NASA." |
 
-O número do cartão ("+54%") é do JSON de exemplo. Na gravação final, use o que o site mostrar com os dados reais.
+Os números do mapa de risco (40% da área queimada em 5% das células, 8 vezes mais que ao acaso) foram medidos na Amazônia, de 2021 a 2024, contra a área queimada MCD64A1 ([validacao-area-queimada.md](validacao-area-queimada.md)). Não falar em redução de queimadas: isso não foi medido. O cartão "últimos 7 dias contra o normal" e o alerta saíram do roteiro para caber em 30 s; continuam no site.
 
 ## Legenda em inglês (SRT)
 
@@ -41,7 +41,8 @@ Salvar como `pitch.en.srt` e subir junto com o vídeo. Os tempos se ajustam depo
 ```
 1
 00:00:00,000 --> 00:00:04,000
-When fires spread, response teams ask one question: is this normal?
+When fires spread, response teams ask:
+is this normal, and where next?
 
 2
 00:00:04,000 --> 00:00:10,000
@@ -49,17 +50,17 @@ firesync answers in seconds. Draw any area in Brazil...
 
 3
 00:00:10,000 --> 00:00:18,000
-...and see 24 years of fire activity: MODIS and VIIRS merged
-into one consistent series, with the uncertainty shown.
+...and see 24 years of MODIS and VIIRS merged
+into one consistent calendar, uncertainty shown.
 
 4
 00:00:18,000 --> 00:00:25,000
-The last seven days are compared with the same season
-in past years, so teams know when to act.
+Its 14-day risk map, tested on NASA burned-area data,
+put 40% of what burned in just 5% of cells.
 
 5
 00:00:25,000 --> 00:00:30,000
-Built on NASA FIRMS open data.
+Built on NASA open data.
 ```
 
 ## Como gravar
