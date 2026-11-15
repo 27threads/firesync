@@ -251,7 +251,7 @@ select {
 .opening {
   --journey-progress: 0;
   position: relative;
-  height: 300svh;
+  height: 380svh; /* 300svh da descida + 80svh de parada com o mapa em tela cheia (MAP_ARRIVAL_HOLD) */
   background: radial-gradient(ellipse at 65% 45%, #ffffff 0%, var(--graphite-950) 62%);
   color: var(--snow);
 }
