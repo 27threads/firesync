@@ -12,7 +12,9 @@ export interface CalendarCell {
   detections: number;
   estimated: boolean;
   incomplete: boolean;
+  provisional: boolean;
   label: string;
+  month: CalendarMonth | null; // null fora do intervalo pedido
 }
 
 export interface YearRow {
@@ -81,7 +83,9 @@ function emptyCell(year: number, monthIndex: number): CalendarCell {
     detections: 0,
     estimated: false,
     incomplete: false,
+    provisional: false,
     label: `${MONTH_NAMES[monthIndex]} ${year}: outside the selected period`,
+    month: null,
   };
 }
 
@@ -95,7 +99,9 @@ function toCell(month: CalendarMonth): CalendarCell {
     detections: month.detections,
     estimated: month.source === 'estimated_modis',
     incomplete: month.incomplete,
+    provisional: month.provisional,
     label: describe(month, position, state),
+    month,
   };
 }
 

@@ -215,6 +215,10 @@ def eventos(ev, unidades, semanas, a, niv):
 
     antecedencia_no_limite: o alerta já estava ligado na 1ª semana da janela; a antecedência real pode ser maior.
     alerta_continuo: o nível ficou em Atenção ou Crítico de o primeiro alerta até o último domingo antes do início.
+    antecedencia_continua_dias: dias desde o começo do trecho sem volta a Normal que chega ao último domingo antes do
+    início (vazio se esse domingo foi Normal); antecedencia_critico_continuo_dias: o primeiro Crítico desse trecho.
+    Frase da tela: "virou Crítico X dias antes e ficou em Atenção ou Crítico até o início".
+    continua_no_limite: o trecho começa na 1ª semana da janela; a antecedência real pode ser maior.
     """
     linhas = []
     for e in ev.itertuples():
@@ -228,10 +232,18 @@ def eventos(ev, unidades, semanas, a, niv):
         dias = (ini - min(alertas)).days if alertas else None  # vazio = nenhum alerta nas semanas antes
         no_limite = bool(antes) and antes[0][1]
         continuo = bool(alertas) and all(ligado for t, ligado in antes if t >= min(alertas))
+        trecho = []  # domingos seguidos em Atenção ou Crítico até o último antes do início
+        for w, t in sel:
+            if t < ini:
+                trecho = trecho + [(w, t)] if niv[w, j] >= 1 else []
+        criticos = [t for w, t in trecho if niv[w, j] == 2]
         linhas += [{"evento": e.nome, "regiao": e.regiao, "semana": t, "nivel": int(niv[w, j]),
                     "detections": float(a["s7"][w, j]), "typical_median": float(a["med7"][w, j]),
                     "antecedencia_dias": dias, "antecedencia_semanas": None if dias is None else dias // 7,
-                    "antecedencia_no_limite": no_limite, "alerta_continuo": continuo}
+                    "antecedencia_no_limite": no_limite, "alerta_continuo": continuo,
+                    "antecedencia_continua_dias": (ini - trecho[0][1]).days if trecho else None,
+                    "antecedencia_critico_continuo_dias": (ini - criticos[0]).days if criticos else None,
+                    "continua_no_limite": bool(trecho) and trecho[0][1] == antes[0][0]}
                    for w, t in sel]
     return pd.DataFrame(linhas)
 

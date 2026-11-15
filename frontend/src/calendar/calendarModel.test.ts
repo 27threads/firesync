@@ -63,6 +63,15 @@ describe('buildCalendar', () => {
     );
   });
 
+  it('keeps the provisional flag and the source month on each cell, for the marks and the detail panel', () => {
+    const nov = month({ month: '2026-11', detections: 146, incomplete: true, provisional: true });
+    const calendar = buildCalendar([nov]);
+    expect(calendar.years[0].cells[10].provisional).toBe(true);
+    expect(calendar.years[0].cells[10].month).toBe(nov);
+    expect(calendar.years[0].cells[11].month).toBeNull();
+    expect(calendar.years[0].cells[11].provisional).toBe(false);
+  });
+
   it('says how many days are missing when a month has gaps', () => {
     const calendar = buildCalendar([month({ month: '2026-09', detections: 2132, missing_days: 4, incomplete: true })]);
     expect(calendar.years[0].cells[8].label).toMatch(/4 days without satellite data/);

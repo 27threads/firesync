@@ -3,21 +3,22 @@ import type * as LTypes from 'leaflet';
 import { fetchRecentDetections } from '../api/client';
 import type {
   GeoJsonPolygon,
-  PointArea,
   RecentDetectionsResponse,
   RecentHours,
 } from '../api/types';
-import { bboxToPolygon, closePolygonRing, DEFAULT_MAP_BBOX } from './areaPeriodModel';
-import { loadLeafletWithGeoman, type LeafletModule } from './leafletLoader';
+import { bboxToPolygon, closePolygonRing, DEFAULT_MAP_BBOX } from '../controls/areaPeriodModel';
+import { loadLeafletWithGeoman, type LeafletModule } from '../controls/leafletLoader';
 import {
   computeHexagonDomain,
   formatHexagonTooltip,
   formatPointTooltip,
   styleForHexagon,
   styleForIntensityPoint,
-} from './recentDetectionsModel';
+} from '../controls/recentDetectionsModel';
+import type { MapShape } from '../state/useExplorer';
+import { shapeView } from './shapeView';
 
-export type BasemapId = 'carto-dark' | 'nasa-gibs';
+export type BasemapId = 'black-marble' | 'blue-marble';
 type DrawMode = 'rectangle' | 'polygon' | null;
 
 interface DragBox {
@@ -27,11 +28,16 @@ interface DragBox {
   height: number;
 }
 
-interface AreaMapProps {
-  focusBbox: [number, number, number, number] | null;
-  focusPoint: PointArea | null;
+interface MapStageProps {
+  shape: MapShape;
   onSelectPolygon: (geometry: GeoJsonPolygon) => void;
 }
+
+type DetectionsState = 'idle' | 'ready' | 'unavailable';
+
+// Contorno da seleção: linha escura larga por baixo e âmbar por cima, legível em qualquer mapa base.
+const HALO = { color: '#0d0f11', weight: 5, opacity: 0.85, fill: false, pmIgnore: true } as const;
+const OUTLINE = { color: '#e9a23b', weight: 2.5, fillColor: '#e9a23b', fillOpacity: 0.08, pmIgnore: true } as const;
 
 function isCoarsePointer(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -39,49 +45,48 @@ function isCoarsePointer(): boolean {
     : false;
 }
 
+const GIBS = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best';
+const GIBS_ATTRIBUTION =
+  'Imagery: <a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs">NASA EOSDIS GIBS</a> · Coastlines: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+// Mapas base do NASA GIBS, sem chave de API. Black Marble é o próprio VIIRS de noite: escuro e da NASA.
 function applyBasemapLayers(L: LeafletModule, group: LTypes.LayerGroup, basemap: BasemapId): void {
   group.clearLayers();
-  if (basemap === 'nasa-gibs') {
-    L.tileLayer(
-      'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg',
-      {
-        maxZoom: 19,
-        maxNativeZoom: 8,
-        attribution: 'Imagery: <a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs">NASA EOSDIS GIBS</a>',
-      },
-    ).addTo(group);
-    // Keep Reference_Features_15m only; Reference_Labels_15m produces black blocks in Leaflet.
-    L.tileLayer(
-      'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Reference_Features_15m/default/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png',
-      {
-        maxZoom: 19,
-        maxNativeZoom: 9,
-        opacity: 0.75,
-      },
-    ).addTo(group);
-    return;
-  }
-
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    subdomains: 'abcd',
-    maxZoom: 19,
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  const base =
+    basemap === 'black-marble'
+      ? `${GIBS}/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png`
+      : `${GIBS}/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg`;
+  L.tileLayer(base, { maxZoom: 12, maxNativeZoom: 8, attribution: GIBS_ATTRIBUTION }).addTo(group);
+  L.tileLayer(`${GIBS}/Coastlines_15m/default/GoogleMapsCompatible_Level13/{z}/{y}/{x}.png`, {
+    maxZoom: 12,
+    maxNativeZoom: 12,
+    opacity: 0.55,
   }).addTo(group);
 }
 
-function renderPolygonSelection(L: LeafletModule, group: LTypes.LayerGroup, geometry: GeoJsonPolygon): void {
+function renderShape(L: LeafletModule, group: LTypes.LayerGroup, shape: MapShape): LTypes.LatLngBounds | null {
   group.clearLayers();
-  const ring = geometry.coordinates[0];
-  if (!ring || ring.length < 3) return;
-  const latLngs: [number, number][] = ring.map(([lon, lat]) => [lat, lon]);
-  L.polygon(latLngs, {
-    color: '#f2a93b',
-    weight: 2,
-    fillColor: '#f2a93b',
-    fillOpacity: 0.16,
-    pmIgnore: true,
-  }).addTo(group);
+  if (shape.kind === 'polygon') {
+    const ring = shape.geometry.coordinates[0];
+    if (!ring || ring.length < 3) return null;
+    const latLngs: [number, number][] = ring.map(([lon, lat]) => [lat, lon]);
+    L.polygon(latLngs, HALO).addTo(group);
+    return L.polygon(latLngs, OUTLINE).addTo(group).getBounds();
+  }
+  if (shape.kind === 'point') {
+    const { lat, lon, radius_km } = shape.point;
+    L.circle([lat, lon], { ...HALO, radius: radius_km * 1000 }).addTo(group);
+    const circle = L.circle([lat, lon], { ...OUTLINE, radius: radius_km * 1000 }).addTo(group);
+    L.circleMarker([lat, lon], { radius: 3, color: '#e9a23b', fillColor: '#e9a23b', fillOpacity: 1, pmIgnore: true }).addTo(group);
+    return circle.getBounds();
+  }
+  const [west, south, east, north] = shape.bbox;
+  const corners: [[number, number], [number, number]] = [
+    [south, west],
+    [north, east],
+  ];
+  L.rectangle(corners, HALO).addTo(group);
+  return L.rectangle(corners, OUTLINE).addTo(group).getBounds();
 }
 
 function renderRecentDetections(
@@ -127,7 +132,7 @@ function renderRecentDetections(
   }
 }
 
-export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps) {
+export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const leafletRef = useRef<LeafletModule | null>(null);
@@ -138,18 +143,21 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
   const currentBboxRef = useRef<[number, number, number, number]>(DEFAULT_MAP_BBOX);
   const currentZoomRef = useRef<number>(4);
   const drawModeRef = useRef<DrawMode>(null);
-  const basemapRef = useRef<BasemapId>('carto-dark');
+  const basemapRef = useRef<BasemapId>('black-marble');
   const showHotSpotsRef = useRef<boolean>(true);
   const hotSpotsHoursRef = useRef<RecentHours>(24);
-  const detectionsAbortRef = useRef<AbortController | null>(null);
+  // Os pedidos de focos recentes nunca são cancelados: um contador descarta respostas antigas.
+  // Cancelar (a cada movimento ou ao desmontar, que o StrictMode faz em dev) jogava fora
+  // respostas já em trânsito.
+  const detectionsSeqRef = useRef(0);
   const moveDebounceRef = useRef<number | null>(null);
   const onSelectPolygonRef = useRef(onSelectPolygon);
   const suppressClickOnceRef = useRef(false);
   const initPromiseRef = useRef<Promise<void> | null>(null);
   const dragStartRef = useRef<{ clientX: number; clientY: number } | null>(null);
-  const lastDrawnPolygonRef = useRef<GeoJsonPolygon | null>(null);
+  const shapeRef = useRef<MapShape>(shape);
 
-  const [basemap, setBasemap] = useState<BasemapId>('carto-dark');
+  const [basemap, setBasemap] = useState<BasemapId>('black-marble');
   const [drawMode, setDrawMode] = useState<DrawMode>(null);
   const [polygonPoints, setPolygonPoints] = useState<[number, number][]>([]);
   const [dragBox, setDragBox] = useState<DragBox | null>(null);
@@ -157,6 +165,7 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
   const [showHotSpots, setShowHotSpots] = useState<boolean>(true);
   const [hotSpotsHours, setHotSpotsHours] = useState<RecentHours>(24);
   const [recentDetections, setRecentDetections] = useState<RecentDetectionsResponse | null>(null);
+  const [detectionsState, setDetectionsState] = useState<DetectionsState>('idle');
 
   onSelectPolygonRef.current = onSelectPolygon;
   drawModeRef.current = drawMode;
@@ -166,19 +175,19 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
 
   const requestRecentDetections = useCallback(
     async (bbox: [number, number, number, number], hours: RecentHours, zoom: number) => {
-      detectionsAbortRef.current?.abort();
-      const controller = new AbortController();
-      detectionsAbortRef.current = controller;
+      const seq = ++detectionsSeqRef.current;
+      const isStale = () => seq !== detectionsSeqRef.current;
 
       try {
-        const result = await fetchRecentDetections(
-          { bbox, hours, zoom: Math.round(zoom) },
-          controller.signal,
-        );
-        if (controller.signal.aborted) return;
+        const result = await fetchRecentDetections({ bbox, hours, zoom: Math.round(zoom) });
+        if (isStale()) return;
         setRecentDetections(result);
+        setDetectionsState('ready');
       } catch {
-        // In demo/offline mode or when the API is unavailable, do not break the map.
+        // Sem API, a camada fica vazia e a legenda explica. Nunca pontos inventados.
+        if (isStale()) return;
+        setRecentDetections(null);
+        setDetectionsState('unavailable');
       }
     },
     [],
@@ -226,12 +235,14 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
           ],
           { padding: [16, 16], animate: false },
         );
-        currentZoomRef.current = Math.round(map.getZoom() || 4);
 
         const baseGroup = L.layerGroup().addTo(map);
         const detectionsGroup = L.layerGroup().addTo(map);
         const selectionGroup = L.layerGroup().addTo(map);
         applyBasemapLayers(L, baseGroup, basemapRef.current);
+        const initialBounds = renderShape(L, selectionGroup, shapeRef.current);
+        if (initialBounds) map.fitBounds(initialBounds, { padding: [48, 48], maxZoom: 7, animate: false });
+        currentZoomRef.current = Math.round(map.getZoom() || 4);
 
         const updateBoundsAndFetch = () => {
           const bounds = map.getBounds();
@@ -270,8 +281,6 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
               type: 'Polygon',
               coordinates: geo.geometry.coordinates.map(closePolygonRing),
             };
-            lastDrawnPolygonRef.current = geometry;
-            renderPolygonSelection(L, selectionGroup, geometry);
             setDrawMode(null);
             setPolygonPoints([]);
             map.pm.disableDraw();
@@ -298,9 +307,6 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
         baseGroupRef.current = baseGroup;
         detectionsGroupRef.current = detectionsGroup;
         selectionGroupRef.current = selectionGroup;
-        if (lastDrawnPolygonRef.current) {
-          renderPolygonSelection(L, selectionGroup, lastDrawnPolygonRef.current);
-        }
         setMapReady(true);
 
         if (drawModeRef.current) {
@@ -335,8 +341,9 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
   }, [ensureMap]);
 
   useEffect(() => {
+    const seqRef = detectionsSeqRef;
     return () => {
-      detectionsAbortRef.current?.abort();
+      seqRef.current += 1; // respostas que chegarem depois de desmontar são ignoradas
       if (moveDebounceRef.current !== null) {
         window.clearTimeout(moveDebounceRef.current);
       }
@@ -349,14 +356,14 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
 
   useEffect(() => {
     if (!showHotSpots) {
-      detectionsAbortRef.current?.abort();
+      detectionsSeqRef.current += 1; // respostas que chegarem depois de desligar a camada são ignoradas
       if (detectionsGroupRef.current) {
         detectionsGroupRef.current.clearLayers();
       }
       return;
     }
     void requestRecentDetections(currentBboxRef.current, hotSpotsHours, currentZoomRef.current);
-  }, [showHotSpots, hotSpotsHours, focusBbox, requestRecentDetections]);
+  }, [showHotSpots, hotSpotsHours, requestRecentDetections]);
 
   useEffect(() => {
     if (leafletRef.current && detectionsGroupRef.current) {
@@ -376,64 +383,24 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
   }, [basemap]);
 
   useEffect(() => {
-    if (!focusBbox) return;
-    lastDrawnPolygonRef.current = null;
-    currentBboxRef.current = focusBbox;
+    const changed = shapeRef.current !== shape;
+    shapeRef.current = shape;
     const L = leafletRef.current;
     const map = mapRef.current;
     const selectionGroup = selectionGroupRef.current;
-    if (!L || !map || !selectionGroup) return;
-
-    const [west, south, east, north] = focusBbox;
-    map.fitBounds(
-      [
-        [south, west],
-        [north, east],
-      ],
-      { padding: [20, 20], animate: false },
-    );
-    selectionGroup.clearLayers();
-    L.rectangle(
-      [
-        [south, west],
-        [north, east],
-      ],
-      {
-        color: '#f2a93b',
-        weight: 2,
-        fillColor: '#f2a93b',
-        fillOpacity: 0.1,
-        pmIgnore: true,
-      },
-    ).addTo(selectionGroup);
-  }, [focusBbox, mapReady]);
-
-  useEffect(() => {
-    if (!focusPoint) return;
-    lastDrawnPolygonRef.current = null;
-    const L = leafletRef.current;
-    const map = mapRef.current;
-    const selectionGroup = selectionGroupRef.current;
-    if (!L || !map || !selectionGroup) return;
-
-    selectionGroup.clearLayers();
-    const circle = L.circle([focusPoint.lat, focusPoint.lon], {
-      radius: focusPoint.radius_km * 1000,
-      color: '#f2a93b',
-      weight: 2,
-      fillColor: '#f2a93b',
-      fillOpacity: 0.16,
-      pmIgnore: true,
-    }).addTo(selectionGroup);
-    L.circleMarker([focusPoint.lat, focusPoint.lon], {
-      radius: 4,
-      color: '#f2a93b',
-      fillColor: '#f2a93b',
-      fillOpacity: 1,
-      pmIgnore: true,
-    }).addTo(selectionGroup);
-    map.fitBounds(circle.getBounds(), { padding: [32, 32], maxZoom: 12, animate: false });
-  }, [focusPoint, mapReady]);
+    if (!L || !map || !selectionGroup) {
+      // O mapa ainda não carregou (fica abaixo da abertura): os focos recentes da nova área
+      // são pedidos já, pelo enquadramento da seleção. Quando o mapa carregar, ele parte daqui.
+      if (!changed) return;
+      const view = shapeView(shape);
+      currentBboxRef.current = view.bbox;
+      currentZoomRef.current = view.zoom;
+      if (showHotSpotsRef.current) void requestRecentDetections(view.bbox, hotSpotsHoursRef.current, view.zoom);
+      return;
+    }
+    const bounds = renderShape(L, selectionGroup, shape);
+    if (bounds) map.fitBounds(bounds, { padding: [48, 48], maxZoom: 7, animate: false });
+  }, [shape, mapReady, requestRecentDetections]);
 
   const clientToLngLat = useCallback((clientX: number, clientY: number): [number, number] => {
     const viewport = viewportRef.current;
@@ -460,12 +427,6 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
   }, []);
 
   const commitDrawnGeometry = useCallback((geometry: GeoJsonPolygon) => {
-    lastDrawnPolygonRef.current = geometry;
-    const L = leafletRef.current;
-    const selectionGroup = selectionGroupRef.current;
-    if (L && selectionGroup) {
-      renderPolygonSelection(L, selectionGroup, geometry);
-    }
     setDrawMode(null);
     setPolygonPoints([]);
     syncDrawModeToMap(null);
@@ -568,6 +529,8 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
   const toggleMode = (mode: Exclude<DrawMode, null>) => {
     void ensureMap();
     const nextMode = drawMode === mode ? null : mode;
+    // Ao entrar no modo de desenho, o mapa precisa estar na tela para receber o arrasto.
+    if (nextMode) viewportRef.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' as ScrollBehavior });
     setDrawMode(nextMode);
     setPolygonPoints([]);
     syncDrawModeToMap(nextMode);
@@ -580,18 +543,20 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
 
   const statusText =
     drawMode === 'rectangle'
-      ? 'Drag across the map or click two opposite corners to draw a rectangle.'
+      ? 'Drag across the map to draw a rectangle.'
       : drawMode === 'polygon'
-        ? `Click points on the map to outline an area (${polygonPoints.length} points), then finish the polygon.`
-        : 'Draw an area on the map, pick a region above, or enter coordinates below.';
+        ? `Click to add points (${polygonPoints.length} so far), then finish the polygon.`
+        : null;
+
+  const windowLabel = hotSpotsHours === 168 ? 'last 7 days' : `last ${hotSpotsHours} h`;
 
   return (
-    <div className="area-map">
-      <div className="area-map__toolbar" role="toolbar" aria-label="Map drawing and layer controls">
-        <div className="area-map__actions">
+    <div className="map-stage">
+      <div className="map-stage__bar" role="toolbar" aria-label="Map drawing and layer controls">
+        <div className="map-stage__group">
           <button
             type="button"
-            className={`map-btn${drawMode === 'rectangle' ? ' map-btn--active' : ''}`}
+            className="map-btn"
             aria-pressed={drawMode === 'rectangle'}
             onClick={() => toggleMode('rectangle')}
           >
@@ -599,7 +564,7 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
           </button>
           <button
             type="button"
-            className={`map-btn${drawMode === 'polygon' ? ' map-btn--active' : ''}`}
+            className="map-btn"
             aria-pressed={drawMode === 'polygon'}
             onClick={() => toggleMode('polygon')}
           >
@@ -611,10 +576,10 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
             </button>
           )}
         </div>
-        <div className="area-map__detections-controls" role="group" aria-label="Recent hot spots layer">
+        <div className="map-stage__group" role="group" aria-label="Recent hot spots layer">
           <button
             type="button"
-            className={`map-btn${showHotSpots ? ' map-btn--active' : ''}`}
+            className="map-btn"
             aria-pressed={showHotSpots}
             onClick={() => setShowHotSpots((prev) => !prev)}
           >
@@ -627,40 +592,26 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
             disabled={!showHotSpots}
             onChange={(e) => setHotSpotsHours(Number(e.target.value) as RecentHours)}
           >
-            <option value="24">Last 24 h</option>
-            <option value="72">Last 72 h</option>
-            <option value="168">Last 7 days (168 h)</option>
+            <option value="24">24 h</option>
+            <option value="72">72 h</option>
+            <option value="168">7 days</option>
           </select>
         </div>
-        <div className="area-map__layers" role="group" aria-label="Base map layer">
-          <button
-            type="button"
-            className={`map-btn${basemap === 'carto-dark' ? ' map-btn--active' : ''}`}
-            aria-pressed={basemap === 'carto-dark'}
-            onClick={() => switchBasemap('carto-dark')}
-          >
-            Dark map (CARTO)
+        <div className="map-stage__group" role="group" aria-label="Base map layer">
+          <button type="button" className="map-btn" aria-pressed={basemap === 'black-marble'} onClick={() => switchBasemap('black-marble')}>
+            Black Marble (NASA GIBS)
           </button>
-          <button
-            type="button"
-            className={`map-btn${basemap === 'nasa-gibs' ? ' map-btn--active' : ''}`}
-            aria-pressed={basemap === 'nasa-gibs'}
-            onClick={() => switchBasemap('nasa-gibs')}
-          >
-            NASA GIBS satellite
+          <button type="button" className="map-btn" aria-pressed={basemap === 'blue-marble'} onClick={() => switchBasemap('blue-marble')}>
+            Blue Marble (NASA GIBS)
           </button>
         </div>
       </div>
-
-      <p className="area-map__hint" aria-live="polite">
-        {statusText}
-      </p>
 
       <div
         ref={viewportRef}
         role="region"
         aria-label="Area selection map"
-        className={`area-map__viewport${drawMode ? ' area-map__viewport--drawing' : ''}`}
+        className={`map-stage__viewport${drawMode ? ' map-stage__viewport--drawing' : ''}`}
         onMouseDownCapture={handleMouseDownCapture}
         onClickCapture={handleViewportClickCapture}
         onClick={handleViewportClick}
@@ -670,53 +621,62 @@ export function AreaMap({ focusBbox, focusPoint, onSelectPolygon }: AreaMapProps
           }
         }}
       >
-        <div ref={canvasHostRef} className="area-map__canvas" />
+        <div ref={canvasHostRef} className="map-stage__canvas" />
+        {statusText && (
+          <p className="map-stage__hint" aria-live="polite">
+            {statusText}
+          </p>
+        )}
         {dragBox && (
           <div
-            className="area-map__drag-preview"
-            style={{
-              left: `${dragBox.left}px`,
-              top: `${dragBox.top}px`,
-              width: `${dragBox.width}px`,
-              height: `${dragBox.height}px`,
-            }}
+            className="map-stage__drag"
+            style={{ left: `${dragBox.left}px`, top: `${dragBox.top}px`, width: `${dragBox.width}px`, height: `${dragBox.height}px` }}
             aria-hidden="true"
           />
         )}
         {!mapReady && (
-          <div className="area-map__placeholder">
-            <span>Interactive map canvas</span>
+          <div className="map-stage__placeholder">
+            <span>Loading map…</span>
           </div>
         )}
       </div>
 
-      {showHotSpots && (
-        <div className="area-map__legend" aria-label="Recent hot spots legend">
-          <span className="area-map__legend-count">
-            {recentDetections !== null
-              ? `${recentDetections.total_detections.toLocaleString('en-US')} hot spots in view`
-              : `Recent hot spots (${hotSpotsHours === 168 ? 'last 7 days' : `last ${hotSpotsHours} h`})`}
-          </span>
-          <span className="area-map__legend-items">
-            <span className="area-map__legend-item">
-              <span className="map-swatch map-swatch--hex" aria-hidden="true" />
-              H3 hexagons (cividis log)
+      <div className="map-stage__legend" aria-label="Recent hot spots legend" aria-live="polite">
+        {!showHotSpots ? (
+          <span>Recent hot spots layer is off.</span>
+        ) : detectionsState === 'unavailable' ? (
+          <span>Recent hot spots are unavailable: the API did not respond. No points are drawn.</span>
+        ) : (
+          <>
+            <span className="map-stage__legend-count">
+              {recentDetections !== null
+                ? `${recentDetections.total_detections.toLocaleString('en-US')} VIIRS detections in view, ${windowLabel}`
+                : `Recent VIIRS detections, ${windowLabel}`}
             </span>
-            <span className="area-map__legend-item">
-              <span className="map-swatch map-swatch--low" aria-hidden="true" />
-              Low
-            </span>
-            <span className="area-map__legend-item">
-              <span className="map-swatch map-swatch--medium" aria-hidden="true" />
-              Medium
-            </span>
-            <span className="area-map__legend-item">
-              <span className="map-swatch map-swatch--high" aria-hidden="true" />
-              High intensity
-            </span>
-          </span>
-        </div>
-      )}
+            {recentDetections?.mode === 'hexagons' ? (
+              <span>
+                <span className="map-swatch map-swatch--hex" style={{ background: 'linear-gradient(90deg, #00224e, #7c7b78, #fee838)' }} aria-hidden="true" />
+                Detections per hexagon (log scale)
+              </span>
+            ) : (
+              <>
+                <span>
+                  <span className="map-swatch map-swatch--low" aria-hidden="true" />
+                  Low
+                </span>
+                <span>
+                  <span className="map-swatch map-swatch--medium" aria-hidden="true" />
+                  Medium
+                </span>
+                <span>
+                  <span className="map-swatch map-swatch--high" aria-hidden="true" />
+                  High intensity
+                </span>
+              </>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

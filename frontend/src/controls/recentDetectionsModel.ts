@@ -49,7 +49,7 @@ export function styleForHexagon(detections: number, domain: [number, number]): H
   return {
     fillColor,
     fillOpacity: Number((0.55 + clamped * 0.3).toFixed(2)),
-    color: '#1b2432',
+    color: '#0d0f11',
     weight: 1,
   };
 }
@@ -64,8 +64,8 @@ export function styleForIntensityPoint(intensity: IntensityClass): PointIntensit
       return {
         radius: 8.5,
         weight: 3,
-        color: '#fff4d6',
-        fillColor: '#ff5c39',
+        color: '#fff7df',
+        fillColor: '#f0a23a',
         fillOpacity: 0.92,
         label: 'High intensity',
       };
@@ -73,8 +73,8 @@ export function styleForIntensityPoint(intensity: IntensityClass): PointIntensit
       return {
         radius: 6,
         weight: 2,
-        color: '#161d27',
-        fillColor: '#f5a623',
+        color: '#0d0f11',
+        fillColor: '#e0c25c',
         fillOpacity: 0.86,
         label: 'Medium intensity',
       };
@@ -83,8 +83,8 @@ export function styleForIntensityPoint(intensity: IntensityClass): PointIntensit
       return {
         radius: 4,
         weight: 1,
-        color: '#0e131a',
-        fillColor: '#56b4e9',
+        color: '#c6cdd4',
+        fillColor: '#8fa3b8',
         fillOpacity: 0.8,
         dashArray: '2 2',
         label: 'Low intensity',
