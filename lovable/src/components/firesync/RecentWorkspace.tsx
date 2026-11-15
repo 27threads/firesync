@@ -34,7 +34,7 @@ import {
   TIERS,
   TIER_LABEL,
   TIER_COLOR,
-  COUNT_GRADIENT,
+  COUNT_BINS,
   type Level,
   type Priority,
   type RecentData,
@@ -74,6 +74,7 @@ export default function RecentWorkspace({
   selection,
   onSelect,
   onRecentSummary,
+  onNext,
 }: {
   active: boolean;
   resetForHandoff: boolean;
@@ -82,6 +83,7 @@ export default function RecentWorkspace({
   selection: AreaSelection | null;
   onSelect: (s: AreaSelection | null) => void;
   onRecentSummary?: (data: RecentData, demo: boolean) => void;
+  onNext?: () => void;
 }) {
   const [view, setView] = useState<Viewport>({ bbox: [-80, -40, -30, 15], zoom: 4 });
   const [hours, setHours] = useState(24);
@@ -93,6 +95,8 @@ export default function RecentWorkspace({
   const [quietOnly, setQuietOnly] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(() => typeof window === "undefined" || window.innerWidth >= 900);
   const [shown, setShown] = useState(10);
+  const [groupOpen, setGroupOpen] = useState<Record<string, boolean>>({});
+  const [groupShown, setGroupShown] = useState<Record<string, number>>({});
   const [basemap, setBasemap] = useState("blue");
   const [state, setState] = useState<BrazilState | ''>('');
   const [drawMode, setDrawMode] = useState("none");
@@ -165,7 +169,10 @@ export default function RecentWorkspace({
     mode === "fire"
       ? (intensities.length < 3 ? intensities.length : 0) + (levels.length < 3 ? levels.length : 0)
       : (tiers.length < 4 ? tiers.length : 0) + (quietOnly ? 1 : 0);
-  useEffect(() => setShown(10), [mode, view, tiers, levels, quietOnly]);
+  useEffect(() => {
+    setShown(10);
+    setGroupShown({});
+  }, [mode, view, tiers, levels, quietOnly]);
   const updated = data ? freshness(data.updated_at, clock) : null;
   const high = data ? highShare(data.features) : null;
   const cell =
@@ -256,7 +263,36 @@ export default function RecentWorkspace({
       void openHistory(area);
     }
   };
-  const badge = demo ? <span className="demo-badge">Demo data</span> : null;
+  const renderCard = (p: Priority) => (
+              <button key={p.h3} className="fs-card" onClick={() => zoom(p)}>
+                <strong>
+                  Area near {p.center[1].toFixed(1)}, {p.center[0].toFixed(1)}
+                </strong>
+                {mode === "risk" ? (
+                  <span className="fs-line">
+                    Next 14 days{" "}
+                    {p.risk_tier ? (
+                      <b className="fs-chip" style={{ background: TIER_COLOR[p.risk_tier], color: p.risk_tier === "medium" || p.risk_tier === "lower" ? "#222" : "#fff" }}>
+                        {TIER_LABEL[p.risk_tier]}
+                      </b>
+                    ) : (
+                      "unavailable"
+                    )}
+                  </span>
+                ) : (
+                  <span className="fs-line">
+                    Compared with usual{" "}
+                    <b className={`fs-chip fs-chip-${p.alert_level}`}>{p.alert_level === "normal" ? "Usual" : p.alert_level[0]!.toUpperCase() + p.alert_level.slice(1)}</b>
+                  </span>
+                )}
+                <span className="fs-line">
+                  Right now{" "}
+                  {p.detections_7d > 0 ? `${number(p.detections_7d)} hot spots in 7 days (usually ${number(p.typical_median)})` : "No hot spots in the last 24 h"}
+                </span>
+                {p.detections_7d > p.typical_median && <span className="fs-tag">More than usual for the season</span>}
+              </button>
+  );
+    const badge = demo ? <span className="demo-badge">Demo data</span> : null;
   return (
     <div className="recent-workspace">
       <AreaMap
@@ -265,6 +301,7 @@ export default function RecentWorkspace({
         active={active}
         resetForHandoff={resetForHandoff}
         onReady={onReady}
+        onMinZoomOut={onReturn}
         selection={selection}
         onSelect={areaChosen}
         recent={data}
@@ -454,44 +491,50 @@ export default function RecentWorkspace({
             </div>
           )}
           {data && !data.alerts && <p>Risk levels are not available for this view. Zoom in.</p>}
-          {priorities.slice(0, shown).map((p) => (
-            <button key={p.h3} className="fs-card" onClick={() => zoom(p)}>
-              <strong>
-                Area near {p.center[1].toFixed(1)}, {p.center[0].toFixed(1)}
-              </strong>
-              {mode === "risk" ? (
-                <span className="fs-line">
-                  Next 14 days{" "}
-                  {p.risk_tier ? (
-                    <b className="fs-chip" style={{ background: TIER_COLOR[p.risk_tier], color: p.risk_tier === "medium" || p.risk_tier === "lower" ? "#222" : "#fff" }}>
-                      {TIER_LABEL[p.risk_tier]}
-                    </b>
-                  ) : (
-                    "unavailable"
+          {mode === "risk" ? (
+            TIERS.map((t) => {
+              const group = priorities.filter((p) => p.risk_tier === t);
+              if (!group.length) return null;
+              const open = groupOpen[t] ?? (t === "very_high" || t === "high");
+              const limit = groupShown[t] ?? 10;
+              return (
+                <section key={t} className="fs-group-block">
+                  <button className="fs-group-head" aria-expanded={open} onClick={() => setGroupOpen((o) => ({ ...o, [t]: !open }))}>
+                    <i className="fs-swatch" style={{ background: TIER_COLOR[t] }} />
+                    <strong>{TIER_LABEL[t]}</strong>
+                    <span>{number(group.length)} areas</span>
+                    <ChevronDown size={14} className={open ? "open" : ""} />
+                  </button>
+                  {open && (
+                    <>
+                      {group.slice(0, limit).map(renderCard)}
+                      <p className="fs-sub">
+                        Showing {Math.min(limit, group.length)} of {number(group.length)} areas (10 at a time)
+                      </p>
+                      {group.length > limit && (
+                        <Button variant="outline" className="fs-more" onClick={() => setGroupShown((g) => ({ ...g, [t]: limit + 10 }))}>
+                          See 10 more
+                        </Button>
+                      )}
+                    </>
                   )}
-                </span>
-              ) : (
-                <span className="fs-line">
-                  Compared with usual{" "}
-                  <b className={`fs-chip fs-chip-${p.alert_level}`}>{p.alert_level === "normal" ? "Usual" : p.alert_level[0]!.toUpperCase() + p.alert_level.slice(1)}</b>
-                </span>
+                </section>
+              );
+            })
+          ) : (
+            <>
+              {priorities.slice(0, shown).map(renderCard)}
+              {!loading && data?.alerts && (
+                <p className="fs-sub">
+                  Showing {Math.min(shown, priorities.length)} of {number(priorities.length)} areas (10 at a time)
+                </p>
               )}
-              <span className="fs-line">
-                Right now{" "}
-                {p.detections_7d > 0 ? `${number(p.detections_7d)} hot spots in 7 days (usually ${number(p.typical_median)})` : "No hot spots in the last 24 h"}
-              </span>
-              {p.detections_7d > p.typical_median && <span className="fs-tag">More than usual for the season</span>}
-            </button>
-          ))}
-          {!loading && data?.alerts && (
-            <p className="fs-sub">
-              Showing {Math.min(shown, priorities.length)} of {number(priorities.length)} areas (10 at a time)
-            </p>
-          )}
-          {priorities.length > shown && (
-            <Button variant="outline" className="fs-more" onClick={() => setShown((n) => n + 10)}>
-              See 10 more
-            </Button>
+              {priorities.length > shown && (
+                <Button variant="outline" className="fs-more" onClick={() => setShown((n) => n + 10)}>
+                  See 10 more
+                </Button>
+              )}
+            </>
           )}
         </aside>
       )}
@@ -574,12 +617,11 @@ export default function RecentWorkspace({
             <h3>
               <Clock size={13} /> Hot spots per area, last 24 hours
             </h3>
-            <div className="fs-gradient" style={{ background: COUNT_GRADIENT }} />
-            <div className="fs-gradient-labels">
-              <span>1</span>
-              <span>10</span>
-              <span>100 or more</span>
-            </div>
+            {COUNT_BINS.map((b) => (
+              <p key={b.label}>
+                <i className="fs-swatch" style={{ background: b.color }} /> {b.label}
+              </p>
+            ))}
             <p className="fs-sym-title">Fire strength (dark centre)</p>
             <p className="fs-sym">
               <i className="fs-dot fs-dot-low" /> Low <i className="fs-dot fs-dot-medium" /> Medium <i className="fs-dot fs-dot-high" /> High
@@ -606,6 +648,11 @@ export default function RecentWorkspace({
           </>
         )}
       </section>
+      {onNext && (
+        <button className="fs-next" onClick={onNext} aria-label="Scroll down to read more about firesync" title="Read more about firesync">
+          <ChevronDown size={20} />
+        </button>
+      )}
       <footer className="fs-footnote">
         {mode === "fire" ? (
           <span>Recent hot spots (NASA FIRMS, VIIRS) can still change. Usual does not mean safe.{demo && " Demo data."}</span>

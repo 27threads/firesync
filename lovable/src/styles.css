@@ -956,7 +956,7 @@ input,select { font: inherit; color: var(--foreground); background: var(--backgr
 .fs-legend p { display: flex; align-items: center; gap: 8px; font-size: 12px; } .fs-legend small { font-size: 10px; color: #6b7280; line-height: 1.35; }
 .fs-footnote { position: absolute; z-index: 620; left: 0; right: 0; bottom: 0; background: #0f2a3a; color: #e6eef3; padding: 7px 14px; font-size: 11px; display: flex; gap: 16px; justify-content: space-between; flex-wrap: wrap; }
 .fs-footnote a { color: #fff; text-decoration: underline; }
-.recent-workspace .mission-navigation { bottom: 48px; right: 12px; }
+.recent-workspace .mission-navigation { z-index: 650; }
 .recent-map-credit { display: none; }
 @media (max-width: 899px) {
   .fs-toolbar { top: 64px; left: 12px; right: 12px; transform: none; max-width: none; }
@@ -965,7 +965,6 @@ input,select { font: inherit; color: var(--foreground); background: var(--backgr
   .fs-panel { top: auto; bottom: 150px; right: 12px; max-height: 40%; width: min(300px, calc(100% - 24px)); }
   .fs-filters { top: 132px; }
   .fs-legend { display: none; }
-  .recent-workspace .mission-navigation { display: none; }
 }
 
 .fs-right { position: absolute; z-index: 600; top: 12px; right: 12px; width: 262px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; max-height: calc(100% - 60px); }
@@ -979,3 +978,14 @@ input,select { font: inherit; color: var(--foreground); background: var(--backgr
 .fs-sym { display: flex; align-items: center; gap: 6px; font-size: 11px; }
 .fs-sym i { margin-left: 8px; } .fs-sym i:first-child { margin-left: 0; }
 .fs-ring-critical { border: 2px solid #d62728; } .fs-ring-attention { border: 2px dashed #b9831c; }
+
+.fs-group-block { margin: 10px 0 0; border-top: 1px solid #e5e7eb; padding-top: 6px; }
+.fs-group-head { display: flex; align-items: center; gap: 8px; width: 100%; background: none; padding: 6px 2px; text-align: left; color: #1c1f24; }
+.fs-group-head span { color: #6b7280; font-size: 11px; margin-left: auto; }
+.fs-group-head svg { transition: transform .15s; } .fs-group-head svg.open { transform: rotate(180deg); }
+
+.fs-right { max-height: calc(100% - 230px); }
+
+.fs-next { position: absolute; z-index: 640; left: 50%; bottom: 44px; transform: translateX(-50%); width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.96); color: #1c1f24; box-shadow: 0 2px 10px rgba(0,0,0,.3); display: flex; align-items: center; justify-content: center; animation: fs-bob 1.8s ease-in-out infinite; }
+@keyframes fs-bob { 0%,100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 4px); } }
+@media (prefers-reduced-motion: reduce) { .fs-next { animation: none; } }
