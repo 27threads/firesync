@@ -59,7 +59,7 @@ Cada jornada roda no desktop e no celular. Os seletores usam papéis e textos ac
 
 | Parte | Medida | Mínimo | Onde fica o mínimo |
 | --- | --- | --- | --- |
-| `data-pipeline/` | Linhas e ramos, juntando unidade e integração | **71%**, o medido na esteira do PR do modelo A (`modelo_a.py` 90%). Os logs estruturados (`logs.py` 97%) entraram depois sem baixar a cobertura | `data-pipeline/.coveragerc` |
+| `data-pipeline/` | Linhas e ramos, juntando unidade e integração | **75%**, o medido na esteira do PR #77 (backtest do alerta com o teste das fórmulas) | `data-pipeline/.coveragerc` |
 | `backend/src/` | Linhas e ramos | **97,1%**, após as rotas HTTP e os testes com PostGIS sintético | `.github/workflows/ci.yml` |
 
 O `eda.py` (análise exploratória) fica fora da cobertura. Download, `stage`, `clean` e `cadastrar` dependem do FIRMS e do IBGE, e são as próximas partes a ganhar teste.
