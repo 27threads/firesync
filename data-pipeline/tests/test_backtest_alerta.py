@@ -216,7 +216,7 @@ def test_evento_sem_alerta_tem_antecedencia_vazia_e_regiao_errada_avisa_o_evento
 def linha(regra, p, mn, ganho, anos=12):
     return {"regra": regra, "regra_atual": False, "p_gabarito": p, "minimo": mn, "freq_critico": 0.05,
             "acerto": 0.5, "acerto_ingenua": 0.5 - ganho, "ganho": ganho, "anos_com_ganho_positivo": anos,
-            "cobertura_critico": 0.2}
+            "cobertura_critico": 0.2, "ganho_ic95_baixo": ganho - 0.01, "ganho_ic95_alto": ganho + 0.01}
 
 
 def principal_e_sensibilidade(regra, ganhos_sensibilidade):
@@ -305,3 +305,32 @@ def test_formulas_do_avaliar_batem_com_a_conta_ingenua_data_por_data(t):
         crit = a["s7"][w, u] >= max(2 * med, 10) and soma(s, t, 3) > soma(s, t - timedelta(3), 3)
         esperado = 2 if crit else 1 if a["s7"][w, u] > p75 else 0
         assert bt.nivel_da_regra({k: v[w:w + 1, u:u + 1] for k, v in a.items()}, REGRA)[0, 0] == esperado
+
+
+def test_bootstrap_por_ano_reamostra_anos_inteiros():
+    """Pedido da #59 (item 5) e da #84: intervalo de 95% do ganho, sorteando anos inteiros com reposição.
+    Semanas seguidas têm gabaritos que se sobrepõem, então a unidade independente é o ano, não a semana."""
+    anos = np.repeat(np.arange(2013, 2025), 10)[:, None] * np.ones((1, 10), int)
+    gab = np.zeros(anos.shape, bool)
+    crit = np.zeros(anos.shape, bool)
+    ing = np.zeros(anos.shape, bool)
+    crit[:, :2] = ing[:, :2] = True
+    gab[:, 0] = True                      # regra e ingênua acertam metade, todo ano: ganho 0 em qualquer sorteio
+    assert bt.ganho_bootstrap(crit, ing, gab, anos) == (0, 0)
+    em_2013 = (anos == 2013)[:, 0]          # um ano ruim só para a regra: ela alerta onde não houve fogo
+    gab[em_2013] = False
+    gab[em_2013, 1] = True
+    crit[em_2013, 1] = False
+    baixo, alto = bt.ganho_bootstrap(crit, ing, gab, anos)
+    assert baixo < 0 <= alto               # o ano ruim, sorteado várias vezes, puxa o ganho para baixo
+    assert bt.ganho_bootstrap(crit, ing, gab, anos) == (baixo, alto)   # semente fixa: mesmo resultado
+
+
+def test_medidas_trazem_o_intervalo_do_ganho():
+    rnd = np.random.default_rng(4)
+    gab = rnd.random((60, 100)) < 0.2
+    niv = np.where(gab & (rnd.random(gab.shape) < 0.5), 2, 0)
+    anos = np.repeat(np.arange(2013, 2025), 5)[:, None] * np.ones((1, 100), int)
+    r = bt.medidas(niv, gab, rnd.random(gab.shape), anos)
+    assert r["ganho_ic95_baixo"] <= r["ganho"] <= r["ganho_ic95_alto"]
+    assert r["ganho_ic95_baixo"] > 0.5
