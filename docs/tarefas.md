@@ -55,6 +55,7 @@ Ler antes: [firms-extracao-dados.md](firms-extracao-dados.md), [plano-extracao-a
 | A6 | Cadastrar as regiões Amazônia e Pantanal em `regioes`, com as células em `celula_regiao` | A2, A4 | feito (os 6 biomas, `pipeline.py cadastrar`) | As duas regiões com polígono e células |
 | A7 | Carregar o histórico completo | A1, A5 | feito no banco de teste (46,4 mi de focos, ver `pipeline-dados.md`) | `cobertura` mostra cada satélite no período esperado |
 | A8 | Backtest do alerta (solução A + B da issue #9, RFC 0001): `validacao/backtest_alerta.py` e `referencia/eventos_conhecidos.csv` | A7, `agregados_diarios` | feito no banco de teste (falta a frente B escolher a `v1` pela tabela) | `backtest.csv`, `por_bioma.csv` e `eventos.csv` gerados; autoteste sem banco passa |
+| A9 | Logs estruturados (JSON) nos pontos de decisão do pipeline e do job NRT (RNF07) | A5 | feito (`data-pipeline/logs.py`, branch `logs-estruturados`, ver [pipeline-dados.md](pipeline-dados.md)) | Cada rodada do job registra `run_id`, focos que entraram, duração e a etapa do erro |
 
 ## B. Harmonização
 

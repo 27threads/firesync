@@ -10,9 +10,13 @@ os dados e a versão novos juntos, ou os antigos juntos, nunca metade.
 Datas em UTC: a conexão de pipeline.db() fixa o fuso.
 """
 import sys
+import time
 from datetime import date, datetime, timezone
 
-from pipeline import db
+import logs
+from pipeline import db, ms_desde
+
+log = logs.logger("agregar")
 
 # Satélite que vale em cada mês (tabela de importacao-regioes.md). Um satélite por mês, nunca a soma.
 # Jan/2012 fica com o Aqua porque o S-NPP só começa em 20/01/2012; nov/2026 já é NOAA-20 (S-NPP parou em 02/11).
@@ -52,6 +56,9 @@ WHERE f.satelite = %(sat)s
   AND f.frp > 0
 GROUP BY 1, 2, 3, 4, 5
 """
+# Para o log: quantos focos entraram no calendário (as linhas são células × mês, não focos).
+FOCOS_DA_JANELA = """SELECT coalesce(sum(focos_brutos), 0) FROM agregados
+                     WHERE satelite = %(sat)s AND make_date(ano, mes, 1) >= %(ini)s AND make_date(ano, mes, 1) < %(fim)s"""
 VERSAO = """INSERT INTO config (chave, valor) VALUES (%s, %s)
             ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor"""
 
@@ -81,20 +88,30 @@ INICIO, FIM = date(2003, 1, 1), date(9999, 1, 1)
 def agregar(de=INICIO, ate=FIM):
     """Refaz `agregados` e `agregados_diarios` do intervalo e grava a versão, tudo num commit. Devolve a versão."""
     conn = db()
+    inicio = time.monotonic()
     versao = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    completa = (de, ate) == (INICIO, FIM)
+    log.info("aggregate_started", start=de, end=ate, scope="full" if completa else "partial")
     with conn.transaction():
-        conn.execute("DELETE FROM agregados WHERE make_date(ano, mes, 1) >= %s AND make_date(ano, mes, 1) < %s",
-                     (de, ate))
-        conn.execute("DELETE FROM agregados_diarios WHERE data >= %s AND data < %s", (de, ate))
+        apagadas = conn.execute(
+            "DELETE FROM agregados WHERE make_date(ano, mes, 1) >= %s AND make_date(ano, mes, 1) < %s",
+            (de, ate)).rowcount
+        apagadas_dia = conn.execute("DELETE FROM agregados_diarios WHERE data >= %s AND data < %s",
+                                    (de, ate)).rowcount
         for sat, ini, fim in janelas(de, ate):
             n = conn.execute(SQL, {"sat": sat, "ini": ini, "fim": fim}).rowcount
             d = 0 if sat == "Aqua" else conn.execute(SQL_DIA, {"sat": sat, "ini": ini, "fim": fim}).rowcount
-            print(f"agregar: {sat} {ini} a {fim}: {n:,} linhas mensais, {d:,} diárias", flush=True)
+            focos = conn.execute(FOCOS_DA_JANELA, {"sat": sat, "ini": ini, "fim": fim}).fetchone()[0]
+            log.info("aggregate_window_done", satellite=sat, start=ini, end=fim, monthly_rows=n, daily_rows=d,
+                     detections=focos, daily_skipped=sat == "Aqua")
         # `atualizado_em` muda a cada escrita (é a chave do cache da API); `data_version` só na carga completa
         # (a API recarrega os fatores). Data e hora: duas cargas no mesmo dia dão versões diferentes.
         conn.execute(VERSAO, ("atualizado_em", versao))
-        if (de, ate) == (INICIO, FIM):
+        if completa:
             conn.execute(VERSAO, ("data_version", versao))
+    log.info("aggregate_finished", scope="full" if completa else "partial", updated_at=versao,
+             data_version_changed=completa, monthly_rows_deleted=apagadas, daily_rows_deleted=apagadas_dia,
+             duration_ms=ms_desde(inicio))
     return versao
 
 

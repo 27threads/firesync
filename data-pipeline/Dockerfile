@@ -12,5 +12,6 @@ COPY *.py regioes.json ./
 COPY migrations ./migrations
 
 # Uma rodada a cada 3 h. A rodada tem trava no banco, então duas nunca rodam ao mesmo tempo,
-# e uma falha não derruba o container: a próxima rodada tenta de novo.
-CMD ["sh", "-c", "while true; do python job_nrt.py || echo 'job_nrt: rodada falhou'; sleep 10800; done"]
+# e uma falha não derruba o container: a próxima rodada tenta de novo. A falha já sai no log como
+# `nrt_run_failed` (JSON, com a etapa e o erro), então o laço não escreve nada fora do formato.
+CMD ["sh", "-c", "while true; do python job_nrt.py || true; sleep 10800; done"]
