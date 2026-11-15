@@ -3,9 +3,9 @@
 Aplicação web: mapa para escolher a área, calendário em heatmap, janela recente com o alerta, camada de focos e downloads.
 
 - **Frente responsável:** D
-- **Consome:** a API descrita em [docs/api.md](../docs/api.md). Até a API existir, use o [docs/api-exemplo.json](../docs/api-exemplo.json).
+- **Consome:** a API descrita em [docs/api.md](../docs/api.md) (`GET /api/v1/health`, `GET /api/v1/regions`, `POST /api/v1/calendar`, `POST /api/v1/export`). Quando a API não responde, entra em modo demo com [docs/api-exemplo.json](../docs/api-exemplo.json).
 - **Decisões já registradas** ([docs/arquitetura.md](../docs/arquitetura.md)):
-  - mapa: Leaflet com renderizador canvas + Leaflet-Geoman para desenhar (confirmado pela frente D);
+  - mapa: Leaflet com renderizador canvas (`preferCanvas`) + Leaflet-Geoman para desenhar em carga tardia (confirmado pela frente D); mapa base padrão CARTO Dark Matter (OpenStreetMap + CARTO) com alternância para NASA EOSDIS GIBS (`BlueMarble_NextGeneration` + `Reference_Features_15m`, sem `Reference_Labels_15m`);
   - cores: cividis em escala logarítmica. Mês incompleto, estimado ou fora da cobertura vão marcados por hachura, borda ou rótulo, nunca só por cor.
 - **Requisitos que cobre:** RF06–RF13 e RD01–RD07 ([docs/requisitos.md](../docs/requisitos.md)).
 
