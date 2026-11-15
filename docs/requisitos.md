@@ -84,14 +84,16 @@ A submissão fecha no domingo, 15/11, às 23h59 no horário do evento local. Dá
 
 ### Página do projeto (tudo em inglês)
 
-- [ ] Project Name
-- [ ] High-Level Project Summary: o que foi feito, como resolve o desafio, por que importa
-- [ ] Link to Project Demo (público, sem login)
-- [ ] Link to Final Project: app no ar e/ou repositório (público, sem login)
-- [ ] Detailed Project Description: o que faz, como funciona, benefícios, ferramentas e linguagens
-- [ ] NASA Data: FIRMS (MODIS e VIIRS) e GIBS (mapa base). Mínimo de um recurso da NASA para concorrer ao prêmio global
-- [ ] Space Agency Partner Data and Other References: todas as fontes, bibliotecas e imagens. Considerar dados de parceiras (INPE/AEB, CONAE)
-- [ ] Use of Super Intelligence: declarar onde e como IA foi usada
+Texto de cada campo em [pagina-projeto.md](pagina-projeto.md). Marcado = texto pronto para colar; falta colar na página e enviar.
+
+- [x] Project Name
+- [x] High-Level Project Summary: o que foi feito, como resolve o desafio, por que importa
+- [ ] Link to Project Demo (público, sem login) ⏳ espera a demo (D8)
+- [x] Link to Final Project: app no ar e/ou repositório (público, sem login)
+- [x] Detailed Project Description: o que faz, como funciona, benefícios, ferramentas e linguagens
+- [x] NASA Data: FIRMS (MODIS e VIIRS) e GIBS (mapa base). Mínimo de um recurso da NASA para concorrer ao prêmio global
+- [x] Space Agency Partner Data and Other References: todas as fontes, bibliotecas e imagens. Considerar dados de parceiras (INPE/AEB, CONAE)
+- [x] Use of Super Intelligence: declarar onde e como IA foi usada
 - [ ] Marcar "Terms and Conditions" e "Confirm All Work is Original" e clicar em "Submit for Judging"
 
 ### Demo
