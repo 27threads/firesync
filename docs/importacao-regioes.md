@@ -47,7 +47,7 @@ O formato segue o `docs/banco.md` e a migration `001_inicial.sql` da frente A (P
 - **Origem de cada mês: depende só da data** (regra da API, não gravada no banco). Assim, uma área sem fogo em um mês continua com origem definida.
 - **FRP:** a API só mostra `frp_soma` dos meses `observado_viirs`, porque o FRP do MODIS e o do VIIRS não são comparáveis.
 - **Falha de satélite:** as datas sem dado ficam na tabela `dias_sem_dados (data, satelite)`, preenchida pela API `missing_data` do FIRMS (migration 002 do PR #2), no lugar da coluna `sem_dados`. A falha é por data e vale para o mundo todo. A API devolve, para cada mês, quantos dias o satélite daquele mês ficou sem dado, e o front marca o mês como "dados incompletos" a partir de **3 dias** (cerca de 10% do mês). ESCOLHA DA EQUIPE.
-- **Pedido à frente A (migration 002):** acrescentar `n_focos_origem` e `fusao_com` em `fatores_harmonizacao`, para registrar o mínimo de focos por condição e a fusão com a condição vizinha.
+- **Mínimo de focos e fusão:** `fatores_harmonizacao` tem `n_focos_origem` e `fusao_com` (migration 002), para registrar o mínimo de focos por condição e a fusão com a condição vizinha.
 
 | Período | Satélite em `agregados` | `origem` | Valor mostrado |
 | --- | --- | --- | --- |
@@ -67,6 +67,7 @@ Para uma área `A`, um mês `(ano, mes)` e cada cenário `k` (ano de calibraçã
 4. Os fatores são aplicados **depois** de somar as células da área e **antes** de calcular os percentis.
 5. **Como cada `F_k` é calculado:** razão das somas, `F_k(b, m, p) = S_k(b, m, p) / A_k(b, m, p)`, com os totais de focos do S-NPP e do Aqua (confiança nominal e alta, `tipo = 0`) no bioma, mês, período e ano `k`. Saem os dias em que o Aqua ou o S-NPP aparecem em `dias_sem_dados`, e janeiro de 2012 (S-NPP incompleto). Quando `A_k` fica abaixo do mínimo de focos, a fusão segue esta ordem: meses vizinhos no mesmo período, depois o ano inteiro do bioma no mesmo período, e só em último caso o ano inteiro com dia e noite juntos (registrada em `fusao_com`). O código está em `data-pipeline/harmonizacao/calibrar.py` (branch `trabalho/harmonizacao`).
 6. **Número de cenários:** 10 ou 13, conforme a validação, e janeiro tem um a menos. A API lê os anos que existem em `fatores_harmonizacao`, sem fixar a quantidade.
+7. **Totais usam só os cenários completos.** Decisão do Weberson em 14/11/2026, registrada por `madruxx` no [PR #26](https://github.com/27threads/firesync/pull/26), commit `8bc528d`. Ao somar biomas, períodos ou meses, alinhar pelo ano de calibração e usar a interseção dos cenários com todos os fatores necessários. Somar dentro de cada cenário e só depois calcular a mediana e P5–P95. Janeiro não tem fator do cenário 2012: um total que inclua janeiro estimado com focos usa 12 de 13 cenários (ou 9 de 10). Isso vale também para os anos completos de 2003 a 2011, além de 2012. Os meses isolados usam os cenários disponíveis naquele mês. Contagens observadas e condições com zero focos não exigem fator nem restringem a interseção. Não preencher janeiro com a mediana dos outros cenários: isso inventaria uma estimativa e estreitaria a faixa. A regra é comum à API e à B6 (`validar_inpe.py`); se não houver cenário válido para uma contagem positiva, o resultado não pode virar zero.
 
 Com `counts.csv` (passo 1) e `factors.csv` (os `F_k`) do ZIP de auditoria, qualquer pessoa refaz o `result.csv`. Os nomes dos arquivos seguem o `docs/api.md` (PR #4).
 
@@ -105,4 +106,4 @@ Adicionar uma região leva quatro passos e não muda nada no front nem na API.
 
 Depois disso, os jobs de atualização diária e de recarga mensal passam a incluir a região automaticamente, usando o bounding box do polígono.
 
-**Próximas regiões previstas:** Pantanal (sem download novo, já está no Brasil) e Califórnia (precisa de um pedido novo no FIRMS) para os casos de 2020 na demo.
+**Regiões:** os 6 biomas do IBGE já estão cadastrados, incluindo o Pantanal. A Califórnia ficou para depois da submissão (tarefa X3), porque precisa de um pedido novo no FIRMS.

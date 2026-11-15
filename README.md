@@ -24,7 +24,16 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 8 | [Banco de dados — decisões para o backend](docs/banco.md) | Imagem, H3, resolução, schema, consulta da API, compose sugerido, benchmark | Antes de mexer no banco ou na API |
 | 9 | [Contrato da API](docs/api.md) | Endpoints, pedido, resposta, erros, export de auditoria. JSON de exemplo em [api-exemplo.json](docs/api-exemplo.json) | Antes de mexer na API ou no front |
 | 10 | [Prompt do frontend](docs/prompt-frontend.md) | Prompt para o agente que constrói o front: direção de design, regras de dado na tela, animação, performance e etapas de construção | Antes de começar a frente D |
-| 11 | [Restrições para o mundo](docs/escala-mundial.md) | O que muda quando a cobertura passar do Brasil para o mundo, com a saída proposta para cada ponto | Antes de mexer em cobertura, seleção de área ou camada de focos |
+| 11 | [Critérios de julgamento e prêmios](docs/premiacao.md) | Os 5 critérios, as categorias-alvo e as regras de prioridade da equipe | Antes de qualquer tarefa |
+| 12 | [Decisões da harmonização](docs/decisoes-harmonizacao.md) | Fator Aqua → S-NPP, faixa P5–P95, resultado da calibração e limites a declarar no Método | Antes de mexer em calibração, agregação ou na conta da API |
+| 13 | [Regras entre as variáveis](docs/regras-variaveis.md) | Colunas de cada sensor, regras de remoção e de duplicata, classificador complementar | Antes de mexer nos filtros do pipeline |
+| 14 | [UX: racional das telas](docs/ux-telas.md) | Objetivo, tarefas e decisões do usuário em cada tela | Antes de mexer no front |
+| 15 | [Pitch e vídeo](docs/pitch.md) | Roteiro de 30 s, legenda em inglês e como gravar | Antes de montar a demo |
+| 16 | [Testes e esteira](docs/testes.md) | TDD, regra dos bugs, cobertura, jornadas e jobs do GitHub Actions | Antes de escrever código |
+| 17 | [Versionamento (SemVer)](docs/versionamento.md) | Tipo no commit e no título do PR, como lançar uma versão | Antes do primeiro commit |
+| 18 | [Validação do nível de alerta](docs/validacao-alerta.md) | Solução A + B da issue #9: teste retroativo com "o que veio depois" e eventos conhecidos, no lugar da área queimada | Antes de mexer no alerta ou no `alert_rules.json` |
+| 19 | [RFC 0001: backtest do alerta](docs/rfcs/0001-backtest-alerta.md) | Como implementar a solução A + B: consultas, janelas, contas, saídas, autoteste e plano | Antes de implementar o backtest do alerta |
+| 20 | [Restrições para o mundo](docs/escala-mundial.md) | O que muda quando a cobertura passar do Brasil para o mundo, com a saída proposta para cada ponto | Antes de mexer em cobertura, seleção de área ou camada de focos |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
@@ -44,7 +53,7 @@ firesync/
 └── infra/                 deploy na VPS: docker-compose, servidor web, .env.example (frente C)
 ```
 
-Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/`, `frontend/` e `infra/` ainda não têm código. `data-pipeline/data/` tem os quatro ZIPs de teste:
+Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/` tem o serviço histórico e seus testes; as rotas HTTP ainda faltam. `frontend/` já traz o esqueleto (D1), a seleção de área e período (D2–D3), o calendário (D4), os indicadores/gráficos (D5), os downloads e pacote de auditoria (D6) e os testes E2E em `frontend/e2e/`. `infra/` ainda não tem arquivos de deploy. `data-pipeline/data/` tem os quatro ZIPs de teste:
 
 | Arquivo | Conteúdo |
 | --- | --- |
@@ -65,7 +74,7 @@ CSV do FIRMS (arquivo SP ou API NRT)
   → frontend           calendário, sazonalidade, ranking de anos, anomalias, downloads
 ```
 
-Detalhes de cada etapa: documento 4.
+Detalhes de cada etapa: [importacao-regioes.md](docs/importacao-regioes.md).
 
 ## Regras que não mudam sem falar com a equipe
 
@@ -84,12 +93,12 @@ Detalhes de cada etapa: documento 4.
 - [x] Levantamento do FIRMS e plano de extração
 - [x] Modelo de dados e processo de importação
 - [x] Dados de teste (Brasil, 2024)
-- [ ] Stack e arquitetura definidas
-- [ ] Contrato da API
+- [x] Stack e arquitetura definidas (pipeline, banco, API, front, mapa e gráficos decididos em [arquitetura.md](docs/arquitetura.md); falta só o ponto 13)
+- [ ] Contrato da API ([api.md](docs/api.md) na `main`; falta A e D confirmarem, tarefa T02)
 - [x] Histórico do FIRMS baixado e análise por satélite ([pipeline-dados.md](docs/pipeline-dados.md))
 - [x] Importador, pipeline, agregação, job NRT e série do INPE ([pipeline-dados.md](docs/pipeline-dados.md))
 - [ ] API
-- [ ] Frontend
+- [ ] Frontend (D1–D6 feitos; faltam integração com a API real D7 e demo D8)
 - [ ] Deploy público
 - [ ] Demo e página do projeto
 
@@ -102,9 +111,16 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `data-pipeline/pipeline.py`, `agregar.py`, `eda.py`, `test_pipeline.py`, `test_banco.py`, `job_nrt.py`, `Dockerfile`, `migrations/` | Claude Code (Claude Opus 5.5) | Código gerado a partir das especificações de filtro escritas pelo time de dados. Revisado pela equipe |
 | `docs/banco.md`, `data-pipeline/migrations/001_inicial.sql` | Claude Code (Claude Opus 5.5) | Schema e documento de decisões gerados a partir dos docs do repo e de um benchmark local. Revisado pela equipe |
 | `docs/pipeline-dados.md` | Claude Code (Claude Opus 5.5) | Redação do relatório do que foi feito e dos achados da análise exploratória |
+| Código e testes em `backend/src/`, `backend/tests/`, configuração Python e CI do backend | OpenAI Codex | Implementação assistida das partes 1–3 e integração da main: domínio, portas, adaptadores PostgreSQL, análise histórica, reorganização de src e CI, conforme documentação da equipe |
+| Estrutura e documentação do `backend/`, ajustes em `docs/arquitetura.md`, `docs/tarefas.md`, `docs/importacao-regioes.md` e `docs/api.md` | OpenAI Codex | Organização das camadas e revisão da documentação; decisões de método referenciadas nos registros da equipe |
 | `docs/prompt-frontend.md` | Claude Code (Claude Opus 5.5) | Prompt do front escrito a partir dos docs do repo. A equipe aprova antes de usar |
 | `docs/api.md`, `docs/api-exemplo.json` (issues #22 e #29) | Claude Code (Claude Opus 5.5) | Correções do contrato escritas a partir das issues da auditoria. Revisado pela equipe |
+| `docs/validacao-alerta.md`, `docs/rfcs/0001-backtest-alerta.md` | Claude Code (Claude Opus 5.5) | Proposta de validação do alerta e RFC de implementação, escritos a partir da issue #9 e da revisão do PR #42. Revisado pela equipe |
+| Limpeza dos `.md` (README, CLAUDE.md, `docs/`, READMEs das pastas) | Claude Code (Claude Opus 5.5) | Levantamento do que estava desatualizado, comparando os docs com o código da `main`, e correção dos trechos. Revisado pela equipe no PR |
 | `.github/workflows/ci.yml` (job "Só documentação?"), `.github/scripts/roda_testes.sh`, `test_roda_testes.sh` | Claude Code (Claude Opus 5.5) | Filtro que pula os testes de código em PR só de `.md`. Revisado pela equipe |
+| Decisões do front em `docs/arquitetura.md` (pontos 5 a 8) e `frontend/README.md` | Claude Code (Claude Opus 5.5) | Levantamento das opções e redação das justificativas. As escolhas foram feitas pela equipe |
+| Ponto 4 de `docs/arquitetura.md` e responsáveis em `docs/tarefas.md` | Claude Code (Claude Opus 5.5) | Redação da justificativa e levantamento dos responsáveis pelos autores dos commits. As escolhas foram feitas pela equipe |
+| `frontend/` (D1–D6: `index.html`, `src/`, configuração do Vite, testes unitários e E2E) | Claude Code (Claude Opus 5.5) em D1, D4 e D5; Antigravity em D2, D3 e D6 | Esqueleto (D1), calendário (D4) e indicadores/gráficos (D5) gerados a partir do `prompt-frontend.md`, `api.md` e `ux-telas.md`. Seleção de área e período (D2–D3: mapa Leaflet + Geoman em `src/controls/`, cliente API `src/api/client.ts`, validação UTC, fallback demo) e downloads/exportação (D6: pacote de auditoria `POST /api/v1/export`, CSVs e PNG do calendário em `src/export/` e todas as jornadas J1–J9 em `e2e/jornadas.spec.ts`) escritos em TDD a partir dos docs. A equipe revisa no PR |
 
 ## Dados e créditos
 

@@ -12,7 +12,7 @@ A equipe quer ganhar um prêmio global do Space Apps. Leia o [docs/premiacao.md]
 
 ## Antes de escrever código
 
-- Ache sua tarefa em [docs/tarefas.md](docs/tarefas.md). Mexa só nas pastas da sua frente e trabalhe na branch dela. Atualize o status da tarefa ao começar e ao terminar.
+- Ache sua tarefa em [docs/tarefas.md](docs/tarefas.md). Mexa só nas pastas da sua frente, numa branch própria a partir da `main` atualizada. Atualize o status da tarefa ao começar e ao terminar.
 - Confira em [docs/arquitetura.md](docs/arquitetura.md) se a stack da parte que você vai mexer já foi decidida. Se estiver "a decidir", pergunte. Não escolha linguagem, banco ou framework por conta própria.
 - Os documentos em `docs/` são a fonte de verdade. Se o código e um documento discordarem, pergunte antes de mudar qualquer um dos dois.
 - A abordagem de harmonização é da equipe (regra do Space Apps). Implemente o que está documentado e não invente outro método.
@@ -29,6 +29,7 @@ A equipe quer ganhar um prêmio global do Space Apps. Leia o [docs/premiacao.md]
 
 - Todo documento novo vai em `docs/`, com nome em minúsculas, sem acento e com hífen (ex.: `docs/api.md`).
 - Ao criar ou renomear um documento, atualize a tabela de leitura do README.
+- **Sem texto lixo nos docs.** Ao terminar uma tarefa, corrija ou apague nos `.md` o que ela tornou falso: status, pendência, "a decidir", "ainda não existe". Não deixe item riscado, pergunta já respondida nem a mesma regra copiada em vários docs: a regra fica num doc só, e os outros põem o link. Decisão com o porquê não é lixo e fica.
 
 ## Regras de código
 
@@ -41,7 +42,7 @@ A equipe quer ganhar um prêmio global do Space Apps. Leia o [docs/premiacao.md]
 ## Dados
 
 - Não commite CSVs descompactados nem arquivos grandes gerados pelo pipeline. Os ZIPs de teste em `data-pipeline/data/` já estão versionados.
-- Para testar, use os arquivos de 2024 (Brasil, SP). O histórico completo ainda não chegou.
+- Para testar, use os arquivos de 2024 (Brasil, SP). O histórico completo fica só no banco de teste da frente A, fora do git ([docs/pipeline-dados.md](docs/pipeline-dados.md)).
 
 ## Git
 
@@ -71,4 +72,6 @@ API (a partir da raiz): `pip install -r backend/requirements-dev.txt` e `pytest 
 
 Jornadas de usuário (a partir de `frontend/e2e/`): `npm ci` e `npx playwright test`.
 
-O resto da API e do front: a preencher quando a stack estiver definida.
+Front (a partir de `frontend/`): `npm ci`, `npm test` (Vitest), `npm run dev` (porta 5173) e `npm run build`.
+
+Os comandos de execução HTTP da API serão acrescentados quando as rotas estiverem implementadas.
