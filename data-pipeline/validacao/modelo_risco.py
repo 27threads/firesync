@@ -205,21 +205,38 @@ def os_k_maiores(valor, k):
     return alerta
 
 
-def medidas_ano(y, p, critico, score):
-    """Acerto do modelo, da regra (Crítico) e da ingênua com o mesmo número de alertas; AUC e precisão média."""
+def acerto_com_k_alertas(y, p, score, k):
+    """Acerto do modelo e da ingênua quando cada um dá exatamente k alertas."""
+    if not k:
+        return np.nan, np.nan
+    return float(y[os_k_maiores(p, k)].mean()), float(y[os_k_maiores(score, k)].mean())
+
+
+def medidas_ano(y, p, critico, score, critico_continuo=None):
+    """Acerto do modelo, da regra (Crítico) e da ingênua com o mesmo número de alertas; AUC e precisão média.
+
+    Com `critico_continuo` (a regra do piso contínuo, escolhida em 15/11/2026, que dá menos alertas), mede também o
+    modelo e a ingênua com o número de alertas dela. É a comparação mais difícil de bater.
+    """
     from sklearn.metrics import average_precision_score, roc_auc_score
 
     y = np.asarray(y, bool)
     k = int(critico.sum())
-    acerto = {nome: float(y[alerta].mean()) if k else np.nan
-              for nome, alerta in (("modelo", os_k_maiores(p, k)), ("regra", critico), ("ingenua", os_k_maiores(score, k)))}
+    modelo, ingenua = acerto_com_k_alertas(y, p, score, k)
+    regra = float(y[critico].mean()) if k else np.nan
     duas_classes = y.any() and not y.all()
-    return {"semanas_unidade": int(y.size), "prevalencia": float(y.mean()), "alertas": k,
-            "acerto_modelo": acerto["modelo"], "acerto_regra": acerto["regra"], "acerto_ingenua": acerto["ingenua"],
-            "ganho_sobre_regra": acerto["modelo"] - acerto["regra"],
-            "ganho_sobre_ingenua": acerto["modelo"] - acerto["ingenua"],
-            "auc": float(roc_auc_score(y, p)) if duas_classes else np.nan,
-            "precisao_media": float(average_precision_score(y, p)) if duas_classes else np.nan}
+    r = {"semanas_unidade": int(y.size), "prevalencia": float(y.mean()), "alertas": k,
+         "acerto_modelo": modelo, "acerto_regra": regra, "acerto_ingenua": ingenua,
+         "ganho_sobre_regra": modelo - regra, "ganho_sobre_ingenua": modelo - ingenua,
+         "auc": float(roc_auc_score(y, p)) if duas_classes else np.nan,
+         "precisao_media": float(average_precision_score(y, p)) if duas_classes else np.nan}
+    if critico_continuo is not None:
+        k2 = int(critico_continuo.sum())
+        modelo2, ingenua2 = acerto_com_k_alertas(y, p, score, k2)
+        regra2 = float(y[critico_continuo].mean()) if k2 else np.nan
+        r.update(alertas_continua=k2, acerto_regra_continua=regra2, acerto_modelo_k_continua=modelo2,
+                 acerto_ingenua_k_continua=ingenua2, ganho_sobre_regra_continua=modelo2 - regra2)
+    return r
 
 
 def empilhar(pistas, forma):
@@ -237,7 +254,8 @@ def cortes(semanas, ano):
     return fim < ano, np.array([t.year for t in semanas]) == ano
 
 
-def validar_em_avanco(pistas, gab, semanas, critico, score, anos_teste, categoricas=(), semente=SEMENTE):
+def validar_em_avanco(pistas, gab, semanas, critico, score, anos_teste, categoricas=(), semente=SEMENTE,
+                      critico_continuo=None):
     """Uma linha por ano de teste. O modelo de cada ano só vê semanas cujo gabarito termina antes daquele ano."""
     x = empilhar(pistas, gab.shape)
     cat = [list(pistas).index(c) for c in categoricas]
@@ -246,7 +264,8 @@ def validar_em_avanco(pistas, gab, semanas, critico, score, anos_teste, categori
         treino, teste = cortes(semanas, ano)
         modelo = ajustar(x[treino].reshape(-1, x.shape[2]), gab[treino].ravel(), cat, semente)
         p = modelo.predict_proba(x[teste].reshape(-1, x.shape[2]))[:, 1]
-        linhas.append({"ano": ano, **medidas_ano(gab[teste].ravel(), p, critico[teste].ravel(), score[teste].ravel())})
+        continua = None if critico_continuo is None else critico_continuo[teste].ravel()
+        linhas.append({"ano": ano, **medidas_ano(gab[teste].ravel(), p, critico[teste].ravel(), score[teste].ravel(), continua)})
     return pd.DataFrame(linhas)
 
 
@@ -270,19 +289,27 @@ def importancia(pistas, gab, semanas, ano, categoricas=(), semente=SEMENTE, amos
 
 def relatorio(medidas, imp, ano_final):
     cols = ["acerto_modelo", "acerto_regra", "acerto_ingenua", "ganho_sobre_regra", "ganho_sobre_ingenua", "auc", "precisao_media"]
+    continua = ["alertas_continua", "acerto_modelo_k_continua", "acerto_regra_continua", "acerto_ingenua_k_continua",
+                "ganho_sobre_regra_continua"]
+    tem_continua = continua[0] in medidas
     avanco = medidas[medidas["papel"] == "avanco"]
     media = avanco.groupby("conjunto", sort=False)[cols].mean().round(4)
     ganhou = avanco.assign(g=avanco["ganho_sobre_regra"] > 0).groupby("conjunto", sort=False)["g"].agg(["sum", "size"])
     final = medidas[medidas["papel"] == "final"].set_index("conjunto")[cols].round(4)
-    return "\n".join([
+    texto = [
         "Modelo de risco (RFC 0003): chance de muito fogo nos 14 dias seguintes, células H3 res 4.",
         f"Alvo: gabarito do backtest (P{bt.GABARITO[0]} do normal e >= {bt.GABARITO[1]} detecções em 14 dias).",
         "Acerto = parte dos alertas seguida de muito fogo. Modelo, regra e ingênua dão o MESMO número de alertas por ano.",
         "", "Validação em avanço (média dos anos de teste; cada ano treinado só com os anteriores):", media.to_string(),
         "", "Anos de teste em que o modelo ganha da regra:",
         "\n".join(f"  {c}: {int(r['sum'])} de {int(r['size'])}" for c, r in ganhou.iterrows()),
-        "", f"Ano final ({ano_final}), rodado uma vez, fora de qualquer escolha:", final.to_string(),
-        "", "Pistas que mais pesam no ano final (queda da precisão média ao embaralhar):", imp.head(12).round(4).to_string(index=False)])
+        "", f"Ano final ({ano_final}), rodado uma vez, fora de qualquer escolha:", final.to_string()]
+    if tem_continua:
+        texto += ["", "Contra a regra do piso contínuo (a v1 escolhida; menos alertas, o modelo e a ingênua usam o número dela):",
+                  "média dos anos de teste:", avanco.groupby("conjunto", sort=False)[continua].mean().round(4).to_string(),
+                  f"ano final ({ano_final}):", medidas[medidas["papel"] == "final"].set_index("conjunto")[continua].round(4).to_string()]
+    return "\n".join(texto + ["", "Pistas que mais pesam no ano final (queda da precisão média ao embaralhar):",
+                              imp.head(12).round(4).to_string(index=False)])
 
 
 def ler_serie(caminho):
@@ -319,6 +346,8 @@ def main():
     crit = regra["levels"]["critical"]
     critico = bt.nivel(av, crit["min_ratio_to_median"], crit["requires_rising_trend"],
                        regra["levels"]["attention"]["above_percentile"], bt.PISO_MEDIANA_ZERO) == 2
+    critico_continuo = bt.nivel(av, crit["min_ratio_to_median"], crit["requires_rising_trend"],
+                                regra["levels"]["attention"]["above_percentile"], bt.PISO_MEDIANA_ZERO, True) == 2
 
     lat, lon = posicao_das_unidades(unidades)
     fogo = {**pistas_fogo(m_n, m_frp, semanas, vizinhos(unidades)),
@@ -337,7 +366,8 @@ def main():
 
     partes = []
     for nome, pistas in conjuntos.items():
-        r = validar_em_avanco(pistas, gab, semanas, critico, av["score"], [*a.anos_teste, a.ano_final], categoricas)
+        r = validar_em_avanco(pistas, gab, semanas, critico, av["score"], [*a.anos_teste, a.ano_final], categoricas,
+                           critico_continuo=critico_continuo)
         partes.append(r.assign(conjunto=nome, papel=np.where(r["ano"] == a.ano_final, "final", "avanco")))
         print(f"{nome}: pronto", flush=True)
     medidas = pd.concat(partes, ignore_index=True)
