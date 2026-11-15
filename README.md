@@ -52,6 +52,7 @@ firesync/
 │   └── data/              ZIPs do FIRMS (Brasil, 2024, SP) para testes
 ├── backend/               API que serve o calendário, a janela recente e o export (frente C)
 ├── frontend/              aplicação web: mapa, calendário, alerta, downloads (frente D)
+├── lovable/               front feito no Lovable (TanStack Start), com a abertura do globo e dos satélites
 ├── config/                regras que mudam sem mudar o código, como o alert_rules.json
 └── infra/                 deploy na VPS: docker-compose com Cloudflare Tunnel, .env.example (frente C)
 ```
@@ -150,6 +151,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | Job de risco no deploy (`data-pipeline/Dockerfile`, serviço `job-risco` e `RISK_MAX_AGE_DAYS` em `infra/docker-compose.yml` e `infra/.env.example`, `docs/deploy.md`) | Claude Code (Claude Opus 5.5) | Configuração escrita a partir da issue #96 e testada rodando o job na imagem contra um Postgres descartável. A equipe revisa no PR |
 | Carga do banco na VPS e status da C7 (`docs/tarefas.md`, `docs/deploy.md`, `README.md`; issue #98) | Claude Code (Claude Opus 5.5) | Roteiro de carga, acesso temporário para o dump e conferência guiados pela IA, executados e conferidos pela equipe na VPS; documentos atualizados com os endereços no ar |
 | Resultados da frente B na tela de Método (`frontend/index.html`, `frontend/public/img/`, `src/index-html.test.ts`) | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Textos em inglês escritos a partir de `docs/decisoes-harmonizacao.md` e do RFC 0003, com os números copiados dos documentos, e testes antes do texto. A equipe revisa no PR |
+| Ajustes da abertura em `lovable/` (`src/lib/opening-copy.ts`, `MapOpening.tsx`, `OrbitalScene.tsx`, `styles.css`, `src/assets/satellites/CREDITS.md`, teste `src/test/opening-copy.test.ts`) | Claude Code (Claude Opus 5.5) | Revisão da abertura pelos critérios do `docs/premiacao.md` e troca dos textos e dos rótulos dos satélites (Aqua; S-NPP → NOAA-20) conforme as regras do README, com o teste antes do código. O resto de `lovable/` foi gerado no Lovable pela equipe. A equipe revisa no PR |
 
 ## Dados e créditos
 
