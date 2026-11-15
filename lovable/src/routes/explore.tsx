@@ -1,0 +1,5 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { Header, Footer } from '@/components/firesync/Shell';
+import { Explorer } from '@/components/firesync/Explorer';
+export const Route = createFileRoute('/explore')({ head: () => ({ meta: [{ title: 'Explore an area | firesync' }, { name: 'description', content: 'Investigate a place through a harmonized monthly fire-detection history and seasonal context.' }, { property: 'og:title', content: 'Explore an area | firesync' }, { property: 'og:description', content: 'A longer view of fire activity, from monthly patterns to recent detections.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary_large_image' }] }), component: ExplorePage });
+function ExplorePage() { return <><Header /><main><Explorer /></main><Footer /></>; }

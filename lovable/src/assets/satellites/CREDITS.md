@@ -1,0 +1,5 @@
+# NASA spacecraft models
+
+- Terra: https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Terra — NASA 3D Resources, public domain / free and without copyright per repository README. Terra carries MODIS; this representative spacecraft does not depict every MODIS host.
+- Suomi NPP: https://science.nasa.gov/3d-resources/suomi-national-polar-orbiting-partnership-suomi-npp/ — NASA/Brian E. Kumanchik; NASA/Christian A. Lopez. NASA 3D Resources, public domain / free and without copyright per repository README. Suomi NPP carries VIIRS; this representative spacecraft does not depict every VIIRS host.
+- Usage guidelines: https://www.nasa.gov/nasa-brand-center/images-and-media/ . No NASA endorsement is implied. Scene orbital paths, relative sizes and animation timing are illustrative, not physical tracking data.
