@@ -1,7 +1,8 @@
 """Modelo de risco (RFC 0003): a chance de "muito fogo" nos 14 dias seguintes, por célula H3 res 4. Não usa o banco.
 
 Alvo: o gabarito do backtest do alerta (RFC 0001, backtest_alerta.py), sem mudar nada nele: os 14 dias t+1..t+14
-acima do P90 do normal e com pelo menos 10 detecções. O modelo é comparado com a regra atual do alerta e com a regra
+acima do P90 do normal e com pelo menos 10 detecções. O modelo é comparado com a v1 do alerta (piso contínuo, a
+regra que vai para a tela), com a regra antiga (piso só na mediana zero, referência histórica) e com a regra
 ingênua, sempre com o MESMO número de alertas em cada ano.
 
 Pistas (todas só com dias até o domingo t):
@@ -321,7 +322,8 @@ def relatorio(medidas, imp, ano_final):
         "Modelo de risco (RFC 0003): chance de muito fogo nos 14 dias seguintes, células H3 res 4.",
         f"Alvo: gabarito do backtest (P{bt.GABARITO[0]} do normal e >= {bt.GABARITO[1]} detecções em 14 dias).",
         "Acerto = parte dos alertas seguida de muito fogo. Modelo, regra e ingênua dão o MESMO número de alertas por ano.",
-        "", "Validação em avanço (média dos anos de teste; cada ano treinado só com os anteriores):", media.to_string(),
+        "", "Validação em avanço (média dos anos de teste; cada ano treinado só com os anteriores). "
+        "Aqui 'regra' é a regra ANTIGA (piso só na mediana zero); a v1 vem mais abaixo:", media.to_string(),
         "", "Anos de teste em que o modelo ganha da regra:",
         "\n".join(f"  {c}: {int(r['sum'])} de {int(r['size'])}" for c, r in ganhou.iterrows()),
         "", f"Ano final ({ano_final}), rodado uma vez, fora de qualquer escolha:", final.to_string()]
@@ -365,10 +367,10 @@ def main():
     semanas, av = bt.avaliar(m_n, regra)
     gab = bt.gabarito(av, *bt.GABARITO)
     crit = regra["levels"]["critical"]
+    # regra antiga (piso só onde a mediana é zero), só como referência histórica; a v1 é a de piso contínuo
     critico = bt.nivel(av, crit["min_ratio_to_median"], crit["requires_rising_trend"],
-                       regra["levels"]["attention"]["above_percentile"], bt.PISO_MEDIANA_ZERO) == 2
-    critico_continuo = bt.nivel(av, crit["min_ratio_to_median"], crit["requires_rising_trend"],
-                                regra["levels"]["attention"]["above_percentile"], bt.PISO_MEDIANA_ZERO, True) == 2
+                       regra["levels"]["attention"]["above_percentile"], crit["min_detections"]) == 2
+    critico_continuo = bt.nivel_da_regra(av, regra) == 2
 
     lat, lon = posicao_das_unidades(unidades)
     fogo = {**pistas_fogo(m_n, m_frp, semanas, vizinhos(unidades)),
