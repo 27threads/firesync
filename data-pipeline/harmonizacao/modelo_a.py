@@ -36,8 +36,10 @@ Etapa B, corte no tempo (um ano de cada vez, para caber na memória): treina em 
 nunca viu, e mostra a curva de cada ano (a deriva do Aqua aparece aí):
     python harmonizacao/modelo_a.py --pasta firms/ --treino 2019 2020 2021 --teste 2022 2023 2024 --janela 90
         --biomas Biomas_250mil.zip --saida pasta [--cache pares/]
-    A pasta tem modis_{ano}_Brazil.csv e viirs-snpp_{ano}_Brazil.csv (os arquivos anuais por país do FIRMS). O --cache
-    guarda os pares de cada ano e a janela usada, e a segunda rodada não relê os CSV.
+    A pasta tem modis_{ano}_Brazil.csv e viirs-snpp_{ano}_Brazil.csv (os arquivos anuais por país do FIRMS) ou, com os nomes
+    que o `pipeline.py download` grava, modis_{ano}.csv e viirs-snpp_{ano}.csv (data/raw/country/). O --cache guarda os
+    pares de cada ano e a segunda rodada não relê os CSV; ele só vale para os mesmos biomas, janela e regras de limpeza,
+    e é refeito se algum deles mudar.
     medidas_por_ano.csv, calibracao_por_ano.csv, curva_por_ano.csv (e .png), totais_por_ano.csv, relatorio_temporal.txt
 """
 import argparse
@@ -389,26 +391,52 @@ def grafico_por_ano(curva_por_ano, saida):
     return "Gráfico: curva_por_ano.png"
 
 
+def chave_do_cache(biomas, janela):
+    """Identifica com o que os pares foram feitos: os biomas, a janela, as regras do pareamento e o código da limpeza.
+
+    Se qualquer um mudar, o cache velho não vale (e não é reaproveitado em silêncio).
+    """
+    import hashlib
+    import inspect
+
+    h = hashlib.sha256()
+    h.update(b"".join(biomas.geometry.to_wkb()))
+    h.update("|".join(map(str, biomas["bioma"])).encode())
+    h.update(f"|{janela}|{OLHANDO_KM}|{PIXEL_VIIRS_KM}".encode())
+    for funcao in (normalize, clean_modis, clean_viirs):
+        h.update(inspect.getsource(funcao).encode())
+    return h.hexdigest()
+
+
+def arquivo_do_ano(pasta, fonte, ano):
+    """Acha o CSV anual do FIRMS: `{fonte}_{ano}_Brazil.csv` (download manual) ou `{fonte}_{ano}.csv` (o do `pipeline.py download`)."""
+    for nome in (f"{fonte}_{ano}_Brazil.csv", f"{fonte}_{ano}.csv"):
+        if (Path(pasta) / nome).exists():
+            return Path(pasta) / nome
+    raise FileNotFoundError(f"{fonte}_{ano}_Brazil.csv ou {fonte}_{ano}.csv não está em {pasta}")
+
+
 def pares_do_ano(pasta, ano, biomas, janela, cache=None):
-    """Lê os CSV do ano (modis_{ano}_Brazil.csv e viirs-snpp_{ano}_Brazil.csv) e forma os pares, ou lê o cache."""
+    """Lê os CSV do ano e forma os pares, ou lê o cache (só se ele foi feito com os mesmos biomas, janela e regras)."""
     import json
 
     import pyarrow as pa
     import pyarrow.parquet as pq
 
     arquivo = Path(cache) / f"pares_{ano}_j{janela}.parquet" if cache else None
+    chave = chave_do_cache(biomas, janela).encode()
     if arquivo is not None and arquivo.exists():
         tabela = pq.read_table(arquivo)
-        return {"olhados": tabela.to_pandas(), "totais": json.loads(tabela.schema.metadata[b"totais"])}
+        if (tabela.schema.metadata or {}).get(b"chave") == chave:
+            return {"olhados": tabela.to_pandas(), "totais": json.loads(tabela.schema.metadata[b"totais"])}
     tipos = {"acq_time": str, "version": str, "confidence": str}
-    pasta = Path(pasta)
-    r = preparar_ano(pd.read_csv(pasta / f"modis_{ano}_Brazil.csv", dtype=tipos),
-                     pd.read_csv(pasta / f"viirs-snpp_{ano}_Brazil.csv", dtype=tipos), biomas, janela)
+    r = preparar_ano(pd.read_csv(arquivo_do_ano(pasta, "modis", ano), dtype=tipos),
+                     pd.read_csv(arquivo_do_ano(pasta, "viirs-snpp", ano), dtype=tipos), biomas, janela)
     if arquivo is not None:
         arquivo.parent.mkdir(parents=True, exist_ok=True)
         tabela = pa.Table.from_pandas(r["olhados"], preserve_index=False)
-        pq.write_table(tabela.replace_schema_metadata({**(tabela.schema.metadata or {}), b"totais": json.dumps(r["totais"]).encode()}),
-                       arquivo)
+        pq.write_table(tabela.replace_schema_metadata({**(tabela.schema.metadata or {}), b"totais": json.dumps(r["totais"]).encode(),
+                                                       b"chave": chave}), arquivo)
     return r
 
 

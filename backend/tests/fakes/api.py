@@ -21,6 +21,8 @@ class FakeApiRepository:
                                       'data_version': '2026-11-14T14:00:00Z', 'h3_resolution': 6, 'scale': 'VIIRS'})
         self.detection_count = 1
         self.map_count = 1
+        self.risk = None  # notas de risco por celula res 4 (risco_celulas); None = sem notas frescas
+        self.cell_daily = {}  # contagens diárias por célula res 4, para o nível de urgência do mapa
         self.failure = None
 
     @contextmanager
@@ -61,4 +63,6 @@ class FakeApiRepository:
                               'n_low': 0, 'n_medium': 0, 'n_high': self.map_count}],
                 'points': [{'satellite': 'N20', 'longitude': -60, 'latitude': -3,
                             'acquired_utc': '2026-11-14T12:00:00Z', 'confidence': 'high',
-                            'intensity': 'high', 'daynight': 'D'}] if self.map_count <= 50_000 else None}
+                            'intensity': 'high', 'daynight': 'D'}] if self.map_count <= 50_000 else None,
+                'data_through': date(2026, 11, 14), 'coverage_start': date(2012, 2, 1),
+                'cell_daily': self.cell_daily, 'risk': self.risk}

@@ -1040,6 +1040,134 @@ select {
   border-radius: 1px;
 }
 
+/* Aviso antecipado (RFC 0003): lista "Where to look first" e legenda do risco. Sem cor nova no mapa. */
+
+.map-badge {
+  display: inline-block;
+  padding: 0 6px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.early-warning {
+  display: grid;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--graphite-700);
+  font-size: 12px;
+  color: var(--fog-200);
+}
+
+.early-warning__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.early-warning__title {
+  margin: 0;
+  font-size: 13px;
+  color: var(--snow);
+}
+
+.early-warning__meta {
+  color: var(--fog-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.early-warning__empty {
+  margin: 0;
+}
+
+.early-warning__list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: look;
+}
+
+.early-warning__list li {
+  counter-increment: look;
+}
+
+.early-warning__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  width: 100%;
+  min-height: 34px;
+  padding: 4px 10px;
+  border: 1px solid var(--graphite-600);
+  border-radius: var(--radius);
+  background: var(--graphite-850);
+  color: var(--fog-200);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.early-warning__item::before {
+  content: counter(look) '.';
+  min-width: 1.6em;
+  color: var(--fog-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.early-warning__item:hover {
+  color: var(--snow);
+  border-color: var(--fog-400);
+}
+
+.early-warning__risk {
+  color: var(--snow);
+  font-weight: 600;
+}
+
+.early-warning__fire {
+  font-variant-numeric: tabular-nums;
+}
+
+.early-warning__more {
+  justify-self: start;
+}
+
+.early-warning__legend {
+  display: grid;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--graphite-700);
+}
+
+.early-warning__legend p {
+  margin: 0;
+}
+
+.early-warning__legend strong {
+  color: var(--snow);
+}
+
+.early-warning__tiers {
+  margin: 0;
+  padding-left: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.early-warning__caveat {
+  color: var(--snow);
+}
+
+.early-warning__limits span {
+  font-weight: 600;
+}
+
 .map-stage .leaflet-container {
   font-family: var(--font);
   background: var(--graphite-950);

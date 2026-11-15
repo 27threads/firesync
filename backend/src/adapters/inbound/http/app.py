@@ -15,7 +15,7 @@ from starlette.concurrency import run_in_threadpool
 from backend.adapters.inbound.http.cache import ResponseCache
 from backend.adapters.inbound.http.limits import RateLimiter
 from backend.adapters.inbound.http.zip_export import audit_zip
-from backend.adapters.outbound.config_file.rules import load_rules
+from backend.adapters.outbound.config_file.rules import load_risk_rules, load_rules
 from backend.application.api import calculate_calendar, parse_request
 from backend.application.audit import audit_document
 from backend.domain.calculations.map_features import map_result
@@ -42,6 +42,7 @@ def create_app(repository: ApiRepository | None = None, clock=None, monotonic=No
     client_ip_header = client_ip_header or os.environ.get('CLIENT_IP_HEADER', '')
     monotonic = monotonic or system_monotonic
     rules = load_rules()
+    risk_rules = load_risk_rules()
     configured_limits = limits if limits is not None else {
         key: int(os.environ.get('RATE_LIMIT_' + key.upper(), default))
         for key, default in [('general', 60), ('calendar', 10), ('export', 2)]}
@@ -177,7 +178,7 @@ def create_app(repository: ApiRepository | None = None, clock=None, monotonic=No
             cached = cache.get(key)
             if cached is None or now > cached[1]:
                 rows = reader.map_rows(query, now)
-                body = map_result(query, rows, meta['updated_at'])
+                body = map_result(query, rows, meta['updated_at'], rules, risk_rules)
                 expires_at = rows['expires_at']
                 cache.put(key, (body, expires_at))
             else:
