@@ -50,6 +50,13 @@ describe('index.html (static page shell)', () => {
     }
   });
 
+  it('declares every AI tool listed in the README, not only one', () => {
+    const credits = doc.getElementById('credits')?.textContent ?? '';
+    for (const tool of ['Claude Code', 'OpenAI Codex', 'Antigravity', 'Lovable']) {
+      expect(credits).toContain(tool);
+    }
+  });
+
   it('counts detections, never fires', () => {
     const text = doc.body.textContent ?? '';
     expect(text).not.toMatch(/\bnumber of fires\b/i);
