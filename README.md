@@ -106,6 +106,19 @@ Processo: identificar requisito e critério → preparar dados e teste → execu
 
 A CI exige cobertura mínima de **97,1% no backend**; o pipeline usa o limite de sua `.coveragerc`. PRs apenas de Markdown dispensam as suítes de código pela regra da esteira. Cobertura, falhas, latência e atualização dos dados são evidências distintas. Detalhes: [testes](docs/testes.md) e [validação com dados reais](docs/validacao-api-eduardo.md).
 
+## 6. Processo de integração
+
+Fluxo de dados: **NASA FIRMS → importação e filtros → PostgreSQL/PostGIS → calibração/agregação → API REST/JSON → frontend**. Biomas vêm do IBGE; INPE fornece referências de validação; NASA GIBS fornece o mapa base. O modelo de risco roda no pipeline e a API lê suas notas.
+
+| Rota em `/api/v1` | Responsabilidade |
+| --- | --- |
+| `GET /health` e `GET /regions` | Metadados de disponibilidade e regiões cadastradas. |
+| `POST /calendar` | Histórico harmonizado, indicadores e comparação recente. |
+| `GET /detections/recent` | Focos no recorte e janela escolhidos; alerta e risco quando disponíveis. |
+| `POST /export` | ZIP com resultados, contagens, fatores, metadados e focos quando permitidos. |
+
+Uma integração começa pelo [contrato da API](docs/api.md) e pelo [JSON de exemplo](docs/api-exemplo.json); segue com implementação dos adaptadores, testes de contrato e integração, validação no front e publicação. Quebras exigem coordenação entre as frentes e atualização do contrato. A arquitetura utiliza jobs em lote e HTTP, sem ESB ou iPaaS documentados.
+
 ## Uso de IA
 
 | Parte | Ferramenta | Como foi usada |
