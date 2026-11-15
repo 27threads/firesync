@@ -252,3 +252,29 @@ def test_map_works_without_the_risk_table_when_migration_005_was_not_applied(api
     with PostgresApiRepository(pool, alert_rules).read() as reader:
         rows = reader.map_rows(MapQuery.parse('-61,-4,-59,-2', '24', '4'), NOW)
     assert rows['risk'] is None and rows['cell_levels'] is not None
+
+
+def test_history_is_read_once_per_day_and_each_data_version_only_reads_the_recent_week(api_database, alert_rules, monkeypatch):
+    """Revisão do PR #86: o primeiro acesso depois de cada rodada do NRT levava de 15 a 29 s. O histórico de 12 anos só
+    muda uma vez por dia; a cada rodada, só a semana atual. O resultado tem de ser o mesmo de um cálculo do zero."""
+    from backend.adapters.outbound.postgres import api as postgres_api
+    from backend.domain.models.map_query import MapQuery
+    pool, region, cell = api_database
+    repository = postgres_api.PostgresApiRepository(pool, alert_rules)
+    calls = []
+    original = postgres_api.PostgresApiReader._query_daily
+    monkeypatch.setattr(postgres_api.PostgresApiReader, '_query_daily',
+                        lambda self, parents, ranges: calls.append(len(ranges)) or original(self, parents, ranges))
+    query = MapQuery.parse('-61,-4,-59,-2', '24', '4')
+    parent = h3.cell_to_parent(h3.int_to_str(cell), 4)
+    with repository.read() as reader:
+        first = reader.map_rows(query, NOW)
+    with pool.connection() as conn:       # a new NRT round: one more day with fire and a new data version
+        conn.execute("INSERT INTO agregados_diarios VALUES (%s,'2026-11-13',%s,'N20','D',7)", (cell, region))
+        conn.execute("UPDATE config SET valor = '2026-11-14T18:00:00Z' WHERE chave = 'atualizado_em'")
+    with repository.read() as reader:
+        second = reader.map_rows(query, NOW)
+    assert calls[0] > 1 and calls[1:] == [1, 1]            # the history once; the recent week at each version
+    assert second['cell_levels'][parent]['detections_7d'] == first['cell_levels'][parent]['detections_7d'] + 7
+    with postgres_api.PostgresApiRepository(pool, alert_rules).read() as reader:
+        assert reader.map_rows(query, NOW)['cell_levels'] == second['cell_levels']      # same as computing from scratch
