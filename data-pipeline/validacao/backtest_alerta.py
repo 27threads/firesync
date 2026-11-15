@@ -17,6 +17,7 @@ Saídas na pasta --saida:
     relatorio.txt   resumo e regras que passam na regra de decisão
 """
 import argparse
+from calendar import monthrange
 import io
 import itertools
 import json
@@ -78,7 +79,7 @@ def indices_normal(t, raio, anos, ano_excluido):
     for ano in anos:
         if ano == ano_excluido:
             continue
-        centro = t.replace(year=ano, day=min(t.day, 28)) if (t.month, t.day) == (2, 29) else t.replace(year=ano)
+        centro = t.replace(year=ano, day=min(t.day, monthrange(ano, t.month)[1]))
         idx += [i for i in range((centro - INICIO).days - raio, (centro - INICIO).days + raio + 1) if 0 <= i <= ultimo]
     return np.array(idx)
 
