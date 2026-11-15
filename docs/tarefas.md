@@ -6,19 +6,19 @@ Divisão do trabalho entre as 4 pessoas da equipe, até a submissão (domingo, 1
 
 - Cada pessoa tem uma frente e mexe **só nas pastas da sua frente**. Para mexer em outra pasta, fale antes com o responsável dela.
 - As frentes dependem de **contratos** (formato da tabela `agregados` e `docs/api.md`), nunca do código de outra frente. Até a parte real ficar pronta, trabalhe com dados falsos no formato do contrato.
-- Cada pessoa trabalha na branch da sua frente e faz merge na `main` assim que algo funcionar.
+- Cada tarefa vai numa branch própria, criada a partir da `main` atualizada, e entra na `main` por PR assim que algo funcionar (regras de Git no [CLAUDE.md](../CLAUDE.md)).
 - Mudar um contrato exige avisar a equipe antes. Depois, atualize o documento do contrato no mesmo commit.
 - Ao começar uma tarefa, mude o status para `fazendo`. Ao terminar, mude para `feito`. Status possíveis: `a fazer`, `fazendo`, `feito`, `bloqueado`, `cortado`.
 - Agentes: leia a sua frente inteira e os documentos indicados nela antes de começar.
 
 ## Frentes
 
-| Frente | Responsável | Branch | Pastas |
-| --- | --- | --- | --- |
-| A. Importador e dados | | `a-importador` | `data-pipeline/` (importação) |
-| B. Harmonização | | `b-harmonizacao` | `data-pipeline/` (calibração e agregação, em módulo separado do importador), `config/` (regras do alerta) |
-| C. API, deploy e submissão | | `c-api` | `backend/`, `infra/` (deploy), `docs/api.md` |
-| D. Frontend e demo | | `d-frontend` | `frontend/` |
+| Frente | Responsável | Pastas |
+| --- | --- | --- |
+| A. Importador e dados | Eduardo | `data-pipeline/` (importação) |
+| B. Harmonização | Weberson | `data-pipeline/` (calibração e agregação, em módulo separado do importador), `config/` (regras do alerta) |
+| C. API, deploy e submissão | Rafael | `backend/`, `infra/` (deploy), `docs/api.md` |
+| D. Frontend e demo | Mateus | `frontend/` |
 
 A e B dividem `data-pipeline/`. Antes de começar, combinem a estrutura de subpastas para não editarem os mesmos arquivos.
 
@@ -36,10 +36,10 @@ A e B dividem `data-pipeline/`. Antes de começar, combinem a estrutura de subpa
 
 | ID | Tarefa | Status | Pronto quando |
 | --- | --- | --- | --- |
-| T00 | Decidir os pontos 1, 2, 4, 5 e 12 de [arquitetura.md](arquitetura.md) e escrever as justificativas | fazendo (1, 2, 5 e 12 decididos; falta o 4) | Os 5 pontos preenchidos |
+| T00 | Decidir os pontos 1, 2, 4, 5 e 12 de [arquitetura.md](arquitetura.md) e escrever as justificativas | feito | Os 5 pontos preenchidos |
 | T01 | Fechar o formato de `agregados` (colunas, tipos, resolução H3) | feito ([banco.md](banco.md), PR #2) | Seção escrita em [importacao-regioes.md](importacao-regioes.md) |
 | T02 | Escrever `docs/api.md` com endpoints, pedido, resposta, erros e um JSON de exemplo | fazendo (na `main`, falta A e D confirmarem) | A e D leram e concordaram |
-| T03 | Preencher responsáveis desta página e criar as 4 branches | a fazer | Tabela de frentes preenchida |
+| T03 | Preencher responsáveis desta página | feito | Tabela de frentes preenchida |
 
 ## A. Importador e dados
 
@@ -78,9 +78,9 @@ Ler antes: [requisitos.md](requisitos.md), [importacao-regioes.md](importacao-re
 | --- | --- | --- | --- | --- |
 | C1 | Esqueleto da API respondendo o JSON de exemplo do `api.md` | T00, T02 | a fazer | D consegue apontar o front para ela |
 | C2 | Gerar `agregados` falsos no formato do contrato, para testar sem esperar B | T01 | a fazer | Script versionado |
-| C3 | Converter a área (polígono, retângulo ou lat/lon) em células H3 e somar os `agregados` | C1 | a fazer | Calendário meses × anos correto para uma área de teste |
-| C4 | Sazonalidade, ranking de anos, mediana do mês atual e anomalias (RF09–RF12) | C3 | a fazer | Valores conferidos à mão para uma área |
-| C5 | Resposta "sem dados" fora da `cobertura` e marcação dos dias de `dias_sem_dados` | C3 | a fazer | Área fora do Brasil devolve o aviso, não um calendário vazio |
+| C3 | Converter a área (polígono, retângulo ou lat/lon) em células H3 e somar os `agregados` | C1 | fazendo (parcial: seleção H3, repositório PostgreSQL e calendário testados; faltam rota HTTP e validação com o histórico real) | Calendário meses × anos correto para uma área de teste |
+| C4 | Sazonalidade, ranking de anos, mediana do mês atual e anomalias (RF09–RF12) | C3 | fazendo (parcial: sazonalidade, ranking e anomalias históricas testados; faltam indicadores da janela recente e rota HTTP) | Valores conferidos à mão para uma área |
+| C5 | Resposta "sem dados" fora da `cobertura` e marcação dos dias de `dias_sem_dados` | C3 | fazendo (parcial: cobertura e dias sem dados tratados no serviço; falta expor e validar a resposta pela rota HTTP) | Área fora do Brasil devolve o aviso, não um calendário vazio |
 | C6 | Export CSV dos focos da busca (RD05) | C3 | a fazer | Arquivo abre no Excel |
 | C7 | Deploy público de banco, API e front | T00, M2 | a fazer | Link funciona numa janela anônima |
 | C8 | Pedir a classificação FortiGuard do site | C7 | a fazer | Pedido enviado |
@@ -95,13 +95,13 @@ D1 a D5 começam com o JSON de exemplo do `api.md`, sem esperar a API.
 
 | ID | Tarefa | Depende de | Status | Pronto quando |
 | --- | --- | --- | --- | --- |
-| D1 | Esqueleto do app, interface em inglês e crédito ao FIRMS visível | T00 | a fazer | App abre local |
-| D2 | Mapa com desenho de polígono e retângulo (RD01) e entrada de lat/lon (RD02) | D1 | a fazer | Área desenhada vira o pedido do `api.md` |
-| D3 | Seletor de intervalo de datas (RF07) | D1 | a fazer | Datas entram no pedido |
-| D4 | Calendário meses × anos em heatmap com paleta acessível (RF08, RD03, RD04) e meses com falha de satélite (`dias_sem_dados`) diferentes de zero | D1 | a fazer | Renderiza o JSON de exemplo |
-| D5 | Indicadores principais, sazonalidade, ranking de anos, mês atual vs. mediana e anomalia (RF09–RF12, RD06) | D1 | a fazer | Renderiza o JSON de exemplo |
-| D6 | Download das análises e do CSV (RF13, RD05) | D4, D5 | a fazer | Arquivos baixam e abrem |
-| D7 | Ligar o front na API real | C3, D2–D5 | a fazer | M2 atingido |
+| D1 | Esqueleto do app, interface em inglês e crédito ao FIRMS visível | T00 | feito (Vite + React + TS em `frontend/`; texto fixo, Method e Data & credits no `index.html`, abre sem JS) | App abre local |
+| D2 | Mapa com desenho de polígono e retângulo (RD01) e entrada de lat/lon (RD02) | D1 | feito (`frontend/src/controls/`: Leaflet `preferCanvas` + Leaflet-Geoman em carga tardia, basemaps CARTO Dark Matter e NASA GIBS sem `Reference_Labels_15m`, desenho de retângulo e polígono em GeoJSON, camada de focos recentes `GET /api/v1/detections/recent` em hexágonos `cividis` log e pontos por classe de intensidade `low`/`medium`/`high`, campos de latitude/longitude/raio de 1 a 200 km, select de região via `GET /regions` e cliente `src/api/client.ts` com fallback em `api-exemplo.json`) | Área desenhada vira o pedido do `api.md` |
+| D3 | Seletor de intervalo de datas (RF07) | D1 | feito (`frontend/src/controls/`: início e fim em `YYYY-MM` em UTC de `2003-01` até `meta.last_month` de `GET /health`, validação de intervalo equivalente a `invalid_period`, estados de cobertura `none`, `429` com `Retry-After`, erro do contrato e aviso de dado velho) | Datas entram no pedido |
+| D4 | Calendário meses × anos em heatmap com paleta acessível (RF08, RD03, RD04) e meses com falha de satélite (`dias_sem_dados`) diferentes de zero | D1 | feito (`frontend/src/calendar/`: D3 + SVG, cividis log, hachura no estimado, borda no incompleto, estados próprios para zero e sem dados, linha da troca de sensor, tooltip e teclado; renderiza o `api-exemplo.json`) | Renderiza o JSON de exemplo |
+| D5 | Indicadores principais, sazonalidade, ranking de anos, mês atual vs. mediana e anomalia (RF09–RF12, RD06) | D1 | feito (`frontend/src/summary/`: indicadores, cartões "last 7 days" e "month to date" com a janela atual desenhada sobre a faixa P25–P75, sazonalidade com mediana e mínimo–máximo, ranking com faixa nos anos estimados, 2012 `mixed` e anos incompletos sem posição; renderiza o `api-exemplo.json`) | Renderiza o JSON de exemplo |
+| D6 | Download das análises e do CSV (RF13, RD05) | D4, D5 | feito (`frontend/src/export/`: pacote de auditoria `POST /api/v1/export` com preservação do `Content-Disposition` e fallback UTC `firesync-YYYY-MM-DD.zip`, erros `429` e do contrato em `role="alert"`, exportação local de `result.csv`, `years.csv`, `seasonality.csv` e PNG do calendário serializado do SVG para canvas com crédito ao NASA FIRMS; jornada J7 passando) | Arquivos baixam e abrem |
+| D7 | Ligar o front na API real | C3, D2–D5 | fazendo (front pronto: proxy `/api` em `vite.config.ts` para `VITE_DEV_API_PROXY` / `http://localhost:8000`, `VITE_API_URL`, camada `GET /api/v1/detections/recent` e carga inicial via `GET /regions` + `POST /calendar` com fallback silencioso; falta expor as rotas HTTP do backend C para validar M2 de ponta a ponta) | M2 atingido |
 | D8 | Demo: vídeo de até 30 s com legenda em inglês, ou até 7 slides em inglês, com nome da equipe, membros, desafio, imagem do projeto, experiência do usuário e uso dos dados da NASA | D7 | a fazer | Link público testado numa janela anônima |
 
 ## Cortado ou depois da submissão

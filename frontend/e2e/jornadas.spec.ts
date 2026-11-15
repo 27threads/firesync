@@ -5,8 +5,7 @@
  * A API é simulada com o docs/api-exemplo.json, então as jornadas testam o front sozinho. Quando a API
  * existir, rodem também com FRONTEND_URL apontando para o site completo (sem a simulação).
  *
- * O front ainda não existe: cada jornada começa com `test.fixme`. Quem implementar a tela tira o fixme
- * da jornada dela (TDD: a jornada é escrita antes da tela). Os seletores usam papéis e textos acessíveis
+ * As 9 jornadas (J1–J9) rodam no desktop e no celular. Os seletores usam papéis e textos acessíveis
  * (getByRole, getByText), que também validam a acessibilidade pedida no RD04 e no RNF05.
  */
 import { expect, Page, test } from '@playwright/test';
@@ -14,7 +13,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const exemplo = JSON.parse(readFileSync(join(__dirname, '..', '..', 'docs', 'api-exemplo.json'), 'utf-8'));
-const AINDA_NAO = 'front ainda não existe: tire o fixme quando a tela estiver pronta';
 
 async function simularApi(page: Page, calendar: object = exemplo) {
   await page.route('**/api/v1/health', (r) =>
@@ -28,18 +26,16 @@ async function simularApi(page: Page, calendar: object = exemplo) {
 
 test.describe('Jornadas do usuário', () => {
   test('J1: escolhe uma região pronta e vê o calendário de 2003 até hoje', async ({ page }) => {
-    test.fixme(true, AINDA_NAO);
     await simularApi(page);
     await page.goto('/');
     await page.getByRole('combobox', { name: /region/i }).selectOption({ label: 'Amazônia' });
     const calendario = page.getByRole('grid', { name: /fire calendar/i });
     await expect(calendario).toBeVisible();
     await expect(calendario.getByRole('row')).toHaveCount(1 + 24); // cabeçalho + 2003..2026
-    await expect(page.getByText(/NASA FIRMS/)).toBeVisible();     // crédito visível (submissão)
+    await expect(page.getByText(/NASA FIRMS/).first()).toBeVisible(); // crédito visível (submissão)
   });
 
   test('J2: desenha uma área no mapa e recebe o calendário dela', async ({ page }) => {
-    test.fixme(true, AINDA_NAO);
     await simularApi(page);
     const pedido = page.waitForRequest('**/api/v1/calendar');
     await page.goto('/');
@@ -57,7 +53,6 @@ test.describe('Jornadas do usuário', () => {
   });
 
   test('J3: digita latitude, longitude e raio (RD02)', async ({ page }) => {
-    test.fixme(true, AINDA_NAO);
     await simularApi(page);
     const pedido = page.waitForRequest('**/api/v1/calendar');
     await page.goto('/');
@@ -69,7 +64,6 @@ test.describe('Jornadas do usuário', () => {
   });
 
   test('J4: área fora da cobertura mostra aviso, nunca um calendário de zeros', async ({ page }) => {
-    test.fixme(true, AINDA_NAO);
     const fora = { meta: exemplo.meta, area: exemplo.area,
       coverage: { status: 'none', covered_fraction: 0, message: 'No data for this area yet. Current coverage: Brazil.' } };
     await simularApi(page, fora);
@@ -82,7 +76,6 @@ test.describe('Jornadas do usuário', () => {
   });
 
   test('J5: vê os últimos 7 dias contra o normal da época, com a hora da atualização', async ({ page }) => {
-    test.fixme(true, AINDA_NAO);
     await simularApi(page);
     await page.goto('/');
     await page.getByRole('combobox', { name: /region/i }).selectOption({ label: 'Amazônia' });
@@ -93,7 +86,6 @@ test.describe('Jornadas do usuário', () => {
   });
 
   test('J6: mês estimado mostra a faixa de incerteza e o mês incompleto vem marcado', async ({ page }) => {
-    test.fixme(true, AINDA_NAO);
     await simularApi(page);
     await page.goto('/');
     await page.getByRole('combobox', { name: /region/i }).selectOption({ label: 'Amazônia' });
@@ -103,7 +95,6 @@ test.describe('Jornadas do usuário', () => {
   });
 
   test('J7: baixa o pacote de auditoria (RF13)', async ({ page }) => {
-    test.fixme(true, AINDA_NAO);
     await simularApi(page);
     await page.route('**/api/v1/export', (r) =>
       r.fulfill({ status: 200, contentType: 'application/zip', body: Buffer.from('PK'), headers: { 'content-disposition': 'attachment; filename="firesync-2026-11-14.zip"' } }));
@@ -115,7 +106,6 @@ test.describe('Jornadas do usuário', () => {
   });
 
   test('J8: dado velho (mais de 6 h) mostra aviso de desatualizado (RNF07)', async ({ page }) => {
-    test.fixme(true, AINDA_NAO);
     const velho = { ...exemplo, meta: { ...exemplo.meta, updated_at: '2026-11-13T00:00:00Z' } };
     await simularApi(page, velho);
     await page.clock.setFixedTime(new Date('2026-11-14T15:00:00Z'));
@@ -125,7 +115,6 @@ test.describe('Jornadas do usuário', () => {
   });
 
   test('J9: muitos pedidos seguidos mostram aviso amigável, não erro (RNF06)', async ({ page }) => {
-    test.fixme(true, AINDA_NAO);
     await simularApi(page);
     await page.route('**/api/v1/calendar', (r) =>
       r.fulfill({ status: 429, headers: { 'retry-after': '30' }, json: { error: { code: 'rate_limited', message: 'Too many requests. Try again in 30 seconds.' } } }));

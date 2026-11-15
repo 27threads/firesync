@@ -140,12 +140,11 @@ O que estas telas precisam deixar visível para os jurados:
 | Relevance | Continuidade depois do fim do MODIS (2027), com o NOAA-20 seguindo a série; tudo feito com o NASA FIRMS | 3 e 4 |
 | Presentation | Fluxo curto e claro (telas 1, 2 e 3), o mesmo do vídeo | 1, 2 e 3 |
 
-Afirmações que precisam ser verdade antes da entrega: comparação com o INPE (B6) e teste do alerta contra área queimada (issue #9).
+Afirmações que precisam ser verdade antes da entrega: comparação com o INPE (B6) e teste retroativo do alerta ([validacao-alerta.md](validacao-alerta.md)), com o texto da tela fixado lá.
 
 ## Pendências que afetam as telas
 
 1. Nível Normal, Atenção ou Crítico (tela 2): aguarda decisão da equipe.
 2. "Estimativa pouco confiável" (tela 3): aguarda decisão da equipe.
-3. Framework do front: ainda "a decidir" em [arquitetura.md](arquitetura.md).
 
 A faixa de incerteza já está no contrato como `band_low` e `band_high` (percentis 5 e 95), no [api.md](api.md).
