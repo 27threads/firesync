@@ -116,3 +116,4 @@ D1 a D5 começam com o JSON de exemplo do `api.md`, sem esperar a API.
 | X1 | Job de atualização NRT pela API do FIRMS | Voltou pela issue #5 e foi feito: `data-pipeline/job_nrt.py` + `Dockerfile` (a cada 3 h) |
 | X2 | Recarga SP mensal | Depende do X1 |
 | X3 | Região da Califórnia | Precisa de pedido novo no FIRMS |
+| X4 | Modelo treinado de "onde vai ter fogo" em produção (job semanal, variáveis de vizinhança e biblioteca de aprendizado de máquina no backend) | Depois da submissão, com o produto no ar. Para a entrega, o caminho previsto para as faixas de risco é uma régua simples calculada pela própria API ([rfcs/0003-modelo-risco.md](rfcs/0003-modelo-risco.md)) |

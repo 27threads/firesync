@@ -83,7 +83,8 @@ O que provavelmente faz diferença, e que não coube no prazo:
 - **Secura da vegetação e do solo** (umidade do solo do SMAP, índices de vegetação do MODIS e do VIIRS);
 - **Previsão do tempo** em vez de clima passado;
 - **Alvo mais longo** (30 a 90 dias), em que a persistência do fogo pesa menos;
-- testar o modelo nas variações do gabarito e com intervalo de confiança por bootstrap em blocos de ano.
+- testar o modelo nas variações do gabarito e com intervalo de confiança por bootstrap em blocos de ano;
+- **O modelo treinado de "onde vai ter fogo" em produção** (decisão do Weberson, 15/11/2026). O teste exploratório dessa pergunta (células com 10 ou mais detecções nos 14 dias seguintes) mostrou que um modelo treinado ordena as células um pouco melhor que uma régua simples (fogo dos últimos 30 dias mais o costume da mesma época nos anos anteriores). Levá-lo ao produto exige **um job semanal, as variáveis de vizinhança e uma biblioteca de aprendizado de máquina no backend**, e isso fica **para depois da submissão, com o produto no ar**. Para a submissão, o caminho previsto para as faixas de risco é a régua simples, que a própria API consegue calcular com os dados que já lê. O teste foi exploratório, e as taxas que irão para uma legenda precisam ser medidas por época do ano e com a calibração conferida antes de serem publicadas.
 
 ## Como refazer
 
