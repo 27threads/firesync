@@ -108,7 +108,7 @@ A submissão fecha no domingo, 15/11, às 23h59 no horário do evento local. Dá
 - [ ] Interface em inglês
 - [ ] Crédito ao FIRMS visível no app
 - [ ] Identificar código gerado com IA em texto descritivo ou metadados (ex.: README)
-- [ ] Pedir a classificação FortiGuard do site para os jurados não terem o acesso bloqueado (recomendado, não obrigatório)
+- [x] Pedir a classificação FortiGuard do site para os jurados não terem o acesso bloqueado (recomendado, não obrigatório). ✅ site e API classificados como Business; reclassificação para Information Technology pedida em 15/11 (C8)
 
 ### Elegibilidade
 
