@@ -10,6 +10,7 @@ import { IndicatorRow } from './summary/IndicatorRow';
 import { MapStage } from './map/MapStage';
 import { useExplorer } from './state/useExplorer';
 import { Summary } from './summary/Summary';
+import { Verdict } from './summary/Verdict';
 
 function monthLabel(key: string): string {
   const [y, m] = key.split('-').map(Number);
@@ -51,6 +52,9 @@ export function App() {
     ex.selectArea(area);
   };
 
+  // Mesma condição do resumo: sem erro e sem área fora da cobertura.
+  const hasAnswer = ['ready', 'demo', 'api_unavailable', 'loading'].includes(ex.result.kind);
+
   let statusChip = <span className="chip chip--live">NASA FIRMS data</span>;
   if (ex.result.kind === 'loading') statusChip = <span className="chip chip--muted">Loading…</span>;
   else if (showingDemoForOtherArea) statusChip = <span className="chip chip--demo">Demo data, not this area</span>;
@@ -89,6 +93,8 @@ export function App() {
             <strong>API unavailable.</strong> Your area is outlined on the map, but the figures below belong to the demo example.
           </p>
         )}
+
+        {ex.shown && hasAnswer && <Verdict window={ex.shown.data.recent.last_7_days} areaLabel={areaLabel} />}
 
         {ex.shown && <IndicatorRow indicators={ex.shown.data.indicators} isDemo={ex.shown.isDemo} />}
 
