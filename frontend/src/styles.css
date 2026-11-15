@@ -2531,6 +2531,9 @@ select {
 .assistant-panel .chip {
   cursor: pointer;
   text-align: left;
+  /* Labels carry region and period ("… · Cerrado · 2024-01 to 2024-12"): they wrap instead of leaving a phone screen. */
+  white-space: normal;
+  max-width: 100%;
 }
 
 .assistant-msg {

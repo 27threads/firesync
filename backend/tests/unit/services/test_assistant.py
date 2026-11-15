@@ -444,3 +444,12 @@ def test_a_provider_that_failed_goes_last_for_a_minute():
     now[0] = 61
     assert chain.complete(QUESTION, [], FAR)['content'] == 'a again'
     assert [url.split('/')[2] for url in opener.urls] == ['a', 'b', 'b', 'a']
+
+
+def test_a_figure_with_the_wrong_sign_is_flagged():
+    results = [{'anomaly_pct': -0.563, 'other_pct': 0.133, 'p25': 9095, 'p75': 20659}]
+    assert unverified_numbers('February was +56.3% above typical.', results) == ['+56.3']
+    assert unverified_numbers('February was -56,3% (\u221256.3%), March +13.3%, 56.3% below.', results) == []
+    assert unverified_numbers('Typical range 9,095-20,659 on 2026-11-14.', results) == []
+    assert unverified_numbers('20,659 at the start of the text is not negative.', results) == []
+
