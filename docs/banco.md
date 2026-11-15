@@ -136,11 +136,11 @@ O compose de produção está em [`infra/docker-compose.yml`](../infra/docker-co
 
 ## Carga na VPS (roteiro)
 
-Em vez de baixar e processar o histórico de novo na VPS (~1 h, mais o FIRMS), leva-se o banco pronto da máquina da frente A. O banco local tem **13 GB** (12 GB só em `focos`, com 46,4 milhões de linhas). Contando a cópia e o restore, são cerca de 2 horas, quase tudo de espera. O dump e o restore foram testados em 14/11/2026, sem erro e com `focos`, `agregados` e `config` conferidos.
+Em vez de baixar e processar o histórico de novo na VPS (~1 h, mais o FIRMS), leva-se o banco pronto da máquina da frente A. O banco local tem **13 GB** (12 GB só em `focos`, com 46,4 milhões de linhas). Contando a cópia e o restore, são cerca de 2 horas, quase tudo de espera. O dump e o restore foram testados em 14/11/2026, sem erro e com `focos`, `agregados` e `config` conferidos. A carga de verdade foi feita em 15/11/2026 com este roteiro: dump de 1,09 GB, upload em 11 min, restore sem erro e os números da VPS iguais aos do banco local (issue #98).
 
-**Antes de começar (frente C):** VPS com Docker, o repositório clonado e `infra/.env` preenchido (`infra/.env.example`); acesso SSH para a frente A; **pelo menos 30 GB livres** (banco, dump e folga para o restore) e de preferência 4 GB de RAM ou mais.
+**Antes de começar (frente C):** VPS com Docker, o repositório clonado e `infra/.env` preenchido (`infra/.env.example`); um usuário só para receber o dump (`upload`, preso pelo `rrsync`, que aceita só `rsync` e não roda comandos); **pelo menos 30 GB livres** (banco, dump e folga para o restore) e de preferência 4 GB de RAM ou mais.
 
-**Ordem:** na carga, suba **só o `db`**. A `api`, o `job-nrt` e o `tunnel` sobem depois do restore (passo 8). Com eles no ar, o `pg_restore --clean` disputa o banco com as conexões deles, e o job pode rodar no banco vazio.
+**Ordem:** na carga, suba **só o `db`**. A `api`, o `job-nrt`, o `job-risco` e o `tunnel` sobem depois do restore (passo 8). Com eles no ar, o `pg_restore --clean` disputa o banco com as conexões deles, e o job pode rodar no banco vazio.
 
 **Prazo:** o job NRT busca no máximo 5 dias para trás. Se o banco chegar à VPS mais de 5 dias depois do último NRT local (`SELECT max(datahora_utc) FROM focos WHERE qualidade = 'NRT'`), os dias do meio ficam vazios. Nesse caso, rode o job uma vez na máquina local antes do dump.
 
@@ -149,14 +149,14 @@ Comandos em bash. Na VPS, a partir de `infra/`. No Git Bash do Windows, rode ant
 | # | Onde | Comando ou ação | Tempo |
 | --- | --- | --- | --- |
 | 1 | local | Dump comprimido: `docker exec firesync-db-test pg_dump -U postgres -d firesync -Fc --no-owner -f /tmp/firesync.dump && docker cp firesync-db-test:/tmp/firesync.dump . && sha256sum firesync.dump` | 10–20 min |
-| 2 | local → VPS | `rsync -P firesync.dump usuario@vps:/tmp/` (retoma se a conexão cair). Na VPS, `sha256sum /tmp/firesync.dump` tem que dar o mesmo valor | depende do upload |
+| 2 | local → VPS | `rsync -P firesync.dump upload@vps:` (retoma se a conexão cair). O arquivo cai na pasta que o `rrsync` libera (em 15/11, `/home/upload/dump/`). O `scp` é recusado pelo `rrsync`, e o Git Bash do Windows não tem `rsync`: rode de um container (`docker run --rm -it -v "$PWD":/w -w /w alpine sh -c "apk add rsync openssh && rsync -P firesync.dump upload@vps:"`). Na VPS, `sha256sum /home/upload/dump/firesync.dump` tem que dar o mesmo valor | 11 min em 15/11 (1,09 GB) |
 | 3 | VPS | `docker compose up -d db`. Com o volume vazio, as migrations rodam no primeiro boot | 1 min |
-| 4 | VPS | `docker compose cp /tmp/firesync.dump db:/tmp/ && docker compose exec db pg_restore -U firesync -d firesync --clean --if-exists --no-owner -j 4 /tmp/firesync.dump` | 30–60 min |
+| 4 | VPS | `docker compose cp /home/upload/dump/firesync.dump db:/tmp/ && docker compose exec db pg_restore -U firesync -d firesync --clean --if-exists --no-owner -j 2 /tmp/firesync.dump`. O `-j` é o número de processos em paralelo; em 15/11 foi `-j 2`, que terminou com código 0 e sem avisos | 30–60 min |
 | 5 | VPS | **Estatísticas:** `docker compose exec db vacuumdb -U firesync -d firesync --analyze-in-stages`. O `pg_restore` não leva as estatísticas, e sem elas o Postgres pode escolher planos muito lentos | 5–10 min |
 | 6 | VPS | Conferir contra o banco local: `SELECT satelite, count(*) FROM focos GROUP BY 1`, `SELECT count(*) FROM agregados`, `SELECT count(*) FROM agregados_diarios` e `SELECT * FROM config` (com `data_version` e `atualizado_em`). Os números têm que ser iguais aos da máquina local | 5 min |
 | 7 | VPS | Usuário só de leitura para a API (abaixo), com a mesma senha de `API_DB_PASSWORD` do `.env` | 2 min |
-| 8 | VPS | `docker compose up -d --build`, para subir `api`, `job-nrt` e `tunnel`. Depois, `docker compose logs -f job-nrt`: a primeira rodada termina com `nrt_run_finished` e mostra em `days` quantos dias ela buscou. E `GET /api/v1/health` pelo túnel | 10 min |
-| 9 | VPS | Apagar o dump (`/tmp/firesync.dump` na VPS e `docker compose exec db rm /tmp/firesync.dump`) e ligar o backup (abaixo) | — |
+| 8 | VPS | Com `RISK_MAX_AGE_DAYS=10` no `.env` (as notas de risco vêm só do dump, e a API esconde as mais velhas que isso), `docker compose up -d --build`, para subir `api`, `job-nrt`, `job-risco` e `tunnel`. Depois, `docker compose logs -f job-nrt`: a primeira rodada termina com `nrt_run_finished` e mostra em `days` quantos dias ela buscou. No `job-risco`, o log mostra quantas células gravou em `risco_celulas` (4.608 em 15/11); meça a RAM dele com `docker stats` nessa rodada. E `GET /api/v1/health` pelo túnel | 10 min |
+| 9 | VPS | Apagar o dump (`/home/upload/dump/firesync.dump` na VPS e `docker compose exec db rm /tmp/firesync.dump`), remover o usuário `upload` e a chave dele, e ligar o backup (abaixo) | — |
 
 **Usuário só de leitura da API.** A API nunca escreve. Com um usuário só de leitura, um erro na API não apaga dados, e o tempo máximo por consulta protege o pool de conexões. O SQL abaixo foi testado num banco descartável: o usuário lê e a escrita é recusada. O `infra/docker-compose.yml` já conecta a API com esse usuário, e a senha vem de `API_DB_PASSWORD` no `.env`. **Sem este passo, a API não consegue entrar no banco.**
 
