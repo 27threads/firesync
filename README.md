@@ -149,6 +149,15 @@ A paleta cividis, rótulos, hachuras, bordas e navegação por teclado evitam de
 
 As responsabilidades e pendências ficam em [tarefas](docs/tarefas.md). A documentação formal sintetiza decisões existentes; mudanças de método ou contrato exigem discussão com os responsáveis.
 
+## 11. Checklist de code review
+
+- [ ] Requisito e escopo identificados; texto consistente com o contrato e a implementação.
+- [ ] Responsabilidades separadas; regras científicas e cenários preservados.
+- [ ] Entradas, consultas, segredos, limites e mensagens de erro revisados.
+- [ ] Testes pertinentes executados; resultados, limitações e impacto de desempenho registrados.
+- [ ] Operação, atualização dos dados e instruções de deploy conferidas quando afetadas.
+- [ ] Links, exemplos, créditos e uso de IA atualizados; aprovação dos responsáveis solicitada.
+
 ## Uso de IA
 
 | Parte | Ferramenta | Como foi usada |
