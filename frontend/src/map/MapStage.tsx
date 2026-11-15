@@ -146,7 +146,10 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
   const basemapRef = useRef<BasemapId>('black-marble');
   const showHotSpotsRef = useRef<boolean>(true);
   const hotSpotsHoursRef = useRef<RecentHours>(24);
-  const detectionsAbortRef = useRef<AbortController | null>(null);
+  // Um controlador para a vida do mapa (cancela só ao desmontar) e um contador que descarta respostas
+  // antigas. Cancelar o pedido anterior a cada movimento jogava fora respostas já em trânsito.
+  const detectionsAbortRef = useRef<AbortController>(new AbortController());
+  const detectionsSeqRef = useRef(0);
   const moveDebounceRef = useRef<number | null>(null);
   const onSelectPolygonRef = useRef(onSelectPolygon);
   const suppressClickOnceRef = useRef(false);
@@ -172,21 +175,18 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
 
   const requestRecentDetections = useCallback(
     async (bbox: [number, number, number, number], hours: RecentHours, zoom: number) => {
-      detectionsAbortRef.current?.abort();
-      const controller = new AbortController();
-      detectionsAbortRef.current = controller;
+      const seq = ++detectionsSeqRef.current;
+      const signal = detectionsAbortRef.current.signal;
+      const isStale = () => signal.aborted || seq !== detectionsSeqRef.current;
 
       try {
-        const result = await fetchRecentDetections(
-          { bbox, hours, zoom: Math.round(zoom) },
-          controller.signal,
-        );
-        if (controller.signal.aborted) return;
+        const result = await fetchRecentDetections({ bbox, hours, zoom: Math.round(zoom) }, signal);
+        if (isStale()) return;
         setRecentDetections(result);
         setDetectionsState('ready');
       } catch {
         // Sem API, a camada fica vazia e a legenda explica. Nunca pontos inventados.
-        if (controller.signal.aborted) return;
+        if (isStale()) return;
         setRecentDetections(null);
         setDetectionsState('unavailable');
       }
@@ -342,8 +342,10 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
   }, [ensureMap]);
 
   useEffect(() => {
+    const detectionsController = new AbortController(); // novo a cada montagem (StrictMode remonta em dev)
+    detectionsAbortRef.current = detectionsController;
     return () => {
-      detectionsAbortRef.current?.abort();
+      detectionsController.abort();
       if (moveDebounceRef.current !== null) {
         window.clearTimeout(moveDebounceRef.current);
       }
@@ -356,7 +358,7 @@ export function MapStage({ shape, onSelectPolygon }: MapStageProps) {
 
   useEffect(() => {
     if (!showHotSpots) {
-      detectionsAbortRef.current?.abort();
+      detectionsSeqRef.current += 1; // respostas que chegarem depois de desligar a camada são ignoradas
       if (detectionsGroupRef.current) {
         detectionsGroupRef.current.clearLayers();
       }

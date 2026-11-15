@@ -103,6 +103,26 @@ describe('App', () => {
     expect(calls.filter((c) => c.url.includes('/detections/recent')).length).toBeGreaterThan(before);
   });
 
+  it('lets an earlier recent-detections request finish when a newer one starts (no aborted responses)', async () => {
+    const signals: AbortSignal[] = [];
+    mockApi(() => json(example));
+    const base = globalThis.fetch as unknown as (url: string, init?: RequestInit) => Promise<Response>;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        if (url.includes('/detections/recent') && init?.signal) signals.push(init.signal);
+        return base(url, init);
+      }),
+    );
+    render(<App />);
+    const select = await screen.findByRole('combobox', { name: /region/i });
+    await waitFor(() => expect(select).toBeEnabled());
+    fireEvent.change(select, { target: { value: '1' } });
+    fireEvent.change(screen.getByRole('combobox', { name: /recent hot spots window/i }), { target: { value: '168' } });
+    await waitFor(() => expect(signals.length).toBeGreaterThanOrEqual(2));
+    expect(signals.some((s) => s.aborted)).toBe(false);
+  });
+
   it('keeps the region selector available after a choice, so the area can be changed again', async () => {
     mockApi(() => json(example));
     render(<App />);
