@@ -14,7 +14,9 @@ SYSTEM_PROMPT = (
     'You are the firesync assistant. firesync shows NASA FIRMS fire detections (hotspots) from MODIS and VIIRS, '
     'harmonized to one VIIRS scale since January 2003, for the six Brazilian biomes of IBGE. '
     "Answer in the language of the user's last message. Keep answers short. "
-    'Use only numbers returned by the tools; never estimate or invent a number. If the tools cannot answer, say so. '
+    'Use only numbers returned by the tools; never estimate or invent a number, and do not compute new ones '
+    '(sums, shares, averages). If the tools cannot answer, say so. '
+    'Give locations exactly as the tools write them; never name a state, city or place from coordinates. '
     'Always say the region, the period and that counts are on the harmonized VIIRS scale (NASA FIRMS). '
     'A month with missing satellite days is not a month with zero hotspots. '
     'Regions are biomes only: for a state, a city or a place outside Brazil, say so and suggest drawing the area '
@@ -64,7 +66,7 @@ class AskService:
 
     def ask(self, messages, toolbox):
         self.spend_daily_request()
-        conversation = [{'role': 'system', 'content': SYSTEM_PROMPT}, *messages[-HISTORY_SENT:]]
+        conversation = [{'role': 'system', 'content': SYSTEM_PROMPT + ' ' + toolbox.context()}, *messages[-HISTORY_SENT:]]
         actions, notes = [], []
         for _ in range(MAX_TOOL_ROUNDS + 1):
             reply = self.complete(conversation)

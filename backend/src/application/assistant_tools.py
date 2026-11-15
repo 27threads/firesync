@@ -14,6 +14,7 @@ TOP_HEXAGONS = 10
 MAP_ZOOM = '4'  # resolution-4 hexagons: the whole coverage fits in one answer
 MONTH_FIELDS = ('month', 'detections', 'source', 'missing_days', 'incomplete', 'provisional', 'anomaly_pct')
 YEAR_FIELDS = ('year', 'detections', 'rank', 'complete', 'source')
+ONE_YEAR_FIELDS = tuple(field for field in YEAR_FIELDS if field != 'rank')
 RISK_NOTE = ('Risk tiers show how often each tier was followed by relevant fire in the next 14 days in past '
              'years. They are a historical frequency, not a forecast for this date.')
 
@@ -50,7 +51,9 @@ def pick(row, fields):
 def calendar_summary(body):
     months = body['months']
     summary = {'area': body['area'], 'coverage': body['coverage'], 'indicators': body['indicators'],
-               'years': [pick(year, YEAR_FIELDS) for year in body['years']],
+               # A rank inside a one-year period is always 1 and reads as 'record year', so it goes only with more years.
+               'years': [pick(year, YEAR_FIELDS if len(body['years']) > 1 else ONE_YEAR_FIELDS)
+                         for year in body['years']],
                'seasonality': [pick(month, ('month_of_year', 'median')) for month in body['seasonality']]}
     if len(months) <= MAX_MONTHS_SENT:
         summary['months'] = [pick(month, MONTH_FIELDS) for month in months]
@@ -81,6 +84,10 @@ class Toolbox:
             return failure(error.code, str(error))
         except (TypeError, ValueError):
             return failure('invalid_arguments', 'Arguments do not match the tool parameters.')
+
+    def context(self):
+        return (f'Today is {self.now.date().isoformat()} (UTC). Data covers 2003-01 to '
+                f"{self.reader.meta()['last_month']}; resolve relative dates like 'last year' from today.")
 
     def list_regions(self):
         return [pick(region, ('region_id', 'name')) for region in self.reader.regions()], [], []
@@ -114,14 +121,24 @@ class Toolbox:
         risk = alerts.get('risk')
         result = {'hours': body['hours'], 'total_detections': body['total_detections'],
                   'top_hexagons': [hexagon_summary(feature['properties']) for feature in hexagons[:TOP_HEXAGONS]],
-                  'look_first': alerts.get('priority', [])[:TOP_HEXAGONS],
+                  'look_first': [look_first_summary(cell) for cell in alerts.get('priority', [])[:TOP_HEXAGONS]],
                   'risk_tiers': risk['tiers'] if risk else None}
         return result, [], [RISK_NOTE] if risk else []
 
 
+def place(lat, lon):
+    # Written out with hemispheres: given bare signed numbers, models swapped N/S and lat/lon in testing.
+    return f"{abs(lat):.2f}°{'N' if lat >= 0 else 'S'}, {abs(lon):.2f}°{'E' if lon >= 0 else 'W'}"
+
+
+def look_first_summary(cell):
+    lon, lat = cell['center']  # the map contract sends [lon, lat]
+    return {**{key: value for key, value in cell.items() if key != 'center'}, 'center': place(lat, lon)}
+
+
 def hexagon_summary(properties):
     lat, lon = h3.cell_to_latlng(properties['h3'])
-    return {'center_lat': round(lat, 2), 'center_lon': round(lon, 2), 'detections': properties['detections'],
+    return {'center': place(lat, lon), 'detections': properties['detections'],
             'alert_level': properties.get('alert_level'), 'risk_tier': properties.get('risk_tier')}
 
 

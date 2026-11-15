@@ -136,6 +136,9 @@ def test_fire_map_lists_the_busiest_hexagons_and_adds_the_risk_note_when_scored(
     assert sent['hours'] == 72 and sent['total_detections'] == 9
     assert sent['top_hexagons'][0]['detections'] == 9 and sent['top_hexagons'][0]['risk_tier'] == 'very_high'
     assert sent['risk_tiers'][0]['historical_share'] == 0.82
+    lat, lon = h3.cell_to_latlng(h3.cell_to_parent(CELL, 4))
+    assert sent['look_first'][0]['center'] == f'{abs(lat):.2f}°S, {abs(lon):.2f}°W'
+    assert sent['top_hexagons'][0]['center'].endswith('°W')
     assert result['notes'] == [RISK_NOTE]
 
 
@@ -152,6 +155,7 @@ def test_system_prompt_comes_first_and_history_is_trimmed():
     ask(llm, messages=messages)
     sent = llm.conversations[0]
     assert sent[0]['role'] == 'system' and 'language' in sent[0]['content']
+    assert 'Today is 2026-11-14 (UTC)' in sent[0]['content'] and 'to 2026-11' in sent[0]['content']
     assert [m['content'] for m in sent[1:]] == ['3', '4', '5', '6', '7', '8']
 
 
@@ -184,9 +188,12 @@ class Opener:
     def __init__(self, *outcomes):
         self.outcomes = list(outcomes)
         self.urls = []
+        self.bodies = []
 
     def __call__(self, request, timeout):
+        assert request.get_header('User-agent') == 'firesync-assistant/1.0'  # Python-urllib is blocked by Cloudflare
         self.urls.append(request.full_url)
+        self.bodies.append(json.loads(request.data))
         outcome = self.outcomes.pop(0)
         if isinstance(outcome, Exception):
             raise outcome
@@ -215,3 +222,28 @@ def test_provider_chain_config():
     assert ProviderChain.from_env('', 5) is None
     with pytest.raises(ValueError):
         ProviderChain.from_env('https://a/v1|key-without-model', 5)
+
+
+def test_reasoning_effort_is_sent_only_when_configured():
+    opener = Opener({'content': 'a'}, {'content': 'b'})
+    ProviderChain.from_env('https://a/v1|ka|m1|none', 5, opener).complete(QUESTION, [])
+    ProviderChain.from_env('https://b/v1|kb|m2', 5, opener).complete(QUESTION, [])
+    assert opener.bodies[0]['reasoning_effort'] == 'none' and 'reasoning_effort' not in opener.bodies[1]
+
+
+def test_empty_reply_falls_to_the_next_provider():
+    opener = Opener({'content': ''}, {'content': None, 'tool_calls': [{'id': 'x'}]})
+    chain = ProviderChain.from_env('https://a/v1|ka|m1,https://b/v1|kb|m2', 5, opener)
+    assert chain.complete(QUESTION, [])['tool_calls'] == [{'id': 'x'}]
+    assert len(opener.urls) == 2
+
+
+def test_one_year_period_sends_no_rank():
+    llm = ScriptedLlm(call('get_calendar', region_id=1, start='2026-01', end='2026-11'), {'content': 'ok'})
+    ask(llm)
+    assert [set(year) for year in tool_results(llm)[0]['years']] == [{'year', 'detections', 'complete', 'source'}]
+
+
+def test_place_writes_hemispheres():
+    from backend.application.assistant_tools import place
+    assert place(1.584, -55.88) == '1.58°N, 55.88°W' and place(-2.3, 10) == '2.30°S, 10.00°E'
