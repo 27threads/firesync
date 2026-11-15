@@ -184,6 +184,38 @@ def test_linha_de_comando_monta_a_serie_dos_arquivos_anuais(tmp_path, monkeypatc
     assert s.loc["2020-08-01", "n"] == 1 and s.loc["2021-08-01", "n"] == 2 and s.loc["2021-08-01", "frp"] == pytest.approx(7.0)
 
 
+def test_anomalia_e_o_valor_menos_a_media_das_mesmas_semanas_em_anos_anteriores():
+    semanas = semanas_de(2015, 2019)
+    x = np.zeros((len(semanas), 2), np.float32)
+    w = 52 * 4 + 10                                    # uma semana de 2019
+    x[w - 52] = [10.0, 0.0]                            # a mesma semana em 2018
+    x[w - 104] = [20.0, 0.0]                           # e em 2017
+    x[w] = [50.0, 7.0]
+    a = mr.anomalia(x)
+    assert a[w, 0] == pytest.approx(50.0 - 15.0) and a[w, 1] == pytest.approx(7.0)
+    assert np.isnan(a[10, 0])                          # primeiro ano: sem ano anterior, sem anomalia
+
+
+def test_anomalia_nao_usa_semanas_futuras():
+    rng = np.random.default_rng(4)
+    x = rng.random((300, 3)).astype(np.float32)
+    antes = mr.anomalia(x)
+    x2 = x.copy()
+    x2[200:] = 999
+    depois = mr.anomalia(x2)
+    assert np.array_equal(antes[:200], depois[:200], equal_nan=True)
+
+
+def test_pistas_de_clima_trazem_a_anomalia_da_chuva_e_da_temperatura():
+    semanas = semanas_de(2015, 2019)
+    forma = (len(UNIDADES), N_DIAS)
+    p = mr.pistas_clima({"PRECTOTCORR": np.full(forma, 2.0, np.float32), "T2M_MAX": np.full(forma, 30.0, np.float32),
+                         "RH2M": np.full(forma, 50.0, np.float32), "WS2M": np.full(forma, 3.0, np.float32)}, semanas)
+    assert {"chuva30_anom", "chuva90_anom", "tmax7_anom", "umid7_anom"} <= set(p)
+    ultima = len(semanas) - 1
+    assert p["chuva30_anom"][ultima, 0] == pytest.approx(0.0)         # clima constante: nenhuma anomalia
+
+
 def test_medidas_comparam_modelo_regra_e_ingenua_com_o_mesmo_numero_de_alertas():
     y = np.array([1, 1, 0, 0, 0, 0, 0, 0], bool)
     p = np.array([0.9, 0.8, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])           # o modelo acerta os dois
