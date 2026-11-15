@@ -91,6 +91,7 @@ Ler antes: [requisitos.md](requisitos.md), [importacao-regioes.md](importacao-re
 | C8 | Pedir a classificação FortiGuard do site | C7 | feito (15/11: site e API já classificados como Business, herdado do domínio `nogranlabs.com.br` desde 13/06/2026; pedida a reclassificação dos dois para Information Technology) | Pedido enviado |
 | C9 | Página do projeto em inglês: summary, descrição detalhada, NASA Data, referências, uso de IA | B6 | a fazer | Todos os campos do checklist de [requisitos.md](requisitos.md) preenchidos |
 | C10 | Completar a tabela "Uso de IA" do README | — | a fazer | Cada parte com IA registrada |
+| C11 | Assistente virtual, backend: `POST /api/v1/ask`, ferramentas e cadeia de provedores ([RFC 0004](rfcs/0004-assistente-virtual.md)) | C7 | a fazer | As 5 perguntas dos chips respondem com os números do calendário; validação de `messages[]`, teto diário e fallback testados |
 
 ## D. Frontend e demo
 
@@ -110,6 +111,7 @@ D1 a D5 começam com o JSON de exemplo do `api.md`, sem esperar a API.
 | D9 | Nova interface: abertura em que a faixa de meses MODIS → VIIRS se dobra no calendário (GSAP), área de análise com mapa, resumo "is recent activity typical?" e calendário juntos, descoberta guiada do exemplo e tela de Método com o diagrama da harmonização | D1–D7 | feito (`frontend/src/hero/`, `calendar/CalendarSvg.tsx`, `map/`, `summary/`, `history/`, `discovery/`, `state/`; 113 testes de unidade e as 9 jornadas no desktop e no celular passando) | A equipe aprova o visual no PR |
 | D10 | Aviso antecipado no mapa (RFC 0003): lista "Where to look first" na ordem de `alerts.priority`, selo "Unusual for the season", faixa de risco no tooltip e na lista, legenda do risco dos 14 dias com os limites | D7; API dos PRs #86 e #97 | feito (`frontend/src/map/alertsModel.ts` e `EarlyWarning.tsx`; campos novos opcionais; jornadas J10 com `alerts` e J11 sem, no desktop e no celular). Conferido em 15/11 no site no ar, com a API real: lista de 10 com "Show all", selo, faixa, legenda com notas de 15/11 14:54 UTC, e o clique leva o mapa ao `center` da célula. As cores do mapa não mudaram (decisão 3 do [ux-telas.md](ux-telas.md)) | Lista e legenda aparecem com a API no ar |
 | D8 | Demo: vídeo de até 30 s com legenda em inglês, ou até 7 slides em inglês, com nome da equipe, membros, desafio, imagem do projeto, experiência do usuário e uso dos dados da NASA | D7 | a fazer | Link público testado numa janela anônima |
+| D11 | Assistente virtual, front: bolinha, chips e ações `show_calendar`/`download_export` ([RFC 0004](rfcs/0004-assistente-virtual.md)) | C11 | a fazer | Jornada Playwright: abre a bolinha, clica num chip, vê a resposta e o calendário aplicado |
 
 ## Cortado ou depois da submissão
 

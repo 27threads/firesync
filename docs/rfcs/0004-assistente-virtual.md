@@ -1,22 +1,22 @@
 # RFC 0004: Assistente virtual (chat) sobre a API
 
-- **Status:** Rascunho, aguardando revisão do Mateus (frente D)
+- **Status:** Revisado pelo Mateus no PR #121 (pontos aplicados). Entra **antes da submissão**, no escopo mínimo da seção "Plano" (tarefas C11 e D11)
 - **Autor:** Eduardo
 - **Data:** 2026-11-15
 
-Critério que melhora (ver [premiacao.md](../premiacao.md)): **Presentation** e **Creativity**. Quem chega ao site pergunta em linguagem natural e recebe a resposta com o número e o calendário de verdade. Ajuda um pouco no **Impact**, porque a brigada ou o gestor não precisa aprender a desenhar área e escolher período. O prazo da submissão é hoje (15/11), então este RFC é para depois da entrega, a não ser que a equipe decida o contrário.
+Critério que melhora (ver [premiacao.md](../premiacao.md)): **Presentation** e **Creativity**. Quem chega ao site pergunta em linguagem natural e recebe a resposta com o número e o calendário de verdade. Ajuda um pouco no **Impact**, porque a brigada ou o gestor não precisa aprender a desenhar área e escolher período.
 
 ## Contexto e problema
 
 Hoje o usuário precisa escolher a área no mapa, o período e ler o calendário para responder perguntas simples:
 
-- "Qual foi o pior mês no Pantanal em 2020?"
-- "2024 foi acima do normal no Cerrado?"
-- "Quantos focos na Amazônia nos últimos 7 dias?"
-- "Onde está pegando fogo agora?"
-- "Me passa um relatório de queimada do ano passado."
+- "What was the worst month in the Pantanal in 2020?"
+- "Was 2024 above normal in the Cerrado?"
+- "How many hotspots in the Amazon in the last 7 days?"
+- "Where is it burning right now?" / "Where is fire likely in the next 14 days?"
+- "Give me a fire report for last year."
 
-A proposta é uma **bolinha de chat** no canto do site que responde essas perguntas com os dados do banco. Ela cobre o que o desafio pede (RF06–RF13 e RD05–RD07 em [requisitos.md](../requisitos.md)) e o que a equipe acrescentou: janela recente contra o normal da época, nível de alerta `v1` e pacote de auditoria.
+A proposta é uma **bolinha de chat** no canto do site que responde essas perguntas com os dados do banco. Ela cobre o que o desafio pede (RF06–RF13 e RD05–RD07 em [requisitos.md](../requisitos.md)) e o que a equipe acrescentou: janela recente contra o normal da época, nível de alerta `v1`, risco dos próximos 14 dias ([RFC 0003](0003-modelo-risco.md)) e pacote de auditoria.
 
 ### Por que não "a IA escreve SQL" (text-to-SQL)
 
@@ -27,17 +27,18 @@ A proposta é uma **bolinha de chat** no canto do site que responde essas pergun
 ## Objetivos / Não-objetivos
 
 **Objetivos**
-- Responder, em linguagem natural, perguntas sobre focos por região (bioma), período, janela recente, alerta e "onde está queimando agora".
+- Responder, em linguagem natural, perguntas sobre focos por região (bioma), período, janela recente, alerta, risco dos próximos 14 dias e "onde está queimando agora".
 - **Todo número vem dos casos de uso que já existem.** O modelo só escolhe a ferramenta, preenche os parâmetros e redige o texto.
-- Toda resposta com número traz um botão que aplica a mesma área e período na tela (calendário de verdade) e, quando fizer sentido, o link do ZIP de auditoria.
-- Responder no idioma da pergunta. A interface (botão, placeholder, erros) fica em inglês, como o resto do site.
-- Crédito ao FIRMS visível no painel do chat.
+- Toda resposta com número traz um botão que aplica a mesma área e período na tela (calendário de verdade) e, quando fizer sentido, o download do ZIP de auditoria.
+- **Responde sempre em inglês**, como todo texto público ([CLAUDE.md](../../CLAUDE.md#regras-de-código)). Entende pergunta em qualquer idioma. Responder no idioma da pergunta exigiria mudar essa regra da equipe, e fica fora deste RFC.
+- Crédito ao NASA FIRMS visível no painel do chat.
+- **Continua respondendo quando a cota do provedor acaba** (ver "Provedores e cota").
 
 **Não-objetivos**
 - SQL gerado pelo modelo ou acesso direto ao banco.
-- Município, estado ou lugar fora do Brasil (o banco só tem os 6 biomas do IBGE). O assistente diz que não tem esse recorte e oferece o bioma ou o desenho no mapa.
-- Previsão ou recomendação operacional ("devo mandar brigada?"). O assistente mostra dado medido, não decide.
-- Histórico de conversa no servidor ou conta de usuário.
+- Município, estado ou lugar fora do Brasil (o banco só tem os 6 biomas do IBGE). O assistente diz que não tem esse recorte e sugere o desenho no mapa.
+- Recomendação operacional ("devo mandar brigada?"). O assistente mostra dado medido e a frequência histórica do risco, não decide.
+- Histórico de conversa no servidor ou conta de usuário. O chat fica aberto, sem login, para os jurados testarem.
 
 ## Proposta
 
@@ -51,10 +52,12 @@ sequenceDiagram
     participant L as LlmClient (porta)
     participant T as Ferramentas (casos de uso)
     U->>H: {messages}
+    H->>H: valida messages (só texto de user/assistant)
     H->>S: ask(messages)
+    S->>S: chip conhecido? devolve do cache
     loop até o modelo responder (máx. 4 voltas)
         S->>L: messages + tools
-        L-->>S: tool_use(nome, args)
+        L-->>S: tool_call(nome, args)
         S->>T: chamada em processo
         T-->>S: JSON do api.md
     end
@@ -67,15 +70,15 @@ sequenceDiagram
 
 ```
 backend/src/
-├── application/assistant.py          AskService: loop de tool-use, limite de voltas, monta actions[]
+├── application/assistant.py          AskService: loop de tool-use, limite de voltas, teto diário, monta actions[]
 ├── application/assistant_tools.py    definição das ferramentas e despacho para os casos de uso
 ├── ports/llm.py                       LlmClient (Protocol): complete(system, messages, tools) -> resposta
 └── adapters/
     ├── inbound/http/app.py            rota POST /api/v1/ask (mesmo guard, rate limit e cache)
-    └── outbound/llm/anthropic.py      adaptador da API da Anthropic (SDK oficial)
+    └── outbound/llm/openai.py         adaptador do formato OpenAI chat completions, com lista de provedores
 ```
 
-O `AskService` recebe o `ApiReader` e o `LlmClient` de fora. Nos testes entra um `LlmClient` falso que devolve uma sequência fixa de `tool_use`, sem rede.
+O `AskService` recebe o `ApiReader` e o `LlmClient` de fora. Nos testes entra um `LlmClient` falso que devolve uma sequência fixa de chamadas de ferramenta, sem rede.
 
 ### Ferramentas
 
@@ -83,100 +86,127 @@ Cada ferramenta chama o que a rota HTTP correspondente já chama e devolve o mes
 
 | Ferramenta | Parâmetros | Chama | Responde |
 | --- | --- | --- | --- |
-| `list_regions` | — | `reader.regions()` | "Quais regiões vocês têm?" e resolve "Pantanal" → `region_id` |
-| `get_calendar` | `region_id`, `start`, `end` (`YYYY-MM`) | `parse_request` + `calculate_calendar` ([api.py](../../backend/src/application/api.py)) | pior mês, ranking de anos, sazonalidade, indicadores, "acima do normal" |
-| `get_recent` | `region_id` | `calculate_calendar` → `recent` | últimos 7 dias contra o normal da época e nível de alerta `v1` |
-| `get_hotspots_now` | `hours` (24 ou 48) | `reader.map_rows(MapQuery(...))` com a bbox da cobertura em modo hexágono | "onde está pegando fogo agora": top N hexágonos com contagem, centro lat/lon e bioma |
-| `build_report` | `region_id` (opcional, todas se vazio), `year` | `get_calendar` por região + link de `POST /export` | "relatório do ano passado": resumo por bioma (total, pior mês, comparação com o normal) e o ZIP de auditoria para baixar |
+| `list_regions` | — | `reader.regions()` | "Which regions do you cover?" e resolve "Pantanal" → `region_id` |
+| `get_calendar` | `region_id`, `start`, `end` (`YYYY-MM`, opcionais) | `parse_request` + `calculate_calendar` ([api.py](../../backend/src/application/api.py)) | pior mês, ranking de anos, sazonalidade, indicadores, "above normal" |
+| `get_recent` | `region_id` | `calculate_calendar` sem `start`/`end`, ou seja, o padrão do contrato: `2003-01` a `last_month` ([api.md](../api.md#start-e-end)); usa só o bloco `recent` | últimos 7 dias contra o normal da época e nível de alerta `v1` |
+| `get_fire_map` | `hours` (`24`, `72` ou `168`, como em [api.md](../api.md#get-detectionsrecent)) | `MapQuery.parse` + `reader.map_rows` com a bbox da cobertura em modo `hexagons` | "Where is it burning now?": top N hexágonos com contagem, centro e bioma. "Where is fire likely?": `alerts.priority[]` com `risk_tier`/`risk_prob` e a legenda `alerts.risk.tiers[]` com `historical_share` |
+| `build_report` | `region_id` (opcional, todas se vazio), `year` | `get_calendar` por região + ação `download_export` | "Report for last year": resumo por bioma (total, pior mês, comparação com o normal) e o ZIP de auditoria |
 
-O resumo do relatório é texto montado pelo modelo a partir dos números da ferramenta. O arquivo oficial continua sendo o ZIP do `/export`, que já tem metadados, fatores e CSV.
+Regras das ferramentas:
+
+- **Risco:** toda resposta que usa `risk_tier` ou `historical_share` repete o aviso do [api.md](../api.md): é a frequência com que a faixa teve fogo relevante nos 14 dias seguintes no passado, **não uma previsão** para a data. O aviso é texto fixo que o `AskService` anexa, não depende do modelo.
+- **Relatório:** o resumo é texto montado pelo modelo a partir dos números da ferramenta. O arquivo oficial continua sendo o ZIP do `/export`, que já tem metadados, fatores e CSV.
+- **Parâmetros inválidos** (período, `hours`, região) passam pelos mesmos `parse_request` e `MapQuery.parse` das rotas. O erro do contrato volta para o modelo como resultado da ferramenta, e ele corrige ou explica.
 
 ### Contrato `POST /api/v1/ask`
 
 Pedido:
 
 ```json
-{ "messages": [ { "role": "user", "content": "Qual o pior mês no Pantanal em 2020?" } ] }
+{ "messages": [ { "role": "user", "content": "What was the worst month in the Pantanal in 2020?" } ] }
 ```
 
-Resposta:
+Resposta (os valores entre `< >` saem do banco na hora; nenhum número é escrito à mão):
 
 ```json
 {
-  "answer": "September 2020 had 8,106 hotspots in the Pantanal, the highest month of that year...",
+  "answer": "<month> 2020 had <count> hotspots in the Pantanal, the highest month of that year (harmonized VIIRS scale, NASA FIRMS).",
   "actions": [
-    { "type": "show_calendar", "area": { "region_id": 4 }, "start": "2020-01", "end": "2020-12" },
-    { "type": "download_export", "area": { "region_id": 4 }, "start": "2020-01", "end": "2020-12" }
+    { "type": "show_calendar", "area": { "region_id": "<region_id>" }, "start": "2020-01", "end": "2020-12" },
+    { "type": "download_export", "area": { "region_id": "<region_id>" }, "start": "2020-01", "end": "2020-12" }
   ],
-  "meta": { "updated_at": "...", "data_version": "..." }
+  "meta": { "updated_at": "<updated_at>", "data_version": "<data_version>" }
 }
 ```
 
-- `messages`: no máximo 10 mensagens e 1.000 caracteres por mensagem. Acima disso, `invalid_request` (400).
-- `actions[]` é montado pelo `AskService` a partir das ferramentas que **de fato rodaram**, não pelo texto do modelo. Assim o botão sempre leva ao dado que gerou a resposta.
-- Erros novos: `assistant_unavailable` (503) quando a API do LLM falha ou estoura o tempo, no formato de erro do [api.md](../api.md#erros).
-- Rate limit novo: `RATE_LIMIT_ASK` (padrão `5` por janela), no mesmo `RateLimiter` dos outros.
+Validação do pedido (fronteira de confiança: o `messages[]` vem do navegador):
+
+- Cada mensagem tem só `role` (`user` ou `assistant`) e `content` (texto). Qualquer outro `role`, campo ou bloco (`tool`, `tool_calls`, `system`, imagem) responde `invalid_request` (400). Resultados de ferramenta só existem dentro do `AskService`, nunca vêm do cliente.
+- No máximo 10 mensagens e 1.000 caracteres por mensagem; o serviço manda ao modelo só as últimas 6.
+- `actions[]` é montado pelo `AskService` a partir das ferramentas que **de fato rodaram**, não pelo texto do modelo.
+
+Erros novos, no formato do [api.md](../api.md#erros):
+
+- `invalid_request` (400): pedido fora das regras acima.
+- `assistant_unavailable` (503): todos os provedores falharam, sem chave configurada ou teto diário atingido. A bolinha mostra "Daily limit reached, use the map" (teto) ou "Assistant unavailable, use the map" (resto).
+
+### Provedores e cota
+
+O medo é a cota da IA acabar e o chat parar. Três camadas, da mais barata para a mais cara:
+
+1. **Cache dos chips (custo zero).** A resposta das 5 perguntas de exemplo fica guardada com a chave `(pergunta, data_version)`. São as que os jurados mais vão clicar. Depois da primeira resposta, não gastam token e **continuam funcionando mesmo com todos os provedores fora**. Com o job NRT mudando o `data_version`, o cache renova sozinho.
+2. **Cadeia de provedores.** O adaptador fala o formato **OpenAI chat completions**, que vários provedores aceitam com outra `base_url`. A variável `ASSISTANT_PROVIDERS` traz a lista em ordem. Se um responde 429, sem cota (`insufficient_quota`), 5xx ou timeout, o serviço tenta o próximo. O primeiro é a OpenAI; o segundo é qualquer provedor compatível com chave própria (ex.: um com camada gratuita), escolhido pela equipe sem mudar código.
+3. **Teto global diário no servidor** (`ASSISTANT_DAILY_LIMIT`), contado no processo da API. Ao atingir, `/ask` responde `assistant_unavailable` antes de chamar qualquer provedor. O limite por IP (`RATE_LIMIT_ASK`) sozinho não segura o custo com o chat aberto.
+
+Além disso: `max_tokens` baixo, até 4 voltas por pedido, histórico cortado nas últimas 6 mensagens e **limite de gasto mensal** no projeto de cada conta de provedor.
+
+### Cache
+
+- `get_calendar` usa **a mesma chave do `ResponseCache` da rota `/calendar`**: `('calendar', <payload em JSON ordenado> + <data UTC>, updated_at, data_version)`, com o payload `{area, start, end}` igual ao que o front mandaria. Assim o chat e o calendário dividem as entradas: o clique em `show_calendar` depois da resposta já acha o resultado pronto.
+- `get_fire_map` usa a chave da rota do mapa: `('map', query, updated_at, data_version)`.
+- O cache dos chips (camada 1 acima) usa uma chave própria `('ask', pergunta, data_version)` no mesmo `ResponseCache`.
 
 ### Frontend
 
 - `frontend/src/assistant/`: `AssistantBubble.tsx` (botão flutuante + painel), `useAssistant.ts` (estado da conversa em memória) e `askClient.ts` (usa o `getApiBaseUrl` e o `ApiClientError` de `frontend/src/api/`).
-- `show_calendar` aplica a área e o período no estado que o `SelectionPanel` já usa, e o calendário recalcula pelo caminho normal.
+- `show_calendar` aplica a área e o período no estado que o `SelectionPanel` já usa, e o calendário recalcula pelo caminho normal. Posição e integração no layout ficam com o Mateus (frente D).
 - `download_export` reaproveita o `ExportBar`/`downloadBlob`.
 - Acessível: foco preso no painel aberto, `Esc` fecha, `aria-live` na resposta.
-- Perguntas de exemplo como chips no painel vazio (as cinco do contexto, em inglês).
+- Painel vazio mostra as 5 perguntas de exemplo como chips.
 
 ### Prompt de sistema (resumo)
 
-- Use só números que vieram das ferramentas. Se a ferramenta não respondeu, diga que não sabe.
-- Sempre diga a região, o período e que a série é harmonizada na escala VIIRS (MODIS + VIIRS, NASA FIRMS).
-- Mês sem dados (`dias_sem_dados`) não é zero focos.
-- Fora do Brasil ou abaixo de bioma: explique o limite e sugira o mapa.
+- Answer in English. Use only numbers returned by tools. If no tool answered, say you don't know.
+- Always state the region, the period and that the series is harmonized to the VIIRS scale (MODIS + VIIRS, NASA FIRMS).
+- A month without satellite data is not a month with zero hotspots.
+- Outside Brazil or below biome level: explain the limit and suggest drawing on the map.
 
 ### Configuração (`infra/.env` na VPS)
 
 | Variável | Padrão | Uso |
 | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | vazio | Sem chave, `/ask` responde `assistant_unavailable` e o front esconde a bolinha |
-| `ASSISTANT_MODEL` | `claude-haiku-5-5` | Barato e rápido para escolher ferramenta e redigir |
+| `ASSISTANT_PROVIDERS` | vazio | Lista em ordem de `base_url|chave|modelo`, separada por vírgula. Vazio: `/ask` responde `assistant_unavailable` e o front esconde a bolinha |
+| `ASSISTANT_DAILY_LIMIT` | `500` | Pedidos que chegam a um provedor por dia (UTC), somando todos os IPs. Chips em cache não contam |
 | `ASSISTANT_TIMEOUT_S` | `20` | Tempo máximo do pedido inteiro |
-| `RATE_LIMIT_ASK` | `5` | Pedidos por IP na janela |
+| `RATE_LIMIT_ASK` | `5` | Pedidos por IP na janela, no mesmo `RateLimiter` das outras rotas |
+
+As chaves ficam só no `.env` da VPS, nunca no front nem no git.
 
 ## Alternativas consideradas
 
 | Alternativa | Prós | Contras | Decisão |
 | --- | --- | --- | --- |
 | **Text-to-SQL** sobre views liberadas | Responde qualquer pergunta | Número diferente do calendário, risco de consulta pesada, segundo caminho de cálculo | Descartada (ver "Contexto") |
-| **FAQ fixo / intents sem LLM** | Sem custo, determinístico | Não entende pergunta livre nem idioma variado; não é o que se quer mostrar | Descartada |
-| **LLM chamando a API HTTP pública** (em vez de em processo) | Desacoplado | Passa pelo rate limit e pelo túnel à toa, mais latência | Descartada: em processo, com o mesmo `reader` e a mesma transação `REPEATABLE READ` |
+| **Só FAQ fixo / intents sem LLM** | Sem custo, nunca fica sem cota | Não entende pergunta livre | Fica como camada 1 (chips em cache), não como o assistente inteiro |
+| **Modelo próprio na VPS** (ex.: modelo pequeno local) | Sem cota nem custo por pergunta | VPS sem GPU: respostas lentas, e tool calling de modelo pequeno erra mais. Disputa CPU com a API e os jobs | Descartada para a submissão. Entra na cadeia depois, se quiserem, por ser compatível com o formato OpenAI |
+| **Um provedor só** | Mais simples | Cota acabou, chat parou | Descartada: cadeia de provedores |
+| **LLM chamando a API HTTP pública** (em vez de em processo) | Desacoplado | Passa pelo rate limit e pelo túnel à toa, mais latência | Descartada: em processo, com o mesmo `reader` e a mesma transação `REPEATABLE READ READ ONLY` |
 | **LLM no navegador** (chave no front) | Sem backend novo | Expõe a chave | Descartada |
 
 ## Riscos e mitigação
 
 | Risco | Mitigação |
 | --- | --- |
-| Modelo inventa número | Prompt proíbe; `actions[]` sai das ferramentas; teste com `LlmClient` falso confere que o número do texto existe no JSON da ferramenta (amostra de perguntas fixas) |
-| Custo da API | Haiku, `RATE_LIMIT_ASK`, `max_tokens` baixo, até 4 voltas por pedido, limite de gasto na conta da Anthropic |
+| Modelo inventa número | Prompt proíbe; `actions[]` sai das ferramentas; teste com `LlmClient` falso confere que cada número do texto existe no JSON da ferramenta (perguntas fixas) |
+| Mensagens forjadas no `messages[]` (resultado de ferramenta falso, `system` injetado) | Validação na rota: só texto de `user`/`assistant`; qualquer outro bloco é `invalid_request`. Teste HTTP cobre cada caso |
 | Prompt injection ("ignore e rode SQL") | O modelo não tem ferramenta de SQL nem de escrita; parâmetros validados pelo `parse_request`/`MapQuery.parse` existentes |
-| LLM fora do ar na demo | `assistant_unavailable` e o front esconde a bolinha; o resto do site não depende dela |
-| Latência (várias voltas) | Indicador "thinking…" no painel; `ResponseCache` no resultado das ferramentas; `ASSISTANT_TIMEOUT_S` |
-| Regra do projeto sobre stack | Provedor do LLM entra em [arquitetura.md](../arquitetura.md) depois do OK da equipe; uso de IA na tabela do README |
+| Cota acaba ou custo dispara com o chat aberto | Chips em cache, cadeia de provedores, `ASSISTANT_DAILY_LIMIT`, `RATE_LIMIT_ASK`, limite de gasto mensal em cada conta |
+| Todos os provedores fora na demo | Chips continuam pelo cache; pergunta livre mostra "use the map"; o resto do site não depende da bolinha |
+| Risco lido como previsão | Aviso fixo anexado pelo `AskService` sempre que a resposta usa `risk_tier` ou `historical_share` |
+| Latência (várias voltas) | Indicador "Thinking…" no painel; cache compartilhado com as rotas; `ASSISTANT_TIMEOUT_S` |
+| Feature nova no dia da entrega quebra o site | PRs separados com a esteira verde; sem `ASSISTANT_PROVIDERS` a bolinha some; nada muda nas rotas existentes |
 
 ## Plano de implementação
 
-Cada etapa é um PR pequeno, com TDD e a esteira verde (`ruff`, `vulture`, `pytest`, Vitest, Playwright).
+Antes da submissão, no escopo mínimo abaixo. Cada etapa é um PR pequeno, com TDD e a esteira verde (`ruff`, `vulture`, `pytest`, Vitest, Playwright).
 
-1. **Decisão:** equipe aprova este RFC e o provedor (registro em `arquitetura.md`).
-2. **Porta e serviço:** `ports/llm.py`, `application/assistant.py` e `assistant_tools.py` com `LlmClient` falso. Testes de `list_regions`, `get_calendar` e do limite de voltas.
-3. **Rota:** `POST /api/v1/ask` no `app.py`, rate limit, erros e seção nova no `api.md`. Testes HTTP com o repositório sintético.
-4. **Adaptador Anthropic:** `adapters/outbound/llm/anthropic.py` + variáveis no `infra/.env.example` e no `backend/README.md`. Teste só com o SDK mockado (a esteira não acessa rede).
-5. **Ferramentas restantes:** `get_recent`, `get_hotspots_now`, `build_report`.
-6. **Front:** `frontend/src/assistant/` com Vitest e uma jornada Playwright (abre a bolinha, clica num chip, vê a resposta e o calendário aplicado) com a API falsa.
-7. **Deploy:** chave na VPS, conferir as cinco perguntas do contexto contra o calendário na tela.
+1. **Backend (C11):** `ports/llm.py`, `application/assistant.py`, `assistant_tools.py` com `LlmClient` falso; rota `POST /api/v1/ask` com validação, erros, rate limit, teto diário e cache dos chips; adaptador `openai.py` com a cadeia de provedores (testado com o HTTP mockado, a esteira não acessa rede); seção nova no `api.md` e variáveis no `infra/.env.example` e no `backend/README.md`.
+2. **Ferramentas:** `list_regions`, `get_calendar`, `get_recent`, `get_fire_map` primeiro. `build_report` entra se sobrar tempo; sem ela, "report" responde com `get_calendar` + `download_export`.
+3. **Front (D11):** `frontend/src/assistant/` com Vitest e uma jornada Playwright (abre a bolinha, clica num chip, vê a resposta e o calendário aplicado) com a API falsa.
+4. **Deploy:** chaves na VPS, conferir as 5 perguntas dos chips contra o calendário na tela e aquecer o cache dos chips antes de enviar a submissão.
 
 ## Perguntas em aberto
 
-1. **Mateus (frente D):** a bolinha cabe no layout atual sem brigar com o mapa e o `ExportBar` no celular? Canto inferior direito?
-2. **Mateus:** `show_calendar` pode reaproveitar o estado do `SelectionPanel` direto ou precisa de um evento/contexto novo?
-3. **Equipe:** entra antes do fim da submissão (só etapas 2–4 + chip mínimo) ou fica para depois?
-4. **Equipe:** provedor e modelo: Anthropic (`claude-haiku-5-5`) está ok? Quem paga a chave?
-5. O `risco_celulas` (RFC 0003) não entra no produto, então não vira ferramenta. Confirmar.
+1. **Mateus (frente D):** posição da bolinha no layout (mapa + `ExportBar` no celular).
+2. **Mateus:** `show_calendar` reaproveita o estado do `SelectionPanel` direto ou precisa de um evento/contexto novo?
+3. **Equipe:** qual é o segundo provedor da cadeia (e o modelo de cada um). Não muda código, só o `ASSISTANT_PROVIDERS`.
