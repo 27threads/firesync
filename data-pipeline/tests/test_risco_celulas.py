@@ -3,9 +3,8 @@
 Nenhum número aqui é dado real. Os testes plantam um padrão conhecido (algumas células pegam fogo todo ano na mesma época)
 e conferem que o modelo o aprende, que nenhuma variável olha para o futuro e que o resultado vai para o arquivo e para o banco.
 """
-import json
 import sys
-from datetime import date, timedelta
+from datetime import date
 
 import h3
 import numpy as np
@@ -17,7 +16,7 @@ import risco_celulas as rc
 CENTRO = h3.latlng_to_cell(-10.0, -55.0, 4)
 CELULAS = [h3.str_to_int(c) for c in sorted(h3.grid_disk(CENTRO, 2))]          # 19 células vizinhas
 FOGUENTAS = CELULAS[:3]                                                         # pegam fogo forte em ago a out, todo ano
-INICIO, FIM = date(2012, 2, 1), date(2017, 6, 30)
+INICIO, FIM = date(2012, 2, 1), date(2017, 12, 31)
 REGRAS = {"version": "t1", "horizon_days": 14, "tiers": [{"tier": "very_high", "min_prob": 0.6}, {"tier": "high", "min_prob": 0.4},
                                                           {"tier": "medium", "min_prob": 0.2}, {"tier": "lower", "min_prob": 0.0}]}
 
@@ -117,7 +116,7 @@ def test_a_nota_de_uma_data_antiga_so_usa_dados_ate_ela(tmp_path, monkeypatch):
                                       "--saida", str(tmp_path / "saida")])
     rc.main()
     texto = (tmp_path / "saida" / "relatorio_risco.txt").read_text(encoding="utf-8")
-    assert "treinado com dados até 2015-07-19" in texto                            # 14 dias antes: o gabarito precisa ter terminado
+    assert "treinado com dados até 2015-08-02" in texto and "nada depois dela" in texto
 
 
 # ---------------------------------------------------------------- banco (pulados sem TEST_DATABASE_URL)
