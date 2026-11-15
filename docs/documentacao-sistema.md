@@ -2,7 +2,7 @@
 
 O **firesync** transforma detecções MODIS e VIIRS do NASA FIRMS em um calendário harmonizado de focos de calor. Apoia equipes de alerta e combate a incêndios, gestores e pesquisadores na comparação entre a atividade recente e o histórico de uma área.
 
-Síntese para desenvolvimento, testes e revisão, organizada pelos capítulos do template **Projeto de Software — UFU (2026), PDSI2.pdf** fornecido para esta documentação. Os requisitos e as decisões específicas permanecem nos documentos vinculados; exemplos genéricos do template foram adaptados à implementação do projeto.
+Síntese para desenvolvimento, testes e revisão, organizada por requisitos, projeto, operação e qualidade do software. Os requisitos e as decisões específicas permanecem nos documentos vinculados; esta visão geral descreve a implementação e o fluxo de trabalho do projeto.
 
 **Aplicação:** [firesync.nogranlabs.com.br](https://firesync.nogranlabs.com.br) · **API:** [firesync-api.nogranlabs.com.br](https://firesync-api.nogranlabs.com.br).
 
@@ -200,4 +200,4 @@ O gerador `backend/scripts/demo_data.py` é exclusivo de banco vazio e descartá
 | [README e ordem de leitura](../README.md#para-agentes-ordem-de-leitura) | Antes de iniciar uma tarefa; preserva o catálogo de documentos do projeto. |
 | [Requisitos](requisitos.md), [arquitetura](arquitetura.md) e [API](api.md) | Especificação, decisões e contratos detalhados. |
 
-Fontes: [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) (MODIS C6.1 e VIIRS C2), IBGE (biomas 1:250.000), INPE (Programa Queimadas), [NASA GIBS](https://www.earthdata.nasa.gov/gibs), [NASA 3D Resources](https://github.com/nasa/NASA-3D-Resources) e [Natural Earth/geo-countries](https://github.com/datasets/geo-countries). Referências técnicas: [FastAPI](https://fastapi.tiangolo.com/), [PostGIS](https://postgis.net/documentation/), [H3](https://h3geo.org/docs/) e [SemVer](https://semver.org/lang/pt-BR/). Estrutura documental: template PDSI2, UFU, 2026, fornecido pelo responsável pela documentação.
+Fontes: [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) (MODIS C6.1 e VIIRS C2), IBGE (biomas 1:250.000), INPE (Programa Queimadas), [NASA GIBS](https://www.earthdata.nasa.gov/gibs), [NASA 3D Resources](https://github.com/nasa/NASA-3D-Resources) e [Natural Earth/geo-countries](https://github.com/datasets/geo-countries). Referências técnicas: [FastAPI](https://fastapi.tiangolo.com/), [PostGIS](https://postgis.net/documentation/), [H3](https://h3geo.org/docs/) e [SemVer](https://semver.org/lang/pt-BR/).
