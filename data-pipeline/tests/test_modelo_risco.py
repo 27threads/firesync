@@ -168,9 +168,10 @@ def test_clima_entra_sobre_as_pistas_de_fogo_e_nao_sobre_o_oni(tmp_path, monkeyp
                                       "--saida", str(tmp_path / "saida"), "--anos-teste", "2023", "--ano-final", "2024"])
     mr.main()
     medidas = pd.read_csv(tmp_path / "saida" / "medidas_por_ano.csv")
-    assert set(medidas["conjunto"]) == {"fogo", "fogo+oni", "fogo+clima"}
+    assert set(medidas["conjunto"]) == {"fogo", "fogo+oni", "fogo+clima", "fogo+anomalia"}
     imp = pd.read_csv(tmp_path / "saida" / "importancia.csv")
-    assert "chuva30" in set(imp["pista"]) and "oni" not in set(imp["pista"])
+    assert "chuva30" in set(imp["pista"]) and "oni" not in set(imp["pista"])      # a importância é do conjunto mais completo
+    assert {"chuva30_anom"} <= set(imp["pista"])
 
 
 def test_linha_de_comando_monta_a_serie_dos_arquivos_anuais(tmp_path, monkeypatch):
