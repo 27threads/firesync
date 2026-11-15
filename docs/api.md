@@ -430,7 +430,7 @@ Resposta:
 | Campo | O que é |
 | --- | --- |
 | `answer` | Texto no idioma da pergunta |
-| `actions[]` | Saem das ferramentas que rodaram. `show_calendar` (`area`, `start` e `end` opcionais) aplica a busca na tela; `download_export` (mesmos campos) baixa o ZIP de `POST /export` |
+| `actions[]` | Saem das ferramentas que rodaram. `show_calendar` (`area`, `start` e `end` opcionais) aplica a busca na tela; `download_export` (mesmos campos) baixa o ZIP de `POST /export`. `label` ("Pantanal · 2024-01 to 2024-12") distingue os botões quando a resposta cobre várias regiões ou períodos |
 | `notes[]` | Avisos fixos em inglês: o do risco (frequência do passado, não previsão) e o de números não rastreados |
 | `sources[]` | Uma por ferramenta que rodou: `endpoint` (rota equivalente), `area`, `region`, `start`, `end` ou `hours`, `data_version` e `updated_at`. Montadas pelo servidor, nunca pelo modelo |
 | `verified` | `true` quando todo número do `answer` aparece nos resultados das ferramentas (lido em formato inglês ou português, com arredondamento; anos e inteiros até 31 não entram). `false` vem com a nota dizendo quais números não foram achados |

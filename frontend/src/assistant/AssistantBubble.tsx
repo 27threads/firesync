@@ -79,10 +79,17 @@ export function AssistantBubble({ onShowCalendar, hideBubble = false }: Props) {
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  const [failedQuestion, setFailedQuestion] = useState<string | null>(null);
+  const logEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const bubbleRef = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
+
+  // New answers can land below the fold in a long conversation.
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [turns.length, busy, failure]);
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
@@ -118,11 +125,16 @@ export function AssistantBubble({ onShowCalendar, hideBubble = false }: Props) {
     setTurns((current) => [...current, { message }]);
     setDraft('');
     setFailure(null);
+    setFailedQuestion(null);
     setBusy(true);
     try {
       const reply = await askAssistant([...history, message].slice(-10));
       setTurns((current) => current.map((turn, index) => (index === current.length - 1 ? { ...turn, reply } : turn)));
     } catch (error) {
+      // Keep the question: it goes back to the box and "Try again" sends it once more.
+      setTurns((current) => current.slice(0, -1));
+      setDraft(question);
+      setFailedQuestion(question);
       setFailure(failureText(error));
     } finally {
       setBusy(false);
@@ -197,12 +209,13 @@ export function AssistantBubble({ onShowCalendar, hideBubble = false }: Props) {
                 ))}
                 {turn.reply.actions.map((action) => (
                   <button
-                    key={action.type + (action.start ?? '') + (action.end ?? '')}
+                    key={`${action.type}-${action.area.region_id}-${action.start ?? ''}-${action.end ?? ''}`}
                     type="button"
                     className="chip"
                     onClick={() => (action.type === 'show_calendar' ? onShowCalendar(action) : void download(action))}
                   >
                     {action.type === 'show_calendar' ? 'Show on calendar' : 'Download audit package'}
+                    {action.label ? ` · ${action.label}` : ''}
                   </button>
                 ))}
               </div>
@@ -212,9 +225,15 @@ export function AssistantBubble({ onShowCalendar, hideBubble = false }: Props) {
         {busy && <p className="assistant-msg assistant-msg__note">Thinking…</p>}
         {failure && (
           <p className="assistant-msg assistant-msg__note" role="alert">
-            {failure}
+            {failure}{' '}
+            {failedQuestion && (
+              <button type="button" className="chip" onClick={() => void send(failedQuestion)}>
+                Try again
+              </button>
+            )}
           </p>
         )}
+        <div ref={logEndRef} />
       </div>
       <form
         className="assistant-panel__form"

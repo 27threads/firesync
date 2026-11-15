@@ -282,6 +282,8 @@ export interface AssistantMessage {
 
 export interface AssistantAction {
   type: 'show_calendar' | 'download_export';
+  /** Region and period, e.g. "Pantanal · 2024-01 to 2024-12": one answer can carry buttons for several. */
+  label?: string;
   area: RegionArea;
   start?: string;
   end?: string;
