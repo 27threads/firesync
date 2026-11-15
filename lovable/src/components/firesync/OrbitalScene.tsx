@@ -6,6 +6,7 @@ import terraAsset from '@/assets/satellites/terra.glb.asset.json';
 import suomiAsset from '@/assets/satellites/suomi-npp-uncompressed.glb.asset.json';
 import earthAsset from '@/assets/earth-surface.jpg.asset.json';
 import fastEarthAsset from '@/assets/earth-fast.jpg.asset.json';
+import { SPACECRAFT_LABELS } from '@/lib/opening-copy';
 import { advanceGlobeRotation, BLUE_MARBLE_TILES, mercatorLatitude, smoothPhase, surfaceCameraDistance, SURFACE_VIEW, tilePosition } from '@/lib/globe-transition';
 
 /** Presentation geometry only: these are not satellite ephemerides or fire coordinates. */
@@ -202,9 +203,9 @@ export default function OrbitalScene({ playing, progress, onSurfaceReady, onGlob
       const label = document.createElement('div');
       label.className = 'orbital-spacecraft-name';
       const sensorName = document.createElement('strong');
-      sensorName.textContent = i === 0 ? 'MODIS' : 'VIIRS';
+      sensorName.textContent = SPACECRAFT_LABELS[i]?.sensor ?? '';
       const spacecraftName = document.createElement('small');
-      spacecraftName.textContent = i === 0 ? 'Terra' : 'Suomi NPP';
+      spacecraftName.textContent = SPACECRAFT_LABELS[i]?.spacecraft ?? '';
       label.append(sensorName, spacecraftName);
       label.hidden = true;
       element.appendChild(label);

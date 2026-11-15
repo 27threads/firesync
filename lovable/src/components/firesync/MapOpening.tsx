@@ -7,13 +7,9 @@ import type { AreaSelection } from './AreaMap';
 import { journeyTransitionDistance, smoothPhase } from '@/lib/globe-transition';
 import { demoInView, recentTotals, type RecentData } from '@/lib/recent-data';
 import { number } from '@/lib/fire-data';
+import { OPENING_AUDIENCE, OPENING_CHAPTERS as chapters, OPENING_DATA_CREDIT } from '@/lib/opening-copy';
 const RecentWorkspace = lazy(() => import('./RecentWorkspace'));
 const OrbitalScene = lazy(() => import('./OrbitalScene'));
-const chapters = [
-  { label: 'Our planet', title: <>One Earth.<br />A longer perspective.</>, copy: 'Understand fire activity in the places that matter to you.' },
-  { label: 'The record', title: <>Different sensors.<br />One shared history.</>, copy: 'Explore monthly detections from MODIS and VIIRS, since 2003.' },
-  { label: 'Your place', title: <>The present.<br />In context.</>, copy: 'Compare recent activity with the seasonal record of an area.' },
-];
 
 export function MapOpening({ selection, onSelect }: { selection: AreaSelection | null; onSelect: (area: AreaSelection | null) => void }) {
   const [playing, setPlaying] = useState(true);
@@ -75,14 +71,15 @@ export function MapOpening({ selection, onSelect }: { selection: AreaSelection |
     <div className="orbital-stage">
       <ClientOnly fallback={<div className="orbital-canvas" />}><Suspense fallback={<div className="orbital-canvas" />}><OrbitalScene playing={playing} progress={progress} onGlobeReady={() => setGlobeReady(true)} onSurfaceReady={() => setSurfaceReady(true)} /></Suspense></ClientOnly>
       <div className="orbital-copy">
-        <span className="eyebrow orbital-kicker">NASA Space Apps · fire observatory</span>
+        <span className="eyebrow orbital-kicker">{OPENING_AUDIENCE}</span>
         <h1>firesync<span>.</span></h1>
-        <div className="orbital-chapter" key={chapter}><span className="eyebrow">{content.label}</span><h2>{content.title}</h2><p>{content.copy}</p></div>
+        <div className="orbital-chapter" key={chapter}><span className="eyebrow">{content.label}</span><h2>{content.title[0]}<br />{content.title[1]}</h2><p>{content.copy}</p></div>
         <Button size="lg" onClick={() => showChapter(2)}>Explore an area</Button>
         <div className="orbital-presentation-controls">
           <Button variant="ghost" size="icon" aria-label={playing ? 'Pause presentation' : 'Play presentation'} title={playing ? 'Pause presentation' : 'Play presentation'} onClick={() => setPlaying(!playing)}>{playing ? <Pause size={14} /> : <Play size={14} />}</Button>
           {chapters.map((item, index) => <Button key={item.label} variant="ghost" size="icon" className="orbital-step" aria-label={`Show ${item.label.toLowerCase()}`} aria-pressed={index === chapter} title={item.label} onClick={() => showChapter(index)}><span /></Button>)}
         </div>
+        <p className="orbital-data-credit">{OPENING_DATA_CREDIT}</p>
       </div>
       <div className={`orbital-map-workspace ${mapActive ? 'is-active' : ''}`} aria-hidden={!mapActive} inert={!mapActive}>
          {globeReady && <ClientOnly><Suspense fallback={<div className="map-loading">Loading map…</div>}><RecentWorkspace active={mapActive} resetForHandoff={resetForHandoff} selection={selection} onSelect={onSelect} onReady={() => setMapReady(true)} onReturn={() => showChapter(0)} onRecentSummary={(data, demo) => setRecentSummary({ data, demo })} /></Suspense></ClientOnly>}
