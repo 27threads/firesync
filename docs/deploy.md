@@ -5,7 +5,7 @@ Nov 15, 2026 · frente C · decisão 12 de [arquitetura.md](arquitetura.md)
 O front fica no Cloudflare. Banco, API e job NRT ficam na VPS, com `docker compose`. A VPS não abre nenhuma porta para a internet: o único caminho de fora para dentro é o Cloudflare Tunnel até a API.
 
 ```
-navegador ──> Cloudflare (front estático, firesync.<conta>.workers.dev)
+navegador ──> Cloudflare (front estático, firesync-prd.<conta>.workers.dev)
 navegador ──> Cloudflare (api.<domínio>) ──túnel──> VPS: api ──> db
                                                     VPS: job-nrt ──> FIRMS
 ```
@@ -16,7 +16,7 @@ navegador ──> Cloudflare (api.<domínio>) ──túnel──> VPS: api ─�
 
 O repositório é um monorepo. O Cloudflare clona o repo inteiro e faz o build a partir de `frontend/`. O `frontend/wrangler.jsonc` diz para o `wrangler deploy` publicar o `dist/` e responder `index.html` em qualquer rota. Sem esse arquivo, o wrangler tenta se configurar sozinho e falha com Vite 5.
 
-Em **Workers & Pages → firesync → Settings → Build**:
+Em **Workers & Pages → firesync-prd → Settings → Build**:
 
 | Campo | Valor |
 | --- | --- |
