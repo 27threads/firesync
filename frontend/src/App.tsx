@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { MONTH_NAMES } from './calendar/calendarModel';
+import { AssistantBubble } from './assistant/AssistantBubble';
 import { SelectionPanel } from './controls/SelectionPanel';
 import { buildExampleStory } from './discovery/exampleStory';
 import { HeroCalendar } from './hero/HeroCalendar';
@@ -14,6 +15,9 @@ function monthLabel(key: string): string {
   const [y, m] = key.split('-').map(Number);
   return `${MONTH_NAMES[m - 1]} ${y}`;
 }
+
+// Off unless the build sets VITE_ENABLE_ASSISTANT=true, so the page ships the same without the assistant (RFC 0004).
+const ASSISTANT_ENABLED = import.meta.env.VITE_ENABLE_ASSISTANT === 'true';
 
 function scrollToExplore() {
   document.getElementById('explore')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
@@ -45,9 +49,9 @@ export function App() {
     [ex],
   );
 
-  const selectArea: typeof ex.selectArea = (area) => {
+  const selectArea: typeof ex.selectArea = (area, period) => {
     setSelectedKey(null);
-    ex.selectArea(area);
+    ex.selectArea(area, period);
   };
 
   let statusChip = <span className="chip chip--live">NASA FIRMS data</span>;
@@ -128,6 +132,15 @@ export function App() {
           request={ex.request}
         />
       </div>
+
+      {ASSISTANT_ENABLED && (
+        <AssistantBubble
+          onShowCalendar={(action) => {
+            selectArea(action.area, action.start && action.end ? { start: action.start, end: action.end } : undefined);
+            scrollToExplore();
+          }}
+        />
+      )}
     </>
   );
 }

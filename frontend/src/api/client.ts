@@ -1,6 +1,8 @@
 import { buildCalendarRequest } from '../controls/areaPeriodModel';
 import { defaultAuditFilenameUtc, parseContentDispositionFilename } from '../export/exportModel';
 import type {
+  AssistantMessage,
+  AssistantResponse,
   CalendarApiResult,
   CalendarRequest,
   HealthResponse,
@@ -133,6 +135,16 @@ export function fetchRecentDetections(
   const query = `bbox=${west},${south},${east},${north}&hours=${hours}&zoom=${zoom}${modeParam}`;
   return requestJson<RecentDetectionsResponse>(`/api/v1/detections/recent?${query}`, {
     method: 'GET',
+    signal,
+  });
+}
+
+/** Asks the virtual assistant (POST /api/v1/ask); every number in the answer comes from the API tools. */
+export function askAssistant(messages: AssistantMessage[], signal?: AbortSignal): Promise<AssistantResponse> {
+  return requestJson<AssistantResponse>('/api/v1/ask', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages }),
     signal,
   });
 }

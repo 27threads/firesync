@@ -2067,3 +2067,111 @@ select {
     padding: 16px;
   }
 }
+
+/* Assistant (RFC 0004): floating button and panel, bottom right, above the map. */
+.assistant-bubble {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1000;
+  width: 52px;
+  height: 52px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--amber);
+  color: var(--ink);
+  font: 700 22px var(--font);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.assistant-bubble:focus-visible,
+.assistant-panel button:focus-visible,
+.assistant-panel textarea:focus-visible {
+  outline: 2px solid var(--amber-ink);
+  outline-offset: 2px;
+}
+
+.assistant-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(560px, calc(100vh - 32px));
+  padding: 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font-family: var(--font);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.assistant-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.assistant-panel__close {
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.assistant-panel__log {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 14px;
+}
+
+.assistant-panel__chips {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assistant-panel .chip {
+  cursor: pointer;
+  text-align: left;
+}
+
+.assistant-msg {
+  margin: 6px 0;
+}
+
+.assistant-msg--user {
+  text-align: right;
+  color: var(--ink-soft);
+}
+
+.assistant-msg__note {
+  margin: 4px 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.assistant-panel__form {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.assistant-panel__form textarea {
+  flex: 1;
+  resize: none;
+  padding: 6px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  font: inherit;
+}

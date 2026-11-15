@@ -273,3 +273,22 @@ export interface RecentDetectionsPointsResponse {
 export type RecentDetectionsResponse =
   | RecentDetectionsHexagonsResponse
   | RecentDetectionsPointsResponse;
+
+/** Assistant chat (RFC 0004): plain text turns only; the server rejects anything else. */
+export interface AssistantMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AssistantAction {
+  type: 'show_calendar' | 'download_export';
+  area: RegionArea;
+  start?: string;
+  end?: string;
+}
+
+export interface AssistantResponse {
+  answer: string;
+  actions: AssistantAction[];
+  notes: string[];
+}

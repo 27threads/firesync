@@ -1,0 +1,169 @@
+import { useEffect, useRef, useState } from 'react';
+import { ApiClientError, askAssistant, fetchAuditPackage } from '../api/client';
+import type { AssistantAction, AssistantMessage, AssistantResponse } from '../api/types';
+import { downloadBlob } from '../export/ExportBar';
+
+export const SUGGESTED_QUESTIONS = [
+  'What was the worst month in the Pantanal in 2020?',
+  'Was 2024 above normal in the Cerrado?',
+  'How many hotspots in the Amazon in the last 7 days?',
+  'Where is it burning right now?',
+  'Give me a fire report for last year in the Amazon.',
+];
+
+interface Turn {
+  message: AssistantMessage;
+  reply?: AssistantResponse;
+}
+
+interface Props {
+  onShowCalendar: (action: AssistantAction) => void;
+}
+
+function failureText(error: unknown): string {
+  if (error instanceof ApiClientError && (error.code === 'assistant_unavailable' || error.code === 'rate_limited')) {
+    return error.message;
+  }
+  return 'Assistant unavailable, use the map.';
+}
+
+/** Floating chat (RFC 0004). Optional: the page works the same without it. */
+export function AssistantBubble({ onShowCalendar }: Props) {
+  const [open, setOpen] = useState(false);
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [draft, setDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  async function send(text: string) {
+    const question = text.trim();
+    if (!question || busy) return;
+    const history: AssistantMessage[] = turns.flatMap((turn) =>
+      turn.reply?.answer ? [turn.message, { role: 'assistant' as const, content: turn.reply.answer }] : [turn.message],
+    );
+    const message: AssistantMessage = { role: 'user', content: question.slice(0, 1000) };
+    setTurns((current) => [...current, { message }]);
+    setDraft('');
+    setFailure(null);
+    setBusy(true);
+    try {
+      const reply = await askAssistant([...history, message].slice(-10));
+      setTurns((current) => current.map((turn, index) => (index === current.length - 1 ? { ...turn, reply } : turn)));
+    } catch (error) {
+      setFailure(failureText(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function download(action: AssistantAction) {
+    try {
+      const { blob, filename } = await fetchAuditPackage({ area: action.area, start: action.start, end: action.end });
+      downloadBlob(blob, filename);
+    } catch (error) {
+      setFailure(error instanceof ApiClientError ? error.message : 'Download failed.');
+    }
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className="assistant-bubble" aria-label="Ask about fire data" onClick={() => setOpen(true)}>
+        ?
+      </button>
+    );
+  }
+
+  return (
+    <section
+      className="assistant-panel"
+      role="dialog"
+      aria-label="Fire data assistant"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') setOpen(false);
+      }}
+    >
+      <header className="assistant-panel__head">
+        <strong>Ask firesync</strong>
+        <button type="button" className="assistant-panel__close" aria-label="Close assistant" onClick={() => setOpen(false)}>
+          ×
+        </button>
+      </header>
+      <div className="assistant-panel__log" aria-live="polite">
+        {turns.length === 0 && (
+          <ul className="assistant-panel__chips">
+            {SUGGESTED_QUESTIONS.map((question) => (
+              <li key={question}>
+                <button type="button" className="chip" onClick={() => void send(question)}>
+                  {question}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {turns.map((turn, index) => (
+          <div key={index}>
+            <p className="assistant-msg assistant-msg--user">{turn.message.content}</p>
+            {turn.reply && (
+              <div className="assistant-msg">
+                <p>{turn.reply.answer}</p>
+                {turn.reply.notes.map((note) => (
+                  <p key={note} className="assistant-msg__note">
+                    {note}
+                  </p>
+                ))}
+                {turn.reply.actions.map((action) => (
+                  <button
+                    key={action.type + (action.start ?? '') + (action.end ?? '')}
+                    type="button"
+                    className="chip"
+                    onClick={() => (action.type === 'show_calendar' ? onShowCalendar(action) : void download(action))}
+                  >
+                    {action.type === 'show_calendar' ? 'Show on calendar' : 'Download audit package'}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+        {busy && <p className="assistant-msg assistant-msg__note">Thinking…</p>}
+        {failure && (
+          <p className="assistant-msg assistant-msg__note" role="alert">
+            {failure}
+          </p>
+        )}
+      </div>
+      <form
+        className="assistant-panel__form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void send(draft);
+        }}
+      >
+        <textarea
+          ref={inputRef}
+          value={draft}
+          maxLength={1000}
+          rows={2}
+          aria-label="Your question"
+          placeholder="Ask about fires in Brazil…"
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              void send(draft);
+            }
+          }}
+        />
+        <button type="submit" className="chip" disabled={busy || !draft.trim()}>
+          Send
+        </button>
+      </form>
+      <p className="assistant-msg__note">Numbers from NASA FIRMS (MODIS + VIIRS), harmonized to the VIIRS scale.</p>
+    </section>
+  );
+}

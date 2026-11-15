@@ -29,6 +29,7 @@ Base: `/api/v1`.
 | `POST` | `/calendar` | Calendário, sazonalidade, ranking de anos, mês atual, anomalias e indicadores de uma área | RF06–RF12, RD06 |
 | `POST` | `/export` | Pacote de auditoria em ZIP da mesma busca | RF13, RD05 |
 | `GET` | `/detections/recent` | Focos recentes na área visível do mapa: hexágonos com a contagem no mapa afastado, pontos no mapa próximo | RD07 |
+| `POST` | `/ask` | Assistente virtual: pergunta em linguagem natural, resposta com os números das rotas acima ([RFC 0004](rfcs/0004-assistente-virtual.md)). Opcional: desligado sem `ASSISTANT_PROVIDERS` | — |
 
 `/calendar` e `/export` usam `POST` porque o GeoJSON da área pode ser grande demais para a URL.
 
@@ -411,6 +412,31 @@ A tela não mostra o FRP em MW. Cada detecção recebe uma classe, para quem dec
 - **Só VIIRS:** a classe vale para detecções do VIIRS, que são todas as recentes. O FRP do MODIS não é comparável.
 - **Limites a declarar na tela de Método:** o FRP de pixels na borda da faixa do satélite tende a sair maior, e os fogos à noite tendem a ter FRP menor. A classe ajuda a priorizar, mas não substitui informação de campo, vento e avanço da frente.
 
+## `POST /ask`
+
+Assistente virtual ([RFC 0004](rfcs/0004-assistente-virtual.md)). O modelo de linguagem só escolhe ferramentas (`list_regions`, `get_calendar`, `get_recent`, `get_fire_map`) que rodam os mesmos casos de uso de `/regions`, `/calendar` e `/detections/recent`, na mesma transação de leitura. Nenhum número sai do modelo.
+
+Pedido:
+
+```json
+{ "messages": [ { "role": "user", "content": "What was the worst month in the Pantanal in 2020?" } ] }
+```
+
+- De 1 a 10 mensagens. Cada uma só com `role` (`user` ou `assistant`) e `content` (texto de 1 a 1.000 caracteres). A última é do usuário. Qualquer outro campo, papel ou bloco é `invalid_request`.
+- O servidor manda ao modelo só as últimas 6 mensagens.
+
+Resposta:
+
+| Campo | O que é |
+| --- | --- |
+| `answer` | Texto no idioma da pergunta |
+| `actions[]` | Saem das ferramentas que rodaram. `show_calendar` (`area`, `start` e `end` opcionais) aplica a busca na tela; `download_export` (mesmos campos) baixa o ZIP de `POST /export` |
+| `notes[]` | Avisos fixos em inglês. Hoje só o do risco: frequência do passado, não previsão |
+| `meta` | `updated_at` e `data_version` dos dados usados |
+
+- Pedido com uma mensagem só fica no cache até mudar `updated_at` ou `data_version`: as perguntas sugeridas repetidas não chamam o provedor.
+- Limite próprio por IP (`RATE_LIMIT_ASK`) e teto diário global (`ASSISTANT_DAILY_LIMIT`). Variáveis em [backend/README.md](../backend/README.md).
+
 ## `GET /regions`
 
 ```json
@@ -441,9 +467,11 @@ Formato único:
 | 400 | `invalid_period` | Data fora de `2003-01` a `last_month`, ou `start` depois de `end` |
 | 400 | `invalid_bbox`, `invalid_hours`, `invalid_mode` | Parâmetro inválido em `GET /detections/recent` |
 | 404 | `region_not_found` | `region_id` não existe |
+| 400 | `invalid_request` | Pedido de `POST /ask` fora das regras |
 | 413 | `area_too_large` | Mais de 250.000 células |
 | 429 | `rate_limited` | Passou do limite de pedidos por IP (RNF06). A resposta traz o cabeçalho `Retry-After`, com os segundos até poder tentar de novo |
 | 500 | `internal_error` | Qualquer outro. A mensagem não expõe detalhes do servidor |
+| 503 | `assistant_unavailable` | `POST /ask`: assistente desligado, todos os provedores falharam ou teto diário atingido |
 
 Área fora da cobertura **não** é erro: é `200` com `coverage.status = "none"`.
 

@@ -16,7 +16,10 @@ from backend.adapters.inbound.http.cache import ResponseCache
 from backend.adapters.inbound.http.limits import RateLimiter
 from backend.adapters.inbound.http.zip_export import audit_zip
 from backend.adapters.outbound.config_file.rules import load_risk_rules, load_rules
+from backend.adapters.outbound.llm.openai import ProviderChain
 from backend.application.api import calculate_calendar, parse_request
+from backend.application.assistant import AskService, validate_messages
+from backend.application.assistant_tools import Toolbox
 from backend.application.audit import audit_document
 from backend.domain.calculations.map_features import map_result
 from backend.domain.models.error import CalendarError
@@ -27,7 +30,8 @@ logger = logging.getLogger('uvicorn.error.firesync')
 # A drawn polygon is a few KB; this stops huge bodies before they reach memory or Shapely.
 MAX_BODY_BYTES = 1_000_000
 ERROR_STATUS = {'invalid_geometry': 400, 'invalid_period': 400, 'invalid_bbox': 400,
-                'invalid_hours': 400, 'invalid_mode': 400, 'region_not_found': 404, 'area_too_large': 413}
+                'invalid_hours': 400, 'invalid_mode': 400, 'region_not_found': 404, 'area_too_large': 413,
+                'invalid_request': 400, 'assistant_unavailable': 503}
 
 
 def error_response(code, message, status, headers=None):
@@ -35,7 +39,7 @@ def error_response(code, message, status, headers=None):
 
 
 def create_app(repository: ApiRepository | None = None, clock=None, monotonic=None,
-               limits=None, rate_window=None, frontend_origin=None, client_ip_header=None):
+               limits=None, rate_window=None, frontend_origin=None, client_ip_header=None, llm=None):
     clock = clock or (lambda: datetime.now(UTC))
     # Only set behind a proxy that overwrites the header (CF-Connecting-IP with Cloudflare Tunnel);
     # otherwise any client could pick its own rate-limit bucket.
@@ -45,9 +49,13 @@ def create_app(repository: ApiRepository | None = None, clock=None, monotonic=No
     risk_rules = load_risk_rules()
     configured_limits = limits if limits is not None else {
         key: int(os.environ.get('RATE_LIMIT_' + key.upper(), default))
-        for key, default in [('general', 60), ('calendar', 10), ('export', 2)]}
+        for key, default in [('general', 60), ('calendar', 10), ('export', 2), ('ask', 5)]}
     limiter = RateLimiter(configured_limits, rate_window if rate_window is not None else int(os.environ.get('RATE_LIMIT_WINDOW', 60)), monotonic)
     cache = ResponseCache(int(os.environ.get('RESPONSE_CACHE_SIZE', 128)))
+    # Without ASSISTANT_PROVIDERS the assistant is off and /ask answers 503; nothing else depends on it.
+    llm = llm or ProviderChain.from_env(os.environ.get('ASSISTANT_PROVIDERS', ''),
+                                        int(os.environ.get('ASSISTANT_TIMEOUT_S', 20)))
+    assistant = AskService(llm, int(os.environ.get('ASSISTANT_DAILY_LIMIT', 500)), clock)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -184,5 +192,31 @@ def create_app(repository: ApiRepository | None = None, clock=None, monotonic=No
             else:
                 body, expires_at = cached
             return json_response(request, body, meta, repr(query) + expires_at.isoformat())
+
+    def ask_response(payload):
+        messages = validate_messages(payload)
+        if llm is None:
+            raise CalendarError('assistant_unavailable', 'Assistant unavailable, use the map.')
+        with repository.read() as reader:
+            meta = reader.meta()
+            # First questions (the suggested ones) repeat a lot: cache them until the data changes.
+            key = ('ask', messages[0]['content'], meta['updated_at'], meta['data_version']) if len(messages) == 1 else None
+            body = cache.get(key) if key else None
+            if body is None:
+                body = assistant.ask(messages, Toolbox(reader, clock(), rules, risk_rules))
+                body['meta'] = {'updated_at': meta['updated_at'], 'data_version': meta['data_version']}
+                if key:
+                    cache.put(key, body)
+        return JSONResponse(body, headers={'Cache-Control': 'no-store'})
+
+    @app.post('/api/v1/ask')
+    async def ask(request: Request):
+        try:
+            payload = await read_body(request)
+        except CalendarError as error:
+            if error.code != 'invalid_geometry':
+                raise
+            raise CalendarError('invalid_request', 'A valid JSON request is required.') from None
+        return await run_in_threadpool(ask_response, payload)
 
     return app
