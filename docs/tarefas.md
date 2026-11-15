@@ -88,7 +88,7 @@ Ler antes: [requisitos.md](requisitos.md), [importacao-regioes.md](importacao-re
 | C5 | Resposta "sem dados" fora da `cobertura` e marcação dos dias de `dias_sem_dados` | C3 | feito (cobertura full/partial/none e dias sem dados expostos e testados por HTTP) | Área fora do Brasil devolve o aviso, não um calendário vazio |
 | C6 | Export CSV dos focos da busca (RD05) | C3 | feito (ZIP em memória com CSVs e metadados; caso de 500.001 focos testado no PostGIS) | Arquivo abre no Excel |
 | C7 | Deploy público de banco, API e front | T00, M2 | feito em 15/11/2026 (front em <https://firesync.nogranlabs.com.br>, API em <https://firesync-api.nogranlabs.com.br>; carga do dump conferida com os números da frente A, na issue #98; ver [deploy.md](deploy.md)) | Link funciona numa janela anônima |
-| C8 | Pedir a classificação FortiGuard do site | C7 | a fazer | Pedido enviado |
+| C8 | Pedir a classificação FortiGuard do site | C7 | feito (15/11: site e API já classificados como Business, herdado do domínio `nogranlabs.com.br` desde 13/06/2026; pedida a reclassificação dos dois para Information Technology) | Pedido enviado |
 | C9 | Página do projeto em inglês: summary, descrição detalhada, NASA Data, referências, uso de IA | B6 | a fazer | Todos os campos do checklist de [requisitos.md](requisitos.md) preenchidos |
 | C10 | Completar a tabela "Uso de IA" do README | — | a fazer | Cada parte com IA registrada |
 
