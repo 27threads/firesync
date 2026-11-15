@@ -154,9 +154,13 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | Aviso antecipado no mapa (D10: `frontend/src/map/alertsModel.ts`, `EarlyWarning.tsx`, tooltip em `src/controls/recentDetectionsModel.ts`, tipos, estilos e jornadas J10 e J11) | Claude Code (Claude Opus 5.5) | Escrito em TDD a partir do contrato dos PRs #86 e #97 e do texto do PR #103, com todos os campos novos opcionais; a correção do foco do mapa veio de uma jornada que falhava. A equipe revisa no PR |
 | Resultados da frente B na tela de Método (`frontend/index.html`, `frontend/public/img/`, `src/index-html.test.ts`) | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Textos em inglês escritos a partir de `docs/decisoes-harmonizacao.md` e do RFC 0003, com os números copiados dos documentos, e testes antes do texto. A equipe revisa no PR |
 | Ajustes da abertura em `lovable/` (`src/lib/opening-copy.ts`, `MapOpening.tsx`, `OrbitalScene.tsx`, `styles.css`, `src/assets/satellites/CREDITS.md`, teste `src/test/opening-copy.test.ts`) | Claude Code (Claude Opus 5.5) | Revisão da abertura pelos critérios do `docs/premiacao.md` e troca dos textos e dos rótulos dos satélites (Aqua; S-NPP → NOAA-20) conforme as regras do README, com o teste antes do código. O resto de `lovable/` foi gerado no Lovable pela equipe. A equipe revisa no PR |
+| Assets de `lovable/` no git (`src/assets/`: texturas da Terra, `aqua.glb`, `suomi-npp.glb`, `country-boundaries.geojson`; imports em `OrbitalScene.tsx`, `AreaMap.tsx`, `routes/index.tsx`) | Claude Code (Claude Opus 5.5) | Troca dos ponteiros `*.asset.json` (só funcionavam na hospedagem do Lovable) por arquivos das fontes públicas: modelos da NASA com o Draco decodificado, textura gerada da camada GIBS do mapa e GeoJSON sem alteração. O Terra rotulado como Aqua virou o modelo do Aqua. Conferido no navegador local. A equipe revisa no PR |
 
 ## Dados e créditos
 
 - Focos de calor: [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) (MODIS C6.1 e VIIRS C2)
 - Polígonos de biomas: IBGE, Biomas do Brasil 1:250.000
 - Série de validação: INPE, Programa Queimadas
+- Textura da Terra na abertura (`lovable/`): [NASA GIBS](https://www.earthdata.nasa.gov/gibs), camada `BlueMarble_ShadedRelief_Bathymetry`
+- Modelos 3D do Aqua e do Suomi NPP: [NASA 3D Resources](https://github.com/nasa/NASA-3D-Resources)
+- Limites de países: [datasets/geo-countries](https://github.com/datasets/geo-countries) (Natural Earth)

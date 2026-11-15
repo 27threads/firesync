@@ -4,9 +4,9 @@ import { MapOpening } from '@/components/firesync/MapOpening';
 import { Explorer } from '@/components/firesync/Explorer';
 import { useEffect, useState } from 'react';
 import type { AreaSelection } from '@/components/firesync/AreaMap';
-import earthAsset from '@/assets/earth-fast.jpg.asset.json';
+import fastEarthUrl from '@/assets/earth-fast.jpg?url';
 
-export const Route = createFileRoute('/')({ head: () => ({ links: [{ rel: 'preload', as: 'image', href: earthAsset.url, fetchPriority: 'high', crossOrigin: 'anonymous' }], meta: [{ title: 'firesync — Two satellites. One fire history.' }, { name: 'description', content: 'Explore a harmonized record of fire detections since 2003. Compare recent activity with what is typical for a place and season.' }, { property: 'og:title', content: 'firesync — Two satellites. One fire history.' }, { property: 'og:description', content: 'A scientific atlas of monthly fire detections, seasonal patterns and recent activity.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary_large_image' }] }), component: Index });
+export const Route = createFileRoute('/')({ head: () => ({ links: [{ rel: 'preload', as: 'image', href: fastEarthUrl, fetchPriority: 'high', crossOrigin: 'anonymous' }], meta: [{ title: 'firesync — Two satellites. One fire history.' }, { name: 'description', content: 'Explore a harmonized record of fire detections since 2003. Compare recent activity with what is typical for a place and season.' }, { property: 'og:title', content: 'firesync — Two satellites. One fire history.' }, { property: 'og:description', content: 'A scientific atlas of monthly fire detections, seasonal patterns and recent activity.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary_large_image' }] }), component: Index });
 function Index() {
   const [selection, setSelection] = useState<AreaSelection | null>(null);
   const navigate = useNavigate();
