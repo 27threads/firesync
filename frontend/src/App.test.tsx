@@ -116,6 +116,7 @@ describe('App (interactive tool shell)', () => {
       expect(screen.getByText(/Current coverage: Brazil/)).toBeInTheDocument();
     });
     expect(screen.queryByRole('grid', { name: /fire calendar/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /download.*audit package/i })).toBeDisabled();
   });
 
   it('shows a rate-limit alert with Retry-After seconds on HTTP 429', async () => {

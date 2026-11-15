@@ -34,10 +34,10 @@ Os dois, com papéis diferentes. **Não vale trocar os testes de unidade por cai
 
 ## TDD na prática: testes que vêm antes do código
 
-A API e o front ainda não existem, mas os testes deles já estão no repositório:
+Os testes da API e do front foram escritos no repositório antes das telas e dos endpoints:
 
 - **`backend/tests/domain/` e `backend/tests/application/`:** a especificação do núcleo da API (faixa P5–P95, origem e satélite do mês, intensidade, alerta, janelas, IDs H3, calendário). Os valores foram calculados à mão. Cada teste tem `xfail(strict=True)`: enquanto o código não existe, ele falha e a esteira aceita. **Quando o código fizer o teste passar, a esteira quebra com XPASS.** É o sinal para tirar o `xfail` daquele teste, que a partir daí vale de verdade.
-- **`frontend/e2e/jornadas.spec.ts`:** 9 jornadas, cada uma com `test.fixme`. Quem fizer a tela tira o `fixme` da jornada dela.
+- **`frontend/e2e/jornadas.spec.ts`:** 9 jornadas (J1–J9), todas ativas e passando com a API simulada no desktop e no celular.
 
 ### Jornadas de usuário
 

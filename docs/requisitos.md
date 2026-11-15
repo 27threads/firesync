@@ -4,7 +4,7 @@ Nov 13, 2026 · @Mateus Nogueira
 
 Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele só **sugere** (aparece como "pode considerar"). Assim fica claro o mínimo para entregar e o que dá pontos extras.
 
-**Situação em 14/11/2026:** ✅ feito e verificado · ⏳ falta ou é parcial (a nota diz onde está). A frente A (dados e banco) está pronta; no front, D1–D5 já cobrem área e período, calendário, indicadores, janela recente, sazonalidade e ranking (falta downloads em D6); na API, faltam os endpoints em código ([api.md](api.md)).
+**Situação em 14/11/2026:** ✅ feito e verificado · ⏳ falta ou é parcial (a nota diz onde está). A frente A (dados e banco) está pronta; no front, D1–D6 já cobrem área e período, calendário, indicadores, janela recente, sazonalidade, ranking e downloads (falta ligar na API real em D7); na API, faltam os endpoints em código ([api.md](api.md)).
 
 ## 1. Requisitos obrigatórios
 
@@ -28,7 +28,7 @@ Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele
 - [ ] **RF10:** Mostrar **quais anos tiveram mais fogo**. ⏳ contrato no [api.md](api.md); falta a API e o front.
 - [ ] **RF11:** Comparar o **mês atual com a mediana histórica** da área. ⏳ contrato no [api.md](api.md) (janela recente); dados prontos (`agregados_diarios`, normal de ±15 dias em 7–40 ms); falta a API e o front.
 - [ ] **RF12:** Mostrar **como a atividade atual se compara a períodos anteriores**, ou seja, as anomalias. ⏳ contrato no [api.md](api.md); falta a API e o front.
-- [ ] **RF13:** Permitir **baixar as análises e visualizações** da busca. ⏳ contrato do pacote de auditoria no [api.md](api.md) (`POST /export`); falta a API e o front.
+- [ ] **RF13:** Permitir **baixar as análises e visualizações** da busca. ⏳ **parcial:** contrato do pacote de auditoria no [api.md](api.md) (`POST /export`) e **front pronto** em `frontend/src/export/` (pacote de auditoria ZIP via `POST /api/v1/export`, CSV local `result.csv` / `years.csv` / `seasonality.csv` e PNG do calendário gerado no front a partir do SVG; jornada J7 passando); falta a API.
 
 ## 2. Requisitos desejáveis (diferenciais)
 
@@ -36,7 +36,7 @@ Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele
 - [ ] **RD02:** Opção de **digitar latitude e longitude**, como alternativa ao desenho no mapa. ⏳ **parcial:** contrato no [api.md](api.md) (`point` com raio) e **front pronto** em `frontend/src/controls/` (campos lat/lon/raio de 1 a 200 km); falta a API.
 - [ ] **RD03:** **Rampa de cores** no calendário, para mostrar as diferenças entre meses como um heatmap. ⏳ decidido: escala logarítmica ([arquitetura.md](arquitetura.md)); falta o front.
 - [ ] **RD04:** Cores **acessíveis**, legíveis para quem tem daltonismo (por exemplo, viridis ou cividis). ⏳ decidido: cividis ([arquitetura.md](arquitetura.md)); falta o front.
-- [ ] **RD05:** **Exportar um CSV** com os focos de calor encontrados na busca. ⏳ `detections.csv` no pacote de auditoria; `focos` vai para produção; falta a API.
+- [ ] **RD05:** **Exportar um CSV** com os focos de calor encontrados na busca. ⏳ **parcial:** `detections.csv` no pacote de auditoria (`POST /api/v1/export`, até 500.000 focos) e **front pronto** em `frontend/src/export/` (chamada ao ZIP de auditoria, exportação local da série visível em CSV e aviso sobre o limite de 500.000 focos); `focos` vai para produção; falta a API.
 - [ ] **RD06:** **Indicadores principais** em destaque: ⏳ contrato no [api.md](api.md) (`indicators`); falta a API e o front.
   - número total de focos detectados e registrados
   - anomalia em relação à média de vários anos
@@ -48,7 +48,7 @@ Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele
 - [x] **RNF02:** **Fonte de dados:** o texto sugere o **NASA FIRMS** (Earthdata), que fornece os dados do MODIS e do VIIRS. ✅ NASA FIRMS: resumos anuais por país (SP) e API (SP e NRT).
 - [ ] **RNF03:** **Atualização contínua.** O calendário precisa estar "atualizado", então os dados novos devem entrar periodicamente. ⏳ **parcial:** job NRT a cada 3 h pronto e testado (`job_nrt.py` + `Dockerfile`); falta rodar na VPS.
 - [x] **RNF04:** **Desempenho.** São mais de 20 anos de focos no mundo inteiro, então as consultas por área e período precisam ser rápidas. Isso pede pré-agregação e indexação espacial. ✅ pré-agregação (`agregados`, `agregados_diarios`) e índice espacial H3: calendário de 100 × 100 km em 2–9 ms, Amazônia inteira em ~0,8 s, focos recentes em 19 ms (medido no banco de teste).
-- [ ] **RNF05:** **Usabilidade e acessibilidade**, porque o usuário pode estar numa situação de emergência. ⏳ **parcial:** controles de área/período com labels, `aria-describedby`, alertas em `role="alert"`, calendário em `cividis` com hachura/borda e navegação por teclado no front (D2–D5); faltam downloads (D6) e integração final (D7).
+- [ ] **RNF05:** **Usabilidade e acessibilidade**, porque o usuário pode estar numa situação de emergência. ⏳ **parcial:** controles de área/período com labels, `aria-describedby`, alertas em `role="alert"`, calendário em `cividis` com hachura/borda, navegação por teclado e downloads acessíveis no front (D2–D6); falta a integração final com a API (D7).
 
 ### Definidos pela equipe
 
