@@ -53,6 +53,30 @@ describe('index.html (static page shell)', () => {
     expect(text).toMatch(/detections/i);
   });
 
+  // Resultados da frente B (docs/decisoes-harmonizacao.md, seções 4 e 5, e docs/rfcs/0003-modelo-risco.md).
+  it('reports the comparison with INPE, including the biomes that do not fit', () => {
+    const method = doc.getElementById('method')?.textContent ?? '';
+    expect(method).toMatch(/INPE/);
+    expect(method).toContain('−0.6%');
+    expect(method).toMatch(/Atlantic Forest/);
+    expect(method).toMatch(/Pampa/);
+  });
+
+  it('shows the detection curve with alt text and its limits', () => {
+    const img = doc.querySelector('#method img[src$="curva_deteccao_2024.png"]');
+    expect(img?.getAttribute('alt') ?? '').toMatch(/MODIS/);
+    const caption = img?.closest('figure')?.querySelector('figcaption')?.textContent ?? '';
+    expect(caption).toMatch(/not used to compute the calendar/);
+    expect(caption).toMatch(/2024/);
+  });
+
+  it('explains why a trained model was not adopted for the alert', () => {
+    const method = doc.getElementById('method')?.textContent ?? '';
+    expect(method).toMatch(/machine-learning model/);
+    expect(method).toMatch(/0\.9 percentage points/);
+    expect(method).toMatch(/rule v1/);
+  });
+
   it('has the mount point for the interactive tool', () => {
     expect(doc.getElementById('tool-root')).not.toBeNull();
   });
