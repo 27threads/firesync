@@ -195,6 +195,28 @@ def test_medidas_comparam_modelo_regra_e_ingenua_com_o_mesmo_numero_de_alertas()
     assert med["ganho_sobre_regra"] == pytest.approx(0.5) and med["auc"] == 1.0
 
 
+def test_medidas_comparam_tambem_com_a_regra_de_piso_continuo_no_numero_de_alertas_dela():
+    """A regra do piso contínuo (escolhida em 15/11/2026) dá menos alertas; o modelo e a ingênua usam o mesmo número."""
+    y = np.array([1, 1, 1, 0, 0, 0, 0, 0], bool)
+    p = np.array([0.9, 0.8, 0.7, 0.1, 0.1, 0.1, 0.1, 0.1])
+    critico = np.array([1, 0, 0, 1, 1, 0, 0, 0], bool)               # regra atual: 3 alertas, acerta 1
+    continua = np.array([1, 0, 0, 0, 0, 0, 0, 0], bool)              # piso contínuo: 1 alerta, acerta 1
+    score = np.array([0, 0, 0, 0, 0, 0, 9, 8], float)
+    med = mr.medidas_ano(y, p, critico, score, continua)
+    assert med["alertas"] == 3 and med["alertas_continua"] == 1
+    assert med["acerto_regra_continua"] == 1.0 and med["acerto_modelo_k_continua"] == 1.0
+    assert med["acerto_ingenua_k_continua"] == 0.0
+    assert med["ganho_sobre_regra_continua"] == pytest.approx(0.0)
+    assert "acerto_regra_continua" not in mr.medidas_ano(y, p, critico, score)   # sem a regra, as colunas não existem
+
+
+def test_validacao_em_avanco_repassa_a_regra_de_piso_continuo():
+    semanas, pistas, gab, critico, score = dados_com_sinal_plantado()
+    continua = critico & (score > np.median(score))
+    r = mr.validar_em_avanco(pistas, gab, semanas, critico, score, anos_teste=[2019], critico_continuo=continua)
+    assert {"acerto_regra_continua", "ganho_sobre_regra_continua"} <= set(r.columns)
+
+
 def semanas_de(ano_ini, ano_fim):
     t, fim = date(ano_ini, 1, 1), date(ano_fim, 12, 14)
     t += timedelta((6 - t.weekday()) % 7)
