@@ -1425,6 +1425,14 @@ select {
   background: var(--graphite-950);
 }
 
+.map-stage .leaflet-container.leaflet-touch-zoom:not(.leaflet-touch-drag) {
+  touch-action: pan-x pan-y;
+}
+
+.map-stage__viewport--drawing .leaflet-container {
+  touch-action: none;
+}
+
 .leaflet-control-attribution {
   font-size: 11px;
 }
