@@ -141,6 +141,14 @@ A interface prioriza **situação atual → contexto histórico → detalhes**. 
 
 A paleta cividis, rótulos, hachuras, bordas e navegação por teclado evitam depender apenas da cor. Desktop e celular têm jornadas próprias. O sistema identifica dados de demonstração, desatualização e falta de cobertura; o nível de alerta sazonal é distinto do risco dos próximos 14 dias. Veja [UX](docs/ux-telas.md) e [frontend](frontend/README.md).
 
+## 10. Integração e fluxo de trabalho
+
+1. **Entrada:** consultar requisito, tarefa e contrato; combinar alterações entre as frentes; criar branch a partir de `main`.
+2. **Execução:** escrever testes antes de código novo ou correções, implementar por responsabilidade e atualizar documentação afetada.
+3. **Entrega:** executar verificações pertinentes, fazer commits por etapa, enviar a branch e solicitar revisão por PR. Integrar somente após os checks e a revisão aplicáveis.
+
+As responsabilidades e pendências ficam em [tarefas](docs/tarefas.md). A documentação formal sintetiza decisões existentes; mudanças de método ou contrato exigem discussão com os responsáveis.
+
 ## Uso de IA
 
 | Parte | Ferramenta | Como foi usada |
