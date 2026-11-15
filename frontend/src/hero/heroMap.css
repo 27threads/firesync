@@ -27,7 +27,6 @@
   font-size: 9px;
 }
 
-.hm-brand,
 .hm-toolbar,
 .hm-filters,
 .hm-status,
@@ -38,28 +37,6 @@
   background: rgba(255, 255, 255, 0.96);
   border-radius: 10px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
-}
-.hm-brand {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px 6px 14px;
-}
-.hm-brand strong {
-  font-size: 19px;
-  font-weight: 700;
-}
-.hm-brand strong span {
-  color: #d62728;
-}
-.hm-iconbtn {
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
-  background: #eef0f3;
 }
 
 .hm-toolbar {
@@ -128,15 +105,15 @@
 
 .hm-filters {
   position: absolute;
-  top: 70px;
+  top: 12px;
   left: 12px;
   width: 178px;
   padding: 8px 8px 10px;
-  max-height: calc(100% - 70px - 70px);
+  max-height: calc(100% - 12px - 70px);
   overflow-y: auto;
 }
 .hm:has(.hm-legend--open) .hm-filters {
-  max-height: calc(100% - 70px - 252px);
+  max-height: calc(100% - 12px - 252px);
 }
 .hm-filters__head,
 .hm-legend__head,
@@ -556,14 +533,14 @@
 
 @media (max-width: 899px) {
   .hm-toolbar {
-    top: 64px;
+    top: 12px;
     left: 12px;
     right: 12px;
     transform: none;
     max-width: none;
   }
   .hm-filters {
-    top: 132px;
+    top: 100px;
   }
   .hm-right {
     top: auto;
@@ -584,7 +561,6 @@
   }
 }
 
-.hm-brand,
 .hm-toolbar,
 .hm-filters,
 .hm-right,

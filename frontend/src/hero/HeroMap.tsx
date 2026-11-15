@@ -378,15 +378,6 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
     <div className="hm" data-active={active ? 'true' : 'false'} aria-hidden={!active} {...(active ? {} : { inert: '' as unknown as boolean })}>
       <div ref={mapNode} className="hm__map" role="application" aria-label="Fire map" />
 
-      <header className="hm-brand">
-        <strong>
-          firesync<span>.</span>
-        </strong>
-        <button type="button" className="hm-iconbtn" onClick={onReturn} aria-label="Back to globe" title="Back to globe">
-          ◐
-        </button>
-      </header>
-
       <nav className="hm-toolbar" aria-label="Map view and area">
         <div className="hm-tabs" role="tablist" aria-label="Map view">
           {(
