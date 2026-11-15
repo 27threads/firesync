@@ -240,3 +240,15 @@ def test_map_cache_expires_detections_when_time_moves_without_a_pipeline_update(
         assert expired.json()['total_detections'] == 0
         assert expired.json()['features'] == []
         assert expired.headers['etag'] != first.headers['etag']
+
+
+def test_map_works_without_the_risk_table_when_migration_005_was_not_applied(api_database, alert_rules):
+    """Deploy: a API pode subir antes da migração 005. O mapa fica como antes, sem erro."""
+    from backend.adapters.outbound.postgres.api import PostgresApiRepository
+    from backend.domain.models.map_query import MapQuery
+    pool, _, _ = api_database
+    with pool.connection() as conn:
+        conn.execute('DROP TABLE risco_celulas')
+    with PostgresApiRepository(pool, alert_rules).read() as reader:
+        rows = reader.map_rows(MapQuery.parse('-61,-4,-59,-2', '24', '4'), NOW)
+    assert rows['risk'] is None and rows['cell_levels'] is not None

@@ -10,10 +10,8 @@ LISTED_TIERS = ('very_high', 'high')     # cells in these tiers are listed to lo
 
 def risk_tier(prob, rules):
     """The first cutoff (from the highest) that the probability reaches."""
-    for tier in sorted(rules['tiers'], key=lambda t: -t['min_prob']):
-        if prob >= tier['min_prob']:
-            return tier['tier']
-    return rules['tiers'][-1]['tier']
+    tiers = sorted(rules['tiers'], key=lambda t: -t['min_prob'])
+    return next((tier['tier'] for tier in tiers if prob >= tier['min_prob']), tiers[-1]['tier'])
 
 
 def risk_block(risk, rules):
