@@ -92,3 +92,13 @@ test('answer markdown becomes paragraphs, bullets and bold without raw HTML', ()
   expect(container.querySelector('p strong')).toHaveTextContent('above');
   expect(container.querySelector('img')).toBeNull();
 });
+
+test('hideBubble esconde o botão flutuante, e o painel aberto continua na tela', () => {
+  const { rerender } = render(<AssistantBubble onShowCalendar={vi.fn()} hideBubble />);
+  expect(screen.queryByRole('button', { name: 'Ask about fire data' })).not.toBeInTheDocument();
+
+  rerender(<AssistantBubble onShowCalendar={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Ask about fire data' }));
+  rerender(<AssistantBubble onShowCalendar={vi.fn()} hideBubble />);
+  expect(screen.getByRole('dialog')).toBeInTheDocument();
+});

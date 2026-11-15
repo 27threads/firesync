@@ -61,6 +61,8 @@ interface Turn {
 
 interface Props {
   onShowCalendar: (action: AssistantAction) => void;
+  /** Esconde só o botão flutuante (por exemplo, enquanto o hero ocupa a tela). O painel aberto não some. */
+  hideBubble?: boolean;
 }
 
 function failureText(error: unknown): string {
@@ -71,7 +73,7 @@ function failureText(error: unknown): string {
 }
 
 /** Floating chat (RFC 0004). Optional: the page works the same without it. */
-export function AssistantBubble({ onShowCalendar }: Props) {
+export function AssistantBubble({ onShowCalendar, hideBubble = false }: Props) {
   const [open, setOpen] = useState(false);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState('');
@@ -137,6 +139,7 @@ export function AssistantBubble({ onShowCalendar }: Props) {
   }
 
   if (!open) {
+    if (hideBubble) return null;
     return (
       <button ref={bubbleRef} type="button" className="assistant-bubble" aria-label="Ask about fire data" onClick={() => setOpen(true)}>
         ?

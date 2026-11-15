@@ -4,6 +4,7 @@ import { AssistantBubble } from './assistant/AssistantBubble';
 import { SelectionPanel } from './controls/SelectionPanel';
 import { buildExampleStory } from './discovery/exampleStory';
 import { prefersReducedMotion } from './hero/heroIntro';
+import { useLeftHero } from './hero/useLeftHero';
 import { HistoryPanel } from './history/HistoryPanel';
 import { IndicatorRow } from './summary/IndicatorRow';
 import { MapStage } from './map/MapStage';
@@ -26,6 +27,7 @@ function scrollToExplore() {
 // Três momentos ligados: entender (abertura), descobrir (exemplo guiado) e investigar (área própria).
 export function App() {
   const ex = useExplorer();
+  const leftHero = useLeftHero();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [storyIndex, setStoryIndex] = useState(0);
 
@@ -139,6 +141,7 @@ export function App() {
 
       {ASSISTANT_ENABLED && (
         <AssistantBubble
+          hideBubble={!leftHero}
           onShowCalendar={(action) => {
             selectArea(action.area, action.start && action.end ? { start: action.start, end: action.end } : undefined);
             scrollToExplore();
