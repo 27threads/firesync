@@ -64,9 +64,10 @@ O gabarito começa **no dia seguinte ao último dia usado pelo nível**. Nenhum 
 | Estabilidade | trocas de nível por unidade por mês | poucas |
 | Ganho sobre a regra ingênua | acerto da regra − acerto da ingênua | positivo |
 
-**Regra de decisão (fixada antes de rodar):**
+**Regra de decisão.** A primeira parte foi fixada antes de rodar. O complemento da frente B foi fixado **depois** da primeira rodada (PR #56), com a tabela já vista, e isso fica declarado.
 
-- A `v1` só é escolhida entre as regras com **ganho positivo** sobre a ingênua (na mesma frequência de alerta), e o ganho tem que ser positivo **no total e na maioria dos anos** (pelo menos 7 dos 12). O tamanho mínimo do ganho é escolha da frente B e fica registrado aqui antes da rodada.
+- A `v1` só é escolhida entre as regras com **ganho positivo** sobre a ingênua (na mesma frequência de alerta), e o ganho tem que ser positivo **no total e na maioria dos anos** (pelo menos 7 dos 12).
+- **Complemento da frente B (Weberson, 15/11/2026):** não há um tamanho mínimo fixo. O ganho tem de ser positivo também **no total de cada variação do gabarito** (P80, P95, mínimo de 5 e mínimo de 20 detecções), porque o ganho medido é frágil e as semanas se sobrepõem. Com esse critério, a `v1` usa o **piso contínuo** de 10 detecções ([RFC 0001](rfcs/0001-backtest-alerta.md), "Perguntas respondidas pela frente B").
 - **Se nenhuma regra tiver ganho positivo** (ou ele der perto de zero), a tela **não** mostra acerto. Mostra só a frequência de cada nível e o limite declarado: *"Rule v1 flags Critical in X% of weeks (2013–2024). It did not beat a simple persistence rule at anticipating high-detection weeks, so we show it as a context indicator, not a forecast."* A regra continua útil para dizer "está acima do normal", mas não é vendida como previsão.
 
 **Saída:** `relatorios/alerta/backtest.csv` (uma linha por regra testada) e `relatorios/alerta/por_bioma.csv`.
