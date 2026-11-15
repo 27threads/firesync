@@ -157,6 +157,26 @@ Faixas do mapa na Amazônia: muito alto (11% das células) teve fogo relevante e
 
 **Calibração:** a nota média é 14,1% e a frequência observada é 13,7%. Mas no meio da escala (notas de 30% a 80%) o modelo **exagera de 3 a 5 pontos percentuais** (no máximo 5,2). Exemplo: nota de 65% e frequência observada de 60%. Nos extremos (abaixo de 20% e acima de 80%) a diferença é de 0 a 2 pontos. O erro é para o lado de avisar um pouco demais. "Ponto percentual" é a diferença entre duas porcentagens da mesma coisa: 65% menos 60% são 5 pontos, e não 5% de erro.
 
+## Acerto por bioma
+
+Mesmo modelo (treinado até 2020), mesmos domingos de 2021 a 2024, mesma regra de aviso (nota de 50% ou mais), para a comparação ser justa. Alvo: 10 ou mais detecções VIIRS nos 14 dias seguintes. A célula entra no bioma pelo centro dela.
+
+| Bioma | Células | Fogo relevante | Precisão | Cobertura | Acerto geral | AUC |
+| --- | --- | --- | --- | --- | --- | --- |
+| Amazônia | 2.129 | 13,7% | 77,8% | **74,5%** | 93,6% | **0,970** |
+| Caatinga | 408 | 19,9% | **81,4%** | 62,9% | 89,8% | 0,940 |
+| Cerrado | 1.020 | 23,2% | 77,2% | 67,1% | 87,8% | 0,918 |
+| Mata Atlântica | 613 | 12,9% | 64,5% | 45,9% | 89,8% | 0,888 |
+| Pantanal | 88 | 13,5% | 64,7% | 45,9% | 89,3% | 0,853 |
+| Pampa | 132 | 2,7% | 39,7% | 8,1% | 97,2% | 0,864 |
+| **Brasil (com o Pantanal)** | 4.598 | 15,4% | 76,5% | 66,4% | 91,7% | 0,947 |
+
+- **Precisão:** dos avisos, quantos tiveram fogo relevante. **Cobertura:** dos locais com fogo relevante, quantos foram avisados. **Acerto geral:** parte das células em que o modelo acertou, avisando ou não, e que exagera, porque a maioria das células não tem fogo (dizer sempre "sem fogo" acerta 84,6% no Brasil). **AUC:** em um par de células, uma com fogo e outra sem, a chance de o modelo dar a nota maior à que teve fogo.
+- **A Amazônia é o melhor caso**, principalmente na cobertura. O Brasil fica abaixo porque a média inclui os biomas onde o modelo é fraco. No Pampa o fogo relevante é raro (2,7%) e o modelo avisa só 8% dele.
+- **Pantanal: cautela.** São só 88 células, e o fogo de 2020 foi muito acima do normal e entra no treino. Os números dele são menos confiáveis que os dos outros biomas. Ele ficava fora dos testes e entra aqui, a pedido da equipe, como bioma separado e no total do Brasil (sem ele o Brasil dava 76,6% e 66,8%).
+- **Método:** esta tabela usa um modelo só (treino até 2020), e a seção "Acerto na Amazônia" usa um treino por ano (cada ano treinado só com os anteriores). Por isso a Amazônia dá 77,8% e 74,5% aqui, e 78,5% e 74,0% lá. A diferença vem do método.
+- Na temporada (ago a out) e fora dela: na Amazônia, 82,3% de precisão e 81,6% de cobertura na temporada, e 69,4% e 62,4% fora; no Brasil, 79,2% e 77,7% na temporada, e 71,3% e 50,9% fora.
+
 ## O que foi testado e não melhorou (e foi registrado mesmo assim)
 
 Os resultados abaixo vêm de scripts locais que ainda não estão versionados no repositório. Os critérios foram fixados antes de rodar cada teste.
@@ -224,6 +244,10 @@ Na manhã, 0,92% das células descem uma faixa. Usar ontem é um pouco pior que 
 - Escala de célula H3 res 4, avaliação semanal, horizonte de 14 dias. Em escala mais fina ou horizonte mais longo, o resultado pode ser outro.
 - O gabarito mede detecções do VIIRS, não área queimada.
 - Só quatro anos de teste (2021 a 2024), com domingos. Falta testar 2025 e 2026 fora da amostra.
+- **Troca de satélite (S-NPP para NOAA-20):** o modelo foi treinado só com S-NPP. O banco guarda um satélite por mês e usa o NOAA-20 a partir de 01/11/2026, então a série que o job lê tem os dias mais recentes (os que mais pesam nas variáveis de 7, 14 e 30 dias) vindos do N20. **Não foi testado** se os dois contam o fogo do mesmo jeito. Os resultados de 2021 a 2024 valem para S-NPP. Pendente, com o Eduardo (issue 102).
+- **Dado em tempo real (NRT) contra dado de arquivo (SP):** o modelo foi treinado com arquivo e o job pontua com NRT, que é provisório. Não foi testado. Pendente (issue 102).
+- **Atribuição de célula:** a série de teste usa `latlng_to_cell` e o banco usa o pai da célula de resolução 6, e cerca de 6% das detecções caem em célula diferente (achado da auditoria). As faixas e as taxas (82%, 46%, 27% e 3%) vêm da atribuição de teste e serão recalculadas com a do banco.
+- **Pantanal:** poucos dados (88 células) e um ano anômalo no treino. Interpretar com cautela.
 - O clima do NASA POWER tem grade de 0,5° × 0,625° (cerca de 55 km), maior que a célula.
 
 ## Próximo passo (depois da submissão)
