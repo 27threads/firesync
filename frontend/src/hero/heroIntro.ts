@@ -65,7 +65,7 @@ export function playHeroIntro(svg: SVGSVGElement, overlay: SVGSVGElement, strip:
   }
 
   const finish = () => tl.progress(1);
-  const host = svg.closest('.hero') ?? svg;
+  const host = svg.closest('.hero, .ws-history') ?? svg;
   host.addEventListener('pointerdown', finish, { once: true });
   host.addEventListener('keydown', finish, { once: true });
 
