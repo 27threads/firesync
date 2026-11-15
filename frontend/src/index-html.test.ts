@@ -42,6 +42,9 @@ describe('index.html (static page shell)', () => {
       'OpenStreetMap',
       'Leaflet',
       'Leaflet-Geoman',
+      'three.js',
+      'NASA 3D Resources',
+      'BlueMarble_ShadedRelief_Bathymetry',
     ]) {
       expect(credits).toContain(source);
     }
