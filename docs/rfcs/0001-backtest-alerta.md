@@ -95,6 +95,7 @@ Tudo em `numpy`, vetorizado por unidade. Para cada semana, `t` é o último dia 
 - alarme falso = 1 − acerto;
 - estabilidade = trocas de nível por unidade por mês;
 - **ganho** = acerto − acerto da ingênua na mesma frequência, no total e por ano (`anos_com_ganho_positivo`, de 12).
+- **intervalo de 95% do ganho** (`ganho_ic95_baixo`, `ganho_ic95_alto`): bootstrap por blocos de ano, sorteando os 12 anos inteiros com reposição (2.000 sorteios, semente fixa). O ano é a unidade porque gabaritos de semanas seguidas se sobrepõem. Os alertas da ingênua ficam os da amostra completa. Na v1 (banco de teste, 15/11): +6,0 pontos, intervalo de +4,1 a +8,0.
 
 ### 3. Saída
 
