@@ -1,10 +1,10 @@
 # RFC 0002: Modelo A, a chance de o MODIS ver um fogo do VIIRS (caminho C)
 
-- **Status:** Decidido pelo Weberson em 14/11/2026 (caminho C). **Etapa A concluída em 14/11/2026** (código e resultado no PR #53, aguardando revisão). Etapa B opcional, não iniciada. Este PR segue em revisão
+- **Status:** Decidido pelo Weberson em 14/11/2026 (caminho C). **Etapa A concluída em 14/11/2026** (código e resultado no PR #53). Etapa B assumida pela frente B com os arquivos anuais públicos do FIRMS, não concluída
 - **Autor:** Weberson (frente B)
 - **Data:** 2026-11-14
 
-Critérios que melhora (ver [premiacao.md](../premiacao.md)): **Validity** e **Creativity**. A tela de Método ganha uma explicação visual de por que a harmonização é necessária e uma segunda prova, independente, de que o fator de conversão está certo. Categoria-alvo: Best Use of Science.
+Critérios que melhora (ver [premiacao.md](../premiacao.md)): **Validity** e **Creativity**. A tela de Método ganha uma explicação visual de por que a harmonização é necessária: a curva de detecção por potência, de dia e de noite. A prova cruzada planejada não virou confirmação do fator (ver "O que a etapa A mostrou"). Categoria-alvo: Best Use of Science.
 
 ## Contexto e problema
 
@@ -16,9 +16,9 @@ O **modelo A** era o plano original da frente B: um modelo treinado que aprende 
 
 - **Aprende:** a chance de o MODIS (Aqua) ter visto um fogo detectado pelo VIIRS (S-NPP), a partir de pistas do fogo: potência (FRP), temperatura, confiança, dia ou noite, mês, bioma e o tamanho do pixel do MODIS naquela passagem.
 - **Não substitui o fator da série de 2003 a 2011.** Para aplicar o modelo a um fogo antigo, seria preciso a potência de cada fogo que o MODIS **não viu**, e esses fogos não têm registro naqueles anos (ponto 1 da revisão do PR #1). O calendário continua usando o fator por contagens.
-- **Entrega duas coisas para a tela de Método:**
+- **O plano previa duas entregas para a tela de Método. Só a primeira se confirmou:**
   1. **A curva de detecção:** "um fogo de 2 MW tem X% de chance de ser visto pelo MODIS; um de 50 MW, Y%", separada para dia e noite. Explica sem jargão por que o fator noturno é cerca de 5 vezes o diurno e por que juntar as séries sem tratamento infla ou esconde fogo.
-  2. **A prova cruzada do fator:** a soma das chances previstas para os fogos do VIIRS estima quantos fogos o MODIS deveria ver. A razão "fogos do VIIRS ÷ soma das chances" é um fator calculado por outro caminho. Se ele ficar perto do fator por contagens, são **dois métodos independentes concordando**.
+  2. **A prova cruzada do fator:** a soma das chances previstas para os fogos do VIIRS estima quantos fogos o MODIS deveria ver. A razão "fogos do VIIRS ÷ soma das chances" é um fator calculado por outro caminho. A ideia era que, se ele ficasse perto do fator por contagens, seriam dois métodos independentes concordando. **A etapa A mostrou que essa comparação mistura unidades diferentes e não confirma nem desmente o fator** (seção "O que a etapa A mostrou"). Ela não vai para a tela de Método.
 
 ## Decisão: caminho C
 
@@ -27,7 +27,7 @@ O **modelo A** era o plano original da frente B: um modelo treinado que aprende 
 | **A** | Arquivos de 2024 do Brasil inteiro que já estão no repositório (`data-pipeline/data/`, S-NPP e Aqua) | Frente B, sem depender do banco | Sábado à noite | **No espaço:** blocos da grade H3 sorteados para treino e teste, com todos os meses dos dois lados |
 | **B** | Histórico do banco de teste | Frente A, com o mesmo script | Domingo de manhã, **só se couber** sem atrasar o servidor público | **No tempo:** treino em 2019 a 2021, teste em 2022 a 2024 (anos que o modelo não vê; mostra se a deriva do Aqua atrapalha) |
 
-A etapa A sozinha já entrega a curva e a prova cruzada. A etapa B reforça com anos que o modelo nunca viu.
+A etapa A sozinha já entrega a curva de detecção. A etapa B testa em anos que o modelo nunca viu e, com o Aqua ainda na órbita original no treino, é o experimento mais limpo.
 
 ## Proposta (etapa A)
 
@@ -73,7 +73,7 @@ A ordem de execução do caminho C. Cada passo só começa depois do anterior, e
 | 8 | Gerar a curva de detecção em gráfico, com rótulos em inglês | 15 min |
 | 9 | Abrir o PR do código: checagens de código morto e de cobertura, linha de uso de IA no README, sem `Co-Authored-By`, Mateus revisando | 20 min |
 
-**Ponto de corte:** se o gradient boosting (passo 6) não ficar pronto até a meia-noite, seguimos só com a tabela simples, que já entrega a curva e a prova cruzada.
+**Ponto de corte:** se o gradient boosting (passo 6) não ficar pronto até a meia-noite, seguimos só com a tabela simples, que já entrega a curva.
 
 **Situação da etapa A em 14/11/2026: os passos 1 a 9 estão concluídos.** O gradient boosting ficou pronto antes do ponto de corte, então não foi preciso cair para a tabela simples.
 
@@ -101,12 +101,12 @@ Só entra se a frente A tiver tempo **depois** de levar o banco para o servidor 
 | Passo | O quê |
 | --- | --- |
 | 13 | Registrar os resultados no `decisoes-harmonizacao.md` (seção 5) e criar a tarefa B7 no `tarefas.md`, depois que o PR #26 entrar |
-| 14 | Entregar à frente D a curva de detecção e a frase da prova cruzada, em inglês, para a tela de Método |
+| 14 | Entregar à frente D a curva de detecção e os limites declarados, em inglês, para a tela de Método. A prova cruzada não é apresentada como validação do fator |
 | 15 | Declarar os limites da seção "Limites a declarar no Método" |
 
 ## Prazos e ponto de corte
 
-- **Etapa A até a meia-noite de sábado.** Se o gradient boosting não ficar pronto, fica só a tabela simples, que já entrega a curva e a prova cruzada.
+- **Etapa A até a meia-noite de sábado.** Se o gradient boosting não ficar pronto, fica só a tabela simples, que já entrega a curva.
 - **Etapa B no domingo de manhã, só se a frente A tiver tempo** depois de levar o banco para o servidor. Se não couber, fica como próximo passo, declarado.
 - **O modelo não pode atrasar o essencial:** os fatores no servidor público, a API, o front e a tela de Método.
 
@@ -127,7 +127,7 @@ O gradient boosting precisa do **scikit-learn** no `requirements.txt` do `data-p
 | --- | --- |
 | **A (dados)** | Só a etapa B, opcional: rodar o script no banco de teste (sem gravar nada) e mandar os CSVs. Estimativa: cerca de 1 hora, com a execução |
 | **C (API)** | Nenhum campo novo. O modelo não entra no cálculo do calendário |
-| **D (front)** | A tela de Método ganha a curva de detecção (imagem ou dados) e uma frase sobre a prova cruzada. Os textos saem do relatório |
+| **D (front)** | A tela de Método ganha a curva de detecção (imagem ou dados) e os limites declarados. Nenhuma frase sobre a prova cruzada. Os textos saem do relatório |
 
 ## O que a etapa A mostrou (14/11/2026, dados de 2024)
 
