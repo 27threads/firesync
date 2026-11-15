@@ -190,8 +190,10 @@ class PostgresApiReader(PostgresHistoryRepository):
         """Daily VIIRS counts of each resolution 4 cell with recent fire, for its alert level (RFC 0003)."""
         parents = {h3.cell_to_parent(h3.int_to_str(row['h3']), ALERT_RESOLUTION) for row in grouped}
         # The last covered day, not the last day with detections: `agregados_diarios` has no row for a day without fire.
-        self.cursor.execute("SELECT max(data_fim) AS through FROM cobertura WHERE satelite = ANY(%s) AND data_fim <= %s",
-                            (list(VIIRS_DAYS), now.date()))
+        # A coverage row that is still running (it ends after today) counts up to today, so cap the end at the clock.
+        self.cursor.execute("SELECT least(max(data_fim), %s::date) AS through FROM cobertura "
+                            "WHERE satelite = ANY(%s) AND data_inicio <= %s",
+                            (now.date(), list(VIIRS_DAYS), now.date()))
         through = self.cursor.fetchone()['through']
         if through is None:  # no coverage rows: fall back to the last day with detections
             self.cursor.execute(f"SELECT max(data) AS through FROM agregados_diarios WHERE data <= %s AND {satellite_sql('data', 'date')}",
