@@ -147,6 +147,32 @@ def test_bioma_da_celula_pelo_centro():
     assert b[J_CENTRO] == 3 and np.isnan(np.delete(b, J_CENTRO)).all()      # as vizinhas ficam fora do retângulo
 
 
+def test_clima_entra_sobre_as_pistas_de_fogo_e_nao_sobre_o_oni(tmp_path, monkeypatch):
+    """Decisão de 15/11/2026: o ONI não ajudou e fica só como comparação. O conjunto com clima parte do de fogo."""
+    rng = np.random.default_rng(2)
+    dias = pd.date_range("2012-02-01", "2024-12-31")
+    serie = pd.concat([pd.DataFrame({"unidade": u, "data": dias.strftime("%Y-%m-%d"),
+                                     "n": rng.poisson(2.0, len(dias)), "frp": 10.0}) for u in UNIDADES[:3]])
+    serie[serie["n"] > 0].to_csv(tmp_path / "serie.csv", index=False)
+    (tmp_path / "oni.txt").write_text(" SEAS  YR   TOTAL   ANOM\n" + "".join(
+        f"  {s} {a}  27.0  0.10\n" for a in range(2011, 2025) for s in mr.ESTACOES), encoding="utf-8")
+    la, lo = h3.cell_to_latlng(CENTRO)
+    (tmp_path / "clima").mkdir()
+    for ano in range(2012, 2025):
+        n = 366 if ano % 4 == 0 else 365
+        pd.DataFrame({"LAT": [round(la * 2) / 2] * n, "LON": [round(lo / 0.625) * 0.625] * n, "YEAR": [ano] * n,
+                      "DOY": range(1, n + 1), "PRECTOTCORR": rng.random(n) * 5}).to_parquet(
+            tmp_path / "clima" / f"PRECTOTCORR_{ano}.parquet", index=False)
+    monkeypatch.setattr(sys, "argv", ["modelo_risco.py", "--serie", str(tmp_path / "serie.csv"), "--oni",
+                                      str(tmp_path / "oni.txt"), "--clima", str(tmp_path / "clima"),
+                                      "--saida", str(tmp_path / "saida"), "--anos-teste", "2023", "--ano-final", "2024"])
+    mr.main()
+    medidas = pd.read_csv(tmp_path / "saida" / "medidas_por_ano.csv")
+    assert set(medidas["conjunto"]) == {"fogo", "fogo+oni", "fogo+clima"}
+    imp = pd.read_csv(tmp_path / "saida" / "importancia.csv")
+    assert "chuva30" in set(imp["pista"]) and "oni" not in set(imp["pista"])
+
+
 def test_linha_de_comando_monta_a_serie_dos_arquivos_anuais(tmp_path, monkeypatch):
     la, lo = h3.cell_to_latlng(CENTRO)
     bruto([(la, lo, "2020-08-01", "n", 5.0, 0)]).to_csv(tmp_path / "a.csv", index=False)
