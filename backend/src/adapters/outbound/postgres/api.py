@@ -1,4 +1,5 @@
 """PostGIS read unit of work. Portuguese column/value translation lives here."""
+import os
 from collections import OrderedDict
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta, UTC
@@ -21,6 +22,8 @@ DATABASE_RESOLUTION = 6
 # Above this many resolution 4 cells with recent fire in view, the map skips alert levels instead of slowing down.
 # The worst 7-day week of 2012-2024 had 3,069 cells with fire in Brazil (P95 2,770, median 1,378).
 MAX_ALERT_CELLS = 4_000
+# Risk scores older than this many days are not shown (env `RISK_MAX_AGE_DAYS`): the job writes them every day.
+DEFAULT_RISK_MAX_AGE_DAYS = 2
 VALID_DETECTION = "confianca IN ('nominal','alta') AND (tipo = 0 OR tipo IS NULL) AND frp > 0"
 VIIRS_START = SATELLITE_SWITCHES[0][0]
 
@@ -187,7 +190,37 @@ class PostgresApiReader(PostgresHistoryRepository):
         expires_at = (min(row['first_acquired'] for row in grouped) + timedelta(hours=query.hours)
                       if grouped else now + timedelta(minutes=1))
         return {'total': total, 'hexagons': grouped, 'points': points, 'expires_at': expires_at,
-                **self._cell_history(grouped, now)}
+                **self._cell_history(grouped, now), 'risk': self._risk_scores(grouped, now, query.bbox)}
+
+    def _risk_scores(self, grouped, now, bbox):
+        """Scores of the trained model (`risco_celulas`) for the resolution 4 cells in view, or None without a fresh day.
+
+        Early warning (PR #97 review): the risk of the next 14 days matters most where there is no fire yet, so the
+        search starts from the table and not from the recent detections: every scored cell whose center is inside the
+        view, plus the cells that have fire."""
+        parents = {h3.cell_to_parent(h3.int_to_str(row['h3']), ALERT_RESOLUTION) for row in grouped}
+        if len(parents) > MAX_ALERT_CELLS:
+            return None
+        self.cursor.execute("SELECT to_regclass('risco_celulas') IS NOT NULL AS present")
+        if not self.cursor.fetchone()['present']:       # migration 005 not applied yet: the map works without risk
+            return None
+        newest = now.date() - timedelta(days=int(os.environ.get('RISK_MAX_AGE_DAYS', DEFAULT_RISK_MAX_AGE_DAYS)))
+        self.cursor.execute("""SELECT data_ref, max(calculado_em) AS scored_at,
+            (array_agg(modelo_versao ORDER BY calculado_em DESC))[1] AS model_version FROM risco_celulas
+            WHERE data_ref = (SELECT max(data_ref) FROM risco_celulas WHERE data_ref <= %s AND data_ref >= %s)
+            GROUP BY data_ref""", (now.date(), newest))
+        head = self.cursor.fetchone()
+        if head is None:
+            return None
+        self.cursor.execute("SELECT h3, prob FROM risco_celulas WHERE data_ref = %s", (head['data_ref'],))   # at most ~4,600 cells
+        west, south, east, north = bbox
+        by_cell = {}
+        for row in self.cursor.fetchall():
+            cell = h3.int_to_str(row['h3'])
+            lat, lon = h3.cell_to_latlng(cell)
+            if cell in parents or (west <= lon <= east and south <= lat <= north):
+                by_cell[cell] = float(row['prob'])
+        return {**head, 'by_cell': by_cell}
 
     def _cell_history(self, grouped, now):
         """Daily VIIRS counts of each resolution 4 cell with recent fire, for its alert level (RFC 0003)."""
