@@ -21,7 +21,7 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 5 | [Arquitetura e stack](docs/arquitetura.md) | Stack de cada componente, o que já está decidido e o que falta decidir | Antes de escrever qualquer código |
 | 6 | [Tarefas](docs/tarefas.md) | Frentes, responsáveis, branches, pastas de cada um, marcos e status | Antes de começar qualquer tarefa |
 | 7 | [Pipeline de dados — o que já foi feito](docs/pipeline-dados.md) | Download do histórico, filtros de qualidade, análise por satélite, achados | Antes de mexer em `data-pipeline/` |
-| 8 | [Banco de dados — decisões para o backend](docs/banco.md) | Imagem, H3, resolução, schema, consulta da API, compose sugerido, benchmark | Antes de mexer no banco ou na API |
+| 8 | [Banco de dados — decisões para o backend](docs/banco.md) | Imagem, H3, resolução, schema, consulta da API, carga na VPS, benchmark | Antes de mexer no banco ou na API |
 | 9 | [Contrato da API](docs/api.md) | Endpoints, pedido, resposta, erros, export de auditoria. JSON de exemplo em [api-exemplo.json](docs/api-exemplo.json) | Antes de mexer na API ou no front |
 | 10 | [Prompt do frontend](docs/prompt-frontend.md) | Prompt para o agente que constrói o front: direção de design, regras de dado na tela, animação, performance e etapas de construção | Antes de começar a frente D |
 | 11 | [Critérios de julgamento e prêmios](docs/premiacao.md) | Os 5 critérios, as categorias-alvo e as regras de prioridade da equipe | Antes de qualquer tarefa |
@@ -36,6 +36,7 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 20 | [Validação da API com a carga real](docs/validacao-api-eduardo.md) | Roteiro para o Eduardo conferir números, cobertura, ZIP e latência antes de fechar D7/M2 | Ao integrar a API com a carga real |
 | 21 | [Simulação e auditoria pelos logs](docs/simulacao.md) | Como rodar o sistema de ponta a ponta num banco descartável e auditar pelos logs se ele entrega o que os critérios cobram | Antes de rodar a simulação ou investigar um problema |
 | 22 | [Restrições para o mundo](docs/escala-mundial.md) | O que muda quando a cobertura passar do Brasil para o mundo, com a saída proposta para cada ponto | Antes de mexer em cobertura, seleção de área ou camada de focos |
+| 23 | [Deploy](docs/deploy.md) | Front no Cloudflare, banco/API/job NRT na VPS pelo Cloudflare Tunnel, variáveis e segurança da VPS | Antes de publicar ou mexer em `infra/` |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
@@ -52,7 +53,7 @@ firesync/
 ├── backend/               API que serve o calendário, a janela recente e o export (frente C)
 ├── frontend/              aplicação web: mapa, calendário, alerta, downloads (frente D)
 ├── config/                regras que mudam sem mudar o código, como o alert_rules.json
-└── infra/                 deploy na VPS: docker-compose, servidor web, .env.example (frente C)
+└── infra/                 deploy na VPS: docker-compose com Cloudflare Tunnel, .env.example (frente C)
 ```
 
 Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/` tem as cinco rotas HTTP, histórico, janela recente, camada de focos, ZIP auditável e testes unitários, HTTP, PostGIS e E2E com dados sintéticos. `frontend/` já traz o esqueleto (D1), a seleção de área, período e camada de focos recentes no mapa (D2–D3, RD07), o calendário (D4), os indicadores/gráficos (D5), os downloads e pacote de auditoria (D6), o proxy e integração com a API (D7) e os testes E2E em `frontend/e2e/`. `infra/` ainda não tem arquivos de deploy. `data-pipeline/data/` tem os quatro ZIPs de teste:
@@ -144,6 +145,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `data-pipeline/logs.py`, logs em `pipeline.py`, `agregar.py`, `job_nrt.py`, `tests/test_logs.py`, `docs/simulacao.md` | Claude Code (Claude Opus 5.5) | Logs estruturados gerados a partir do RNF07 e dos pontos de decisão do pipeline. Revisado pela equipe |
 | `frontend/` (D1–D7: `index.html`, `src/`, configuração do Vite, testes unitários e E2E) | Claude Code (Claude Opus 5.5) em D1, D4, D5 e na fonte do decreto em Data & credits (#65); Antigravity em D2, D3, D6 e D7 | Esqueleto (D1), calendário (D4) e indicadores/gráficos (D5) gerados a partir do `prompt-frontend.md`, `api.md` e `ux-telas.md`. Seleção de área e período (D2–D3: mapa Leaflet + Geoman em `src/controls/`, cliente API `src/api/client.ts`, validação UTC, fallback demo), camada de focos recentes e integração com a API (D7: `GET /api/v1/detections/recent` em hexágonos `cividis` log e pontos por intensidade, proxy `/api` no Vite) e downloads/exportação (D6: pacote de auditoria `POST /api/v1/export`, CSVs e PNG do calendário em `src/export/` e todas as jornadas J1–J9 em `e2e/jornadas.spec.ts`) escritos em TDD a partir dos docs. A equipe revisa no PR |
 | Mapa base padrão NASA GIBS (`frontend/src/map/MapStage.tsx`, `MapStage.test.tsx`) | Claude Code (Claude Opus 5.5) | Revisão das fontes de dados do projeto e troca do padrão em TDD. A equipe revisa no PR |
+| Deploy (`infra/docker-compose.yml`, `infra/.env.example`, `backend/Dockerfile`, `.dockerignore`, `frontend/wrangler.jsonc`, `frontend/public/_headers`, `docs/deploy.md`) e IP real no rate limit atrás do Cloudflare (`app.py`, testes) | Claude Code (Claude Opus 5.5) | Configuração escrita a partir da decisão de pôr o front no Cloudflare e a API atrás do túnel; o bug do rate limit foi reproduzido num teste antes da correção. A equipe revisa no PR |
 | Resultados da frente B na tela de Método (`frontend/index.html`, `frontend/public/img/`, `src/index-html.test.ts`) | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Textos em inglês escritos a partir de `docs/decisoes-harmonizacao.md` e do RFC 0003, com os números copiados dos documentos, e testes antes do texto. A equipe revisa no PR |
 
 ## Dados e créditos

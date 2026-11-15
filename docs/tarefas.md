@@ -86,7 +86,7 @@ Ler antes: [requisitos.md](requisitos.md), [importacao-regioes.md](importacao-re
 | C4 | Sazonalidade, ranking de anos, mediana do mês atual e anomalias (RF09–RF12) | C3 | feito (paridade API/backtest desde a série diária testada na #64; indicador anual por mediana com cenários preservados e contrato `reference_median` na #78; histórico e janelas recentes de ±15 dias, P25–P75, intensidade e alerta com piso contínuo da issue #59 testados no domínio e por HTTP) | Valores conferidos à mão para uma área |
 | C5 | Resposta "sem dados" fora da `cobertura` e marcação dos dias de `dias_sem_dados` | C3 | feito (cobertura full/partial/none e dias sem dados expostos e testados por HTTP) | Área fora do Brasil devolve o aviso, não um calendário vazio |
 | C6 | Export CSV dos focos da busca (RD05) | C3 | feito (ZIP em memória com CSVs e metadados; caso de 500.001 focos testado no PostGIS) | Arquivo abre no Excel |
-| C7 | Deploy público de banco, API e front | T00, M2 | a fazer | Link funciona numa janela anônima |
+| C7 | Deploy público de banco, API e front | T00, M2 | fazendo (front no Cloudflare e compose da VPS com túnel em [deploy.md](deploy.md); falta subir a carga real e testar o link) | Link funciona numa janela anônima |
 | C8 | Pedir a classificação FortiGuard do site | C7 | a fazer | Pedido enviado |
 | C9 | Página do projeto em inglês: summary, descrição detalhada, NASA Data, referências, uso de IA | B6 | a fazer | Todos os campos do checklist de [requisitos.md](requisitos.md) preenchidos |
 | C10 | Completar a tabela "Uso de IA" do README | — | a fazer | Cada parte com IA registrada |

@@ -1,0 +1,12 @@
+// Front on Cloudflare Workers (static assets only). With this file, `npx wrangler deploy`
+// skips its automatic setup, which requires Vite 6. Build: `npm run build`; API URL comes from
+// the build variable VITE_API_URL (docs/deploy.md).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "firesync",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}
