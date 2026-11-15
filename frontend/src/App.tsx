@@ -1,10 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { MONTH_NAMES } from './calendar/calendarModel';
 import { AssistantBubble } from './assistant/AssistantBubble';
 import { SelectionPanel } from './controls/SelectionPanel';
 import { buildExampleStory } from './discovery/exampleStory';
-import { HeroCalendar } from './hero/HeroCalendar';
 import { prefersReducedMotion } from './hero/heroIntro';
 import { HistoryPanel } from './history/HistoryPanel';
 import { IndicatorRow } from './summary/IndicatorRow';
@@ -30,7 +28,6 @@ export function App() {
   const ex = useExplorer();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [storyIndex, setStoryIndex] = useState(0);
-  const heroHost = typeof document !== 'undefined' ? document.getElementById('hero-viz') : null;
 
   const shownData = ex.shown?.data ?? null;
   const story = useMemo(() => (shownData ? buildExampleStory(shownData) : null), [shownData]);
@@ -68,14 +65,8 @@ export function App() {
 
   return (
     <>
-      {heroHost &&
-        createPortal(
-          <HeroCalendar months={ex.hero.data.months} areaLabel={ex.hero.label} isDemo={ex.hero.isDemo} onOpenExample={openExample} />,
-          heroHost,
-        )}
-
-      <div className="workspace">
-        <div className="selection-bar">
+    <div className="workspace">
+      <div className="selection-bar">
           <h2 id="explore-title" className="selection-bar__title">
             Explore an area
           </h2>

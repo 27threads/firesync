@@ -42,7 +42,7 @@ test.describe('Responsividade', () => {
 
   test('R3: no celular, o texto dos gráficos tem pelo menos 10 px', async ({ page }) => {
     await abrirSemApi(page, CELULAR);
-    for (const seletor of ['#record .calendar-svg-root', '#explore .calendar-svg-root', '#explore svg.chart']) {
+    for (const seletor of ['#explore .calendar-svg-root', '#explore svg.chart']) {
       expect(await menorTextoEmPx(page, seletor), seletor).toBeGreaterThanOrEqual(10);
     }
   });
