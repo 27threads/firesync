@@ -33,7 +33,7 @@ Tela 1 (desenhar a área) → Tela 2 (é normal?) → Tela 3 (contexto históric
 - Desenhar a área no mapa (polígono, retângulo ou círculo) ou digitar latitude e longitude (RD01, RD02).
 - Ver os focos das últimas 24 horas ou 7 dias, com a **classe de intensidade** (`low`, `medium`, `high`) por símbolo ou tamanho, além da cor (RD04).
 - Aproximar e afastar: de longe, hexágonos com a contagem; de perto, os pontos (`GET /detections/recent`).
-- Ligar a camada de **risco dos próximos 14 dias** (modelo treinado, RFC 0003): as células de faixa muito alta ou alta entram na lista "onde olhar primeiro" **mesmo sem fogo agora** (aviso antecipado). As cores e as quatro faixas ainda estão a decidir; hoje a cor do mapa é a do alerta.
+- Ligar a camada de **risco dos próximos 14 dias** (modelo treinado, RFC 0003): as células de faixa muito alta ou alta entram na lista "onde olhar primeiro" **mesmo sem fogo agora** (aviso antecipado). A lista mostra 10 células e o botão "Show all", porque no pico da temporada cerca de 29% das células ficam em "muito alto". As cores ainda estão a decidir (pendência 3); hoje a cor do mapa é a contagem de detecções.
 
 **Decisões no app:** qual área analisar; janela de 24 horas ou 7 dias (para trás, a partir de agora). O horizonte de 14 dias do risco é fixo e não tem seletor.
 
@@ -151,6 +151,5 @@ Afirmações que precisam ser verdade antes da entrega: comparação com o INPE 
 1. Nível Normal, Atenção ou Crítico (tela 2): aguarda decisão da equipe.
 2. "Estimativa pouco confiável" (tela 3): aguarda decisão da equipe.
 3. Cores e faixas do risco do modelo (tela 1): a decidir qual sinal vira cor e qual vira selo, o alerta ou o risco. Não muda por enquanto.
-4. Limite de itens da lista de prioridade: no pico da temporada cerca de 29% das células ficam em "muito alto", e o front precisa limitar a lista ("Show all").
 
 A faixa de incerteza já está no contrato como `band_low` e `band_high` (percentis 5 e 95), no [api.md](api.md).
