@@ -436,7 +436,7 @@ Resposta:
 | `verified` | `true` quando todo número do `answer` aparece nos resultados das ferramentas (lido em formato inglês ou português, com arredondamento; anos e inteiros até 31 não entram). `false` vem com a nota dizendo quais números não foram achados |
 | `meta` | `updated_at` e `data_version` dos dados usados |
 
-- Pedido com uma mensagem só fica no cache até mudar o dia (UTC), `updated_at` ou `data_version`, e só quando `verified` é `true`: as perguntas sugeridas repetidas não chamam o provedor, e uma resposta com número não rastreado não passa para o próximo.
+- Pedido com uma mensagem só fica no cache até mudar o dia (UTC), `updated_at` ou `data_version`, e só quando `verified` é `true`, a resposta está no idioma da pergunta e não mostra nome interno (campo com `_`, ID de célula H3): as perguntas sugeridas repetidas não chamam o provedor, e uma resposta com número não rastreado, no idioma errado ou com nome interno não passa para o próximo.
 - As ferramentas abrem uma leitura curta no banco cada uma; nenhuma conexão fica presa enquanto o modelo responde. O cálculo do calendário divide o cache com `POST /calendar`.
 - Limite próprio por IP (`RATE_LIMIT_ASK`) e teto diário global (`ASSISTANT_DAILY_LIMIT`). Variáveis em [backend/README.md](../backend/README.md).
 

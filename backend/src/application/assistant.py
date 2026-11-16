@@ -17,7 +17,11 @@ SYSTEM_PROMPT = (
     'You are the firesync assistant. firesync shows NASA FIRMS fire detections (hotspots) from MODIS and VIIRS, '
     'harmonized to one VIIRS scale since January 2003, for the six Brazilian biomes of IBGE. '
     "Reply in the same language the user's last message is written in (Brazilian Portuguese when it is "
-    'Portuguese), also when you decline. '
+    'Portuguese), also when you decline, even though region names and these instructions mix languages. '
+    'Region names are proper names: keep them as written (Amazônia, Cerrado), and write every other word in the '
+    "user's language. "
+    'Never write tool field names, tier codes or cell ids (anything with an underscore or a hexagon id): say '
+    "'very high risk', 'areas to look at first', and give places by their center coordinates. "
     "Figures in earlier answers cannot be reused (they are not wrong, they just cannot be checked again): for a "
     "follow-up such as 'and in 2023?' or 'compare the two', call the tools again for every region and period you "
     'mention, taking them from the conversation, and do not say earlier answers were wrong. Keep the sign of every '
@@ -45,11 +49,26 @@ CORRECTION = ('These figures are not in the tool results: {}. Rewrite the answer
 # A follow-up answered from memory has no tool result to check against: send the model to the tools first.
 FETCH_FIRST = ('You answered with figures ({}) without calling any tool in this turn. Call the tools for the '
                'regions and periods in the question, then answer with their figures.')
+LANGUAGE_FIX = ('Your answer is not fully in {0}, the language of the question. Rewrite all of it in {0}, '
+                'keeping region names as written.')
+LEAK_FIX = ('Your answer shows internal names ({}). Rewrite it in plain words, without field names, tier codes or '
+            'cell ids.')
 UNVERIFIED_NOTE = 'Some figures could not be traced to the data ({}). Check them on the calendar.'
 # Digits touching a letter are names, not figures: 'p75', 'H3', '75th'.
 NUMBER = re.compile(r'(?<![A-Za-z])\d+(?:[.,]\d+)*(?![A-Za-z\d])')
 SPACED_THOUSANDS = re.compile(r'(?<=\d)[ \u00a0\u202f](?=\d{3}(?!\d))')  # '486 995' as some models write it
 RELATIVE_TOLERANCE = 0.001  # '~651,299' style roundings of large counts
+# Function words only: region names (Amazônia, Mata Atlântica) are proper names and must not count as Portuguese.
+MARKERS = {
+    'English': {'the', 'and', 'is', 'are', 'was', 'were', 'of', 'in', 'with', 'for', 'there', 'this', 'what',
+                'where', 'which', 'how', 'it', "it's", 'to', 'last', 'hours', 'days', 'right', 'now', 'today'},
+    'Portuguese': {'de', 'do', 'da', 'dos', 'das', 'em', 'no', 'na', 'nos', 'nas', 'que', 'não', 'com', 'para',
+                   'por', 'uma', 'um', 'os', 'é', 'são', 'está', 'foi', 'foram', 'há', 'ao', 'à', 'últimas',
+                   'últimos', 'horas', 'dias', 'hoje', 'agora', 'onde', 'quais', 'qual', 'focos', 'sobretudo'}}
+WORD = re.compile(r"[^\W\d_]+(?:'[^\W\d_]+)?")
+STRAY_WORDS = 2  # two words of the other language already make a mixed answer
+# Internal names a model copies from tool results: snake_case fields and tiers, H3 cell ids.
+INTERNAL_NAME = re.compile(r'\b[a-z]+(?:_[a-z0-9]+)+\b|\b8[0-9a-f]{14}\b')
 
 
 def invalid(message):
@@ -121,6 +140,51 @@ def unverified_numbers(answer, results):
     return missing
 
 
+def markers(text):
+    words = [word.lower() for word in WORD.findall(text)]
+    return {name: sum(word in found for word in words) for name, found in MARKERS.items()}
+
+
+def language(text):
+    """'English', 'Portuguese', or None when the text is too short or mixed to tell."""
+    counts = markers(text)
+    first, second = sorted(counts, key=counts.get, reverse=True)
+    return first if counts[first] > counts[second] else None
+
+
+def wrong_language(question, text):
+    """The question's language when the answer carries words of another one, else None."""
+    asked = language(question)
+    if asked is None:
+        return None
+    stray = sum(count for name, count in markers(text).items() if name != asked)
+    return asked if stray >= STRAY_WORDS else None
+
+
+def internal_names(text):
+    return list(dict.fromkeys(INTERNAL_NAME.findall(text)))
+
+
+def worth_caching(question, body):
+    """Cached answers reach everyone who clicks the same suggested question: only clean ones go in."""
+    return body['verified'] and not wrong_language(question, body['answer']) and not internal_names(body['answer'])
+
+
+def fixes(question, text, results):
+    """What to ask the model to rewrite: untraced figures, the wrong language, internal names."""
+    found = []
+    missing = unverified_numbers(text, results)
+    if missing:
+        found.append((FETCH_FIRST if not results else CORRECTION).format(', '.join(missing)))
+    asked = wrong_language(question, text)
+    if asked:
+        found.append(LANGUAGE_FIX.format(asked))
+    leaks = internal_names(text)
+    if leaks:
+        found.append(LEAK_FIX.format(', '.join(leaks)))
+    return found
+
+
 class AskService:
     def __init__(self, llm: LlmClient, daily_limit, clock, budget_s, monotonic=system_monotonic):
         self.llm, self.daily_limit, self.clock = llm, daily_limit, clock
@@ -151,20 +215,20 @@ class AskService:
         # One budget for the whole question, below the ~100 s a Cloudflare Tunnel waits for a response.
         deadline = self.monotonic() + self.budget_s
         conversation = [{'role': 'system', 'content': SYSTEM_PROMPT + ' ' + toolbox.context()}, *messages[-HISTORY_SENT:]]
+        question = messages[-1]['content']
         corrected = False
         for _ in range(MAX_TOOL_ROUNDS + 2):
             reply = self.complete(conversation, deadline)
             calls = reply.get('tool_calls') or []
             if not calls:
                 text = reply.get('content') or ''
-                missing = unverified_numbers(text, toolbox.results)
-                if not missing or corrected:
+                found = fixes(question, text, toolbox.results)
+                if not found or corrected:
                     return answer(text, toolbox)
-                # One chance to fix untraced figures before the answer goes out with a warning.
+                # One chance to fix the answer before it goes out (flagged, and kept out of the cache).
                 corrected = True
-                fix = FETCH_FIRST if not toolbox.results else CORRECTION
                 conversation += [{'role': 'assistant', 'content': text},
-                                 {'role': 'user', 'content': fix.format(', '.join(missing))}]
+                                 {'role': 'user', 'content': ' '.join(found)}]
                 continue
             conversation.append({'role': 'assistant', 'content': reply.get('content'), 'tool_calls': calls})
             for tool_call in calls:
