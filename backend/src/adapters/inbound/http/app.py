@@ -18,7 +18,7 @@ from backend.adapters.inbound.http.zip_export import audit_zip
 from backend.adapters.outbound.config_file.rules import load_risk_rules, load_rules
 from backend.adapters.outbound.llm.openai import ProviderChain
 from backend.application.api import calculate_calendar, calendar_cache_key, parse_request
-from backend.application.assistant import AskService, validate_messages
+from backend.application.assistant import AskService, validate_messages, worth_caching
 from backend.application.assistant_tools import Toolbox
 from backend.application.audit import audit_document
 from backend.domain.calculations.map_features import map_result
@@ -217,7 +217,7 @@ def create_app(repository: ApiRepository | None = None, clock=None, monotonic=No
         if body is None:
             body = assistant.ask(messages, Toolbox(repository, meta, now, rules, risk_rules, cache))
             body['meta'] = {'updated_at': meta['updated_at'], 'data_version': meta['data_version']}
-            if key and body['verified']:  # an answer with untraced figures is never served to the next person
+            if key and worth_caching(messages[0]['content'], body):  # untraced figures, wrong language: not reused
                 cache.put(key, body)
         return JSONResponse(body, headers={'Cache-Control': 'no-store'})
 

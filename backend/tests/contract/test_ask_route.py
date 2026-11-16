@@ -114,3 +114,13 @@ def test_follow_up_after_a_long_answer_is_accepted():
                                  {'role': 'user', 'content': 'And 2023?'}]}
     with client_with(llm) as client:
         assert client.post('/api/v1/ask', json=conversation).status_code == 200
+
+
+def test_answer_in_the_wrong_language_is_not_cached():
+    llm = ScriptedLlm({'content': 'Nas últimas 24 horas o fogo foi no Cerrado.'},
+                      {'content': 'Nas últimas 24 horas o fogo foi no Cerrado.'},
+                      {'content': 'It burned in the Cerrado.'})
+    with client_with(llm) as client:
+        client.post('/api/v1/ask', json=QUESTION)
+        second = client.post('/api/v1/ask', json=QUESTION).json()
+    assert second['answer'] == 'It burned in the Cerrado.'
