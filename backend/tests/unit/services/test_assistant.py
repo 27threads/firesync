@@ -205,6 +205,17 @@ def test_endless_tool_calls_stop_after_the_round_limit():
     assert error.value.code == 'assistant_unavailable' and len(llm.conversations) == 6
 
 
+def test_one_reply_runs_at_most_four_tools():
+    """Audit 16/11: one model reply could ask for ~144 calendars in a single round and hold the whole connection pool."""
+    many = {'content': None, 'tool_calls': [
+        {'id': f'call-{i}', 'type': 'function', 'function': {'name': 'list_regions', 'arguments': '{}'}} for i in range(20)]}
+    llm = ScriptedLlm(many, {'content': 'There is one region.'})
+    ask(llm)
+    sent = llm.conversations[-1]
+    assert len(sent[-5]['tool_calls']) == 4  # the assistant message keeps only the calls that ran
+    assert [message['role'] for message in sent[-4:]] == ['tool'] * 4
+
+
 def test_time_budget_stops_the_question_between_rounds():
     now = [0.0]
 
