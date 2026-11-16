@@ -147,14 +147,14 @@ Um item por ano do intervalo, **ordenado por `detections`, do maior para o menor
 
 ### `seasonality[]`: meses com mais fogo (RF09)
 
-Doze itens, de janeiro a dezembro, usando **só os anos completos** do intervalo.
+Doze itens, de janeiro a dezembro, usando **só os anos completos** do intervalo. Sem nenhum ano completo no período, `n_years` vem 0 e `median`, `mean`, `min` e `max` vêm `null` (o front mostra um aviso no lugar do gráfico, nunca zeros).
 
 | Campo | Tipo | Significado |
 | --- | --- | --- |
 | `month_of_year` | 1–12 | |
-| `median` | número | Mediana entre os anos |
-| `mean` | número | Média entre os anos |
-| `min`, `max` | número | Menor e maior ano |
+| `median` | número ou `null` | Mediana entre os anos |
+| `mean` | número ou `null` | Média entre os anos |
+| `min`, `max` | número ou `null` | Menor e maior ano |
 | `n_years` | inteiro | Quantos anos entraram |
 
 ### `recent`: o agora contra o normal da época (RF11)

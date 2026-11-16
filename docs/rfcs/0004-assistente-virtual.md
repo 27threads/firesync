@@ -136,7 +136,9 @@ Erros novos, no formato do [api.md](../api.md#erros):
 O medo é a cota da IA acabar e o chat parar. Três camadas, da mais barata para a mais cara:
 
 1. **Cache dos chips (custo zero).** A resposta das 5 perguntas de exemplo fica guardada com a chave `(pergunta, updated_at, data_version)`. São as que os jurados mais vão clicar. Depois da primeira resposta, não gastam token e **continuam funcionando mesmo com todos os provedores fora**. Quando o job NRT muda o `updated_at`, o cache renova sozinho.
-2. **Cadeia de provedores.** O adaptador fala o formato **OpenAI chat completions**, que vários provedores aceitam com outra `base_url`. A variável `ASSISTANT_PROVIDERS` traz a lista em ordem. Se um responde 429, sem cota (`insufficient_quota`), 5xx ou timeout, o serviço tenta o próximo. O primeiro é a OpenAI; o segundo é qualquer provedor compatível com chave própria (ex.: um com camada gratuita), escolhido pela equipe sem mudar código.
+2. **Cadeia de provedores.** O adaptador fala o formato **OpenAI chat completions**, que vários provedores aceitam com outra `base_url`. A variável `ASSISTANT_PROVIDERS` traz a lista em ordem. Se um responde 429, sem cota (`insufficient_quota`), 5xx ou timeout, o serviço tenta o próximo. Trocar provedor ou modelo não muda código.
+
+   **Cadeia escolhida (15/11/2026):** `gpt-oss-120b` (OpenAI, pesos abertos) na Cerebras, o mesmo modelo na Groq, Gemini no Google e Nemotron (NVIDIA) no OpenRouter, todos em camada gratuita oficial. O Qwen saiu da cadeia. Antes de ir para a VPS, cada provedor passa pela bateria `backend/scripts/assistant_benchmark.py`.
 3. **Teto global diário no servidor** (`ASSISTANT_DAILY_LIMIT`), contado no processo da API. Ao atingir, `/ask` responde `assistant_unavailable` antes de chamar qualquer provedor. O limite por IP (`RATE_LIMIT_ASK`) sozinho não segura o custo com o chat aberto.
 
 Além disso: `max_tokens` baixo, até 4 voltas por pedido, histórico cortado nas últimas 6 mensagens e **limite de gasto mensal** no projeto de cada conta de provedor.
@@ -211,4 +213,3 @@ Antes da submissão, no escopo mínimo abaixo. Cada etapa é um PR pequeno, com 
 
 1. **Mateus (frente D):** posição da bolinha no layout (mapa + `ExportBar` no celular).
 2. **Mateus:** `show_calendar` reaproveita o estado do `SelectionPanel` direto ou precisa de um evento/contexto novo?
-3. **Equipe:** qual camada gratuita oficial entra como segundo provedor (precisa de tool calling e endpoint compatível com OpenAI), e o modelo de cada um. Não muda código, só o `ASSISTANT_PROVIDERS`.
