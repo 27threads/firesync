@@ -2118,18 +2118,58 @@ select {
 /* Assistant (RFC 0004): floating button and panel, bottom right, above the map. */
 .assistant-bubble {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  right: 20px;
+  bottom: 20px;
   z-index: 1000;
-  width: 52px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   height: 52px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--amber);
-  color: var(--ink);
-  font: 700 22px var(--font);
+  padding: 0 20px 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1c2430, #0f1720);
+  color: #fff;
+  font: 600 15px var(--font);
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 10px 28px rgba(15, 23, 32, 0.35), 0 2px 6px rgba(15, 23, 32, 0.2);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.assistant-bubble:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(15, 23, 32, 0.4), 0 3px 8px rgba(15, 23, 32, 0.22);
+}
+.assistant-icon {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linejoin: round;
+}
+.assistant-icon__flame {
+  fill: var(--amber);
+  stroke: none;
+}
+/* Phones: only the icon, a round 56 px target. */
+@media (max-width: 560px) {
+  .assistant-bubble {
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    justify-content: center;
+    right: 16px;
+    bottom: 16px;
+  }
+  .assistant-bubble__label {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .assistant-bubble {
+    transition: none;
+  }
 }
 
 .assistant-bubble:focus-visible,
@@ -2147,35 +2187,69 @@ select {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: min(380px, calc(100vw - 32px));
-  max-height: min(560px, calc(100vh - 32px));
-  padding: 12px;
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius);
+  width: min(400px, calc(100vw - 32px));
+  max-height: min(600px, calc(100vh - 32px));
+  padding: 0 0 12px;
+  border: 1px solid var(--rule);
+  border-radius: 18px;
   background: var(--paper-raised);
   color: var(--ink);
   font-family: var(--font);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 24px 60px rgba(15, 23, 32, 0.28), 0 4px 12px rgba(15, 23, 32, 0.12);
+  overflow: hidden;
 }
 
 .assistant-panel__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 14px 16px;
+  background: linear-gradient(135deg, #1c2430, #0f1720);
+  color: #fff;
+}
+.assistant-panel__avatar {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+}
+.assistant-panel__title {
+  display: grid;
+  flex: 1;
+  line-height: 1.2;
+}
+.assistant-panel__title strong {
+  font-size: 15px;
+}
+.assistant-panel__title small {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
 }
 
 .assistant-panel__close {
+  width: 36px;
+  height: 36px;
   border: 0;
-  background: none;
-  color: var(--ink);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
   font-size: 22px;
+  line-height: 1;
   cursor: pointer;
+}
+.assistant-panel__close:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .assistant-panel__log {
   flex: 1;
   overflow-y: auto;
+  padding: 4px 14px;
   font-size: 14px;
+  line-height: 1.45;
 }
 
 .assistant-panel__chips {
@@ -2194,6 +2268,12 @@ select {
   /* Labels carry region and period ("… · Cerrado · 2024-01 to 2024-12"): they wrap instead of leaving a phone screen. */
   white-space: normal;
   max-width: 100%;
+  border-radius: 12px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.assistant-panel .chip:hover:not(:disabled) {
+  border-color: var(--amber);
+  background: #fdf1dc;
 }
 
 .assistant-panel .chip:disabled {
@@ -2205,13 +2285,25 @@ select {
   cursor: progress;
 }
 
+/* Messages as bubbles: the person on the right, firesync on the left. */
 .assistant-msg {
-  margin: 6px 0;
+  margin: 8px 0;
+}
+div.assistant-msg {
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 4px 14px 14px 14px;
+  background: #fff;
 }
 
 .assistant-msg--user {
-  text-align: right;
-  color: var(--ink-soft);
+  width: fit-content;
+  max-width: 85%;
+  margin-left: auto;
+  padding: 8px 12px;
+  border-radius: 14px 14px 4px 14px;
+  background: #1c2430;
+  color: #fff;
 }
 
 .assistant-msg__note {
@@ -2219,20 +2311,63 @@ select {
   color: var(--ink-soft);
   font-size: 12px;
 }
+.assistant-panel > .assistant-msg__note {
+  padding: 0 14px;
+  font-size: 11px;
+}
 
 .assistant-panel__form {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: flex-end;
+  margin: 0 12px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 16px;
+  background: #fff;
+}
+.assistant-panel__form:focus-within {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px rgba(233, 162, 59, 0.2);
 }
 
 .assistant-panel__form textarea {
   flex: 1;
   resize: none;
-  padding: 6px;
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius);
+  padding: 6px 0;
+  border: 0;
+  background: none;
   font: inherit;
+  font-size: 14px;
+}
+.assistant-panel__form textarea:focus-visible {
+  outline: none;
+}
+
+.assistant-panel__send {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border: 0;
+  border-radius: 12px;
+  background: var(--amber);
+  color: var(--ink);
+  cursor: pointer;
+}
+.assistant-panel__send svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.assistant-panel__send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .assistant-msg__sources {

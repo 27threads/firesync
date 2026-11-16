@@ -72,6 +72,16 @@ function failureText(error: unknown): string {
   return 'Assistant unavailable, use the map.';
 }
 
+/** A speech bubble with a small flame: the assistant talks about fire. */
+function ChatIcon() {
+  return (
+    <svg className="assistant-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5z" />
+      <path className="assistant-icon__flame" d="M12 7.5c1.6 1.4 2.6 2.7 2.6 4.1a2.6 2.6 0 0 1-5.2 0c0-.9.4-1.7 1.1-2.4.1.8.5 1.3 1 1.5-.2-1.2 0-2.2.5-3.2z" />
+    </svg>
+  );
+}
+
 /** Floating chat (RFC 0004). Optional: the page works the same without it. */
 export function AssistantBubble({ onShowCalendar, hideBubble = false }: Props) {
   const [open, setOpen] = useState(false);
@@ -162,7 +172,8 @@ export function AssistantBubble({ onShowCalendar, hideBubble = false }: Props) {
     if (hideBubble) return null;
     return (
       <button ref={bubbleRef} type="button" className="assistant-bubble" aria-label="Ask about fire data" onClick={() => setOpen(true)}>
-        ?
+        <ChatIcon />
+        <span className="assistant-bubble__label">Ask firesync</span>
       </button>
     );
   }
@@ -180,7 +191,13 @@ export function AssistantBubble({ onShowCalendar, hideBubble = false }: Props) {
       }}
     >
       <header className="assistant-panel__head">
-        <strong>Ask firesync</strong>
+        <span className="assistant-panel__avatar" aria-hidden="true">
+          <ChatIcon />
+        </span>
+        <span className="assistant-panel__title">
+          <strong>Ask firesync</strong>
+          <small>Fire data from NASA, in plain words</small>
+        </span>
         <button type="button" className="assistant-panel__close" aria-label="Close assistant" onClick={() => setOpen(false)}>
           ×
         </button>
@@ -262,7 +279,7 @@ export function AssistantBubble({ onShowCalendar, hideBubble = false }: Props) {
           maxLength={1000}
           rows={2}
           aria-label="Your question"
-          placeholder="Ask about fires in Brazil…"
+          placeholder="What do you want to monitor?"
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
@@ -271,8 +288,10 @@ export function AssistantBubble({ onShowCalendar, hideBubble = false }: Props) {
             }
           }}
         />
-        <button type="submit" className="chip" disabled={busy || !draft.trim()}>
-          Send
+        <button type="submit" className="assistant-panel__send" aria-label="Send" disabled={busy || !draft.trim()}>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12h13M13 6l6 6-6 6" />
+          </svg>
         </button>
       </form>
       <p className="assistant-msg__note">Numbers from NASA FIRMS (MODIS + VIIRS), harmonized to the VIIRS scale.</p>

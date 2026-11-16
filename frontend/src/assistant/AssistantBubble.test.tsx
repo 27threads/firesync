@@ -161,3 +161,9 @@ test('a failed question goes back to the box and Try again sends it again', asyn
   const body = JSON.parse(String((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body));
   expect(body.messages).toEqual([{ role: 'user', content: 'E em 2023?' }]);
 });
+
+test('the question box asks what the person wants to monitor', () => {
+  render(<AssistantBubble onShowCalendar={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Ask about fire data' }));
+  expect(screen.getByLabelText('Your question')).toHaveAttribute('placeholder', 'What do you want to monitor?');
+});
