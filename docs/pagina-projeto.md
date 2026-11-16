@@ -21,7 +21,7 @@ PENDING (D8): video of up to 30 seconds or up to 7 slides, not recorded yet.
 ## Link to Final Project
 
 - Live app: https://firesync.nogranlabs.com.br
-- Public API: https://firesync-api.nogranlabs.com.br
+- Public API: https://firesync-api.nogranlabs.com.br/docs
 - Source code: https://github.com/27threads/firesync
 
 ## Detailed Project Description

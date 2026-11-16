@@ -5,7 +5,7 @@
 NASA Space Apps Challenge 2026 · challenge [MODIS and VIIRS Hot Spots](https://www.spaceappschallenge.org/2026/challenges/modis-and-viirs-hot-spots/)
 
 - **Live app:** https://firesync.nogranlabs.com.br (no login, desktop and mobile)
-- **Public API:** https://firesync-api.nogranlabs.com.br
+- **Public API:** https://firesync-api.nogranlabs.com.br/docs
 - **Project page text, with the full method, results and references:** [docs/pagina-projeto.md](docs/pagina-projeto.md)
 
 ![firesync opening: the Earth with the Aqua (MODIS) and S-NPP/NOAA-20 (VIIRS) satellites](docs/img/site/opening.png)
@@ -164,7 +164,7 @@ Detalhes de cada etapa: [importacao-regioes.md](docs/importacao-regioes.md).
 - [x] Importador, pipeline, agregação, job NRT e série do INPE ([pipeline-dados.md](docs/pipeline-dados.md))
 - [x] API HTTP C1–C6 (validação com dados sintéticos; conferência da carga real pelo Eduardo em [validacao-api-eduardo.md](docs/validacao-api-eduardo.md))
 - [x] Frontend (D1–D7 prontos e conferidos com a carga real no site no ar em 15/11; aviso antecipado D10 no ar, conferido com a API real em 15/11; a demo D8 segue pendente)
-- [x] Deploy público (front em <https://firesync.nogranlabs.com.br>, API em <https://firesync-api.nogranlabs.com.br>; [deploy.md](docs/deploy.md))
+- [x] Deploy público (front em <https://firesync.nogranlabs.com.br>, API em <https://firesync-api.nogranlabs.com.br/docs>; [deploy.md](docs/deploy.md))
 - [x] Texto da página do projeto ([pagina-projeto.md](docs/pagina-projeto.md); falta o link da demo)
 - [ ] Demo (D8)
 
