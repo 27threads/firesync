@@ -16,17 +16,13 @@ firesync
 
 ## High-Level Project Summary
 
-(Field "Resumo", up to 1,500 characters. This text has 1189.)
+(Field "Resumo", up to 1,500 characters; the form asks what we developed, how it addresses the challenge and why it matters, in 50 to 200 words. This text has 1154 characters and 200 words.)
 
-firesync turns NASA satellite fire data into decisions for brigade commanders. It shows where hot spots are burning now, whether that is normal for the place and time of year, and which areas carry the highest fire risk in the next 14 days.
+firesync is a web platform that turns NASA fire data into decisions for fire commanders and crews. It shows where hot spots are burning now, whether that is normal for the place and time of year, and which areas carry the highest fire risk in the next 14 days.
 
-VIIRS records about six times more detections than MODIS over the same fires. firesync converts the MODIS Aqua record to the VIIRS scale with factors calibrated in the 13 years both sensors flew, giving one consistent 24-year series with the uncertainty shown.
+It addresses the challenge by joining two sensor records into one. VIIRS records about six times more detections than MODIS, so we convert MODIS Aqua to the VIIRS scale with factors calibrated in the 13 years both sensors flew. The result is a consistent 24-year series, with estimated months marked and their uncertainty range available. A model trained only on past data estimates the 14-day risk per area: tested on the Amazon (2021-2024), it warned of 51 in 100 significant fire outbreaks, usually 10 days ahead.
 
-A machine-learning model trained only on past data estimates the 14-day risk per area. Tested year by year on the Amazon (2021-2024), it warned of 51 in 100 significant fire outbreaks, usually 10 days ahead. When it flagged an area, significant fire followed 78% of the time. These are past frequencies, not forecasts.
-
-Potential impact: brigades in a Cerrado study (Oliveira et al.) cut burned area by 12%. If early warning helped Amazon brigades do the same, that could mean about 290,000 hectares (710,000 acres) and 3.8 million tonnes of CO2 less in a year like 2024 (June to August), a hypothesis to test in a pilot.
-
-Open source, no login, with an audit package for every number.
+It matters because commanders decide with little time. Knowing early where fire is likely can help place crews before it spreads. If early warning helped Amazon crews cut burned area as Cerrado brigades did (12%), that could mean about 290,000 hectares (710,000 acres) and 3.8 million tonnes of CO2 less in a year like 2024 (June to August): a hypothesis to test in a pilot.
 
 ## Link to Project Demo
 
@@ -44,7 +40,7 @@ PENDING (D8): video of up to 30 seconds or up to 7 slides, not recorded yet.
 
 ### What it does and how it works
 
-firesync answers one question for the people who decide where to send fire brigades: **where is fire burning now, is that normal for this place and time of year, and where is it likely to burn next?**
+firesync answers three questions for the people who decide where to send fire crews: **Where is fire burning now? Is it unusual for this place and time of year? Where is the risk highest in the next 14 days?**
 
 - **Fire now.** A map of the last 24, 72 or 168 hours of NASA hot spots, as H3 hexagons (about 1,770 km² each) or points, with the intensity class of each detection. An icon marks the areas that are above the usual for the season (Attention and Critical).
 - **Is it normal?** The last 7 days and the month to date are compared with the median of the same dates (within ±15 days) in earlier VIIRS years. The alert level (Normal, Attention, Critical) follows rule v1, versioned in `config/alert_rules.json`.
@@ -55,16 +51,20 @@ firesync answers one question for the people who decide where to send fire briga
 
 **How it works**
 
-1. **Data.** NASA FIRMS active fire detections for Brazil since November 2000: MODIS Collection 6.1 (Terra and Aqua) and VIIRS 375 m Collection 2 (S-NPP, NOAA-20, NOAA-21), from the yearly country files and the near-real-time API. Only nominal and high-confidence vegetation fires are counted.
-2. **Harmonization.** VIIRS records about six times more detections than MODIS over the same fires, so the raw counts cannot be joined (2012 would look like a jump in fire). We use the VIIRS scale. Only Aqua is used on the MODIS side. In the 13 overlap years (2012 to 2024) we count Aqua and S-NPP on an H3 grid and compute one factor per biome × month × day or night pass for each year: 1,860 factors in six IBGE biomes. A MODIS-era month is the median of the 13 scenarios, with a 5th to 95th percentile range.
+1. **Data.** NASA FIRMS active fire detections for Brazil since November 2000: MODIS Collection 6.1 (Terra and Aqua) and VIIRS 375 m Collection 2 (S-NPP, NOAA-20, NOAA-21), from the yearly country files and the near-real-time API.
+2. **Harmonization.** VIIRS records about six times more detections than MODIS over the same fires, so the raw counts cannot be joined (2012 would look like a jump in fire). We put the whole series on the VIIRS scale.
+   - **Standardized before counting.** The FIRMS columns of both sensors are brought to one format: satellite name, acquisition date and UTC time, day or night pass (`daynight`), and the brightness columns, whose names change with the source. Confidence comes on different scales (MODIS 0 to 100, VIIRS low, nominal or high), so MODIS is mapped to the same three classes (below 30 low, 30 to 79 nominal, 80 or more high), and the two scales are never compared directly.
+   - **The same cleaning on both sensors.** Only vegetation fires (`type` 0) with fire power (FRP) above zero, exact duplicates removed, and low-confidence detections kept apart (VIIRS low-confidence night detections are dropped because of the South Atlantic Anomaly). Pixel size (`scan`, `track`) is not filtered.
+   - **What the factor depends on:** biome (six IBGE biomes) × month × day or night pass. Only Aqua is used on the MODIS side, because it crosses at about the same time of day as S-NPP; NOAA-20 is treated as equal to S-NPP. Fire power is left out of the factor on purpose: in the MODIS-only years the fires MODIS missed have no FRP recorded, and FRP is not comparable between the two sensors.
+   - **How the factor is computed.** In the 13 overlap years (2012 to 2024) we count Aqua and S-NPP detections per H3 cell and divide the sums, one factor per biome, month and pass for each year: 1,860 factors. Days with a data gap in either satellite are left out, and a condition with too few detections borrows from the neighbouring months, then from the whole year. A MODIS-era month is the median of the 13 scenarios, with a 5th to 95th percentile range.
 3. **Area queries.** Counts are pre-aggregated by H3 cell, month, satellite and day or night in PostgreSQL with PostGIS. The API sums the cells of the drawn area, applies each scenario's factors and only then takes the median and the range, because the sum of cell percentiles is not the percentile of the sum.
 4. **Risk model.** A gradient boosting model with 10 variables, all from daily VIIRS detection counts per cell (fire in the last 7, 14 and 30 days, trend, neighbouring cells, the same season in earlier years, week of the year, position). It estimates the probability of significant fire (10 or more VIIRS detections) in the next 14 days. It was trained only on earlier years and tested year by year. A separate job writes the scores to the database, and the API only reads them.
 
 ### Benefits
 
-- **A decision aid for brigade commanders:** which areas to look at first today, and where to prepare resources in the next 14 days.
+- **A decision aid for fire commanders and crews:** which areas to look at first today, and where to prepare resources in the next 14 days.
 - **Context, not just a map.** Today's fire is shown against what is normal for the place and the season, with 24 years of NASA data read as one series.
-- **Honest numbers.** The uncertainty of estimated months is shown, the alert rule is versioned, and every number can be rebuilt from the audit package.
+- **Honest numbers.** Estimated months are marked and their uncertainty range is available, the alert rule is versioned, and every number can be rebuilt from the audit package.
 - **Open and easy to reach:** open source, no login, works on desktop and mobile, in English, with colour scales that are readable with colour-vision deficiency.
 
 ### Intended impact
@@ -74,9 +74,18 @@ firesync answers one question for the people who decide where to send fire briga
 - It **warned of 51 in every 100** starts of significant fire (10 or more VIIRS detections in 14 days). Of those, 42 were warned **3 days or more** ahead and 33 **7 days or more** ahead; among the warned, the median lead time was **10 days**. 49 in every 100 still arrive without a warning.
 - When it flags an area (probability of 50% or more), significant fire followed in **78%** of cases, and it flagged **74%** of the areas that had significant fire (in Brazil: 76% and 66%).
 - Looking only at the 20% of areas with the highest score each week, a brigade covers **66%** of the significant fire (top 10% of areas: 42%; a random choice captures only as much as the share of areas chosen).
-- **Independent check with NASA burned area (MCD64A1):** the "very high" tier is 11% of the predictions and holds 75.5% of all the area burned in the following 14 days. 69% of the places that burned had been flagged high or very high. The score separates burned from unburned places with an AUC of 0.898, between 0.880 and 0.904 in each year.
+- NASA's burned-area product agrees: the "very high" tier holds 75.5% of the area burned in the next 14 days (see "How we checked it").
 
 **What we estimate as a scenario, not as a result.** Brigades in conservation units of the Cerrado reduced burned area by about 12% (Oliveira et al., via Aliança da Terra and Embrapa). The Amazon burned about 2.4 million hectares from June to August 2024, an extreme drought year (IPAM). If early warning helped Amazon brigades do the same, **that could mean about 290,000 hectares (710,000 acres) less burned area and about 3.8 million tonnes of CO2 less** in a year like 2024 (288,000 ha × 13.1 t CO2 per hectare, from the same IPAM figures). This assumes that the Cerrado effect also holds in the Amazon, that warning ahead makes brigades more effective (the study measures having brigades, not having a warning), and that an average year would give less. It is a hypothesis to test in a pilot with a fire brigade.
+
+### How we checked it
+
+Every check had its pass or fail criterion fixed before the run, and we tried to refute each result before reporting it.
+
+- **The harmonized series, year by year.** We left one overlap year out, rebuilt the factors with the other years and compared the estimate with the real VIIRS count of the year left out. In the Amazon the error is about 6% a year, and the uncertainty range holds the real value about 8 times in 10.
+- **The harmonized series against INPE's Programa Queimadas**, Brazil's official fire monitoring (2003 to 2025). The two series have the same shape in all six biomes: monthly correlation of 0.94 to 0.99, the same peak month (within one month) in 83% to 100% of the years, and 4 or 5 of the 5 worst years in common. **The bias we declare:** INPE's series is almost Aqua itself (monthly correlation of 0.998), so this comparison checks the shape of the curve and the 2012 sensor switch, not the size of the factor; the year-by-year test above is what checks the factor. INPE is compared only by the shape of the curve, never by absolute value, because it counts on the scale of one satellite. The switch leaves no artificial jump in the Amazon (−0.6%) and up to about 7% in the Cerrado, Caatinga and Pantanal. In the Atlantic Forest (−12.7%) and the Pampa (+12.3%) the step is larger, and we say so in the method.
+- **The risk model against INPE's official fire-risk index** (2021 to 2024, more than 200 weeks, the same target, Pantanal excluded, our model trained each year only on earlier years). Our model ranked areas better in every year: 59% to 64% of its top 10% areas had significant fire, against 25% to 31% for INPE's index (AUC of 0.94 to 0.95 against 0.74 to 0.81). **The bias we declare:** INPE's index measures how dry and flammable the vegetation is, while our target counts satellite detections, which depend a lot on recent fire, the main input of our model. So we tried to refute the result: in areas with no fire in the previous 30 days, in each biome, with 3-day and 7-day horizons, with the cell maximum instead of the mean, and in each year apart. Our model stayed ahead in all of them (in areas with no recent fire, AUC of 0.92 against 0.81). Two points remain open: the target is ours (a target closer to INPE's index, such as burned area, was not part of this comparison), and 2025 and 2026 were not tested. This does not make INPE's index a poor danger indicator: it answers a different question. Adding it to our model gave no gain, so it is an external benchmark and not an input.
+- **The risk model against NASA burned area (MCD64A1)**, a product made from surface reflectance and not from the hot-spot detections the model uses. The "very high" tier is 11% of the predictions and holds 75.5% of all the area burned in the following 14 days. 69% of the places that burned had been flagged high or very high. The score separates burned from unburned places with an AUC of 0.898, between 0.880 and 0.904 in each year. This hit rate is a floor: MCD64A1 misses small burns and pixels under cloud or smoke.
 
 ### Tools, languages, hardware and software
 
@@ -90,7 +99,7 @@ firesync answers one question for the people who decide where to send fire briga
 
 ### The creative aspect
 
-- **Joining two sensors with the doubt shown.** Instead of hiding the 2012 sensor switch, firesync converts MODIS to the VIIRS scale with 13 calibration scenarios and draws the uncertainty band on the calendar. The opening of the site shows the MODIS-to-VIIRS band folding into the calendar.
+- **Joining two sensors without hiding the doubt.** Instead of hiding the 2012 sensor switch, firesync converts MODIS to the VIIRS scale with 13 calibration scenarios, hatches the estimated months on the calendar and gives each one an uncertainty range. The opening of the site shows the MODIS-to-VIIRS band folding into the calendar.
 - **"Is this fire normal?"** Today's fire is compared with the same dates in earlier years, in plain language, with a verdict in one sentence.
 - **Early warning for places with no fire yet.** The risk list brings areas to the top before the first detection.
 - **Everything can be rebuilt.** A versioned alert rule and an audit package for every query, so a judge or a scientist can recompute the numbers.
@@ -99,17 +108,31 @@ firesync answers one question for the people who decide where to send fire briga
 ### Factors the team considered
 
 - **Detections are not fires and not burned area.** One large fire produces many detections. We count detections, and say so on screen.
-- **Risk is a frequency from the past, not a forecast.** 52% of the high-detection periods followed a week rated Normal, and 49 in every 100 starts of significant fire still arrive without a warning. The risk model uses only VIIRS detection counts: no weather forecast. NASA POWER weather data and more MODIS history were tested and did not improve it under criteria fixed before the runs, so they are not in the product.
+- **Risk is an estimate from past cases, not a guarantee.** 52% of the high-detection periods followed a week rated Normal, and 49 in every 100 starts of significant fire still arrive without a warning. The risk model uses only VIIRS detection counts: no weather forecast. NASA POWER weather data and more MODIS history were tested and did not improve it under criteria fixed before the runs, so they are not in the product.
+- **Test years.** The risk model was tested on 2021 to 2024. 2025 and 2026 have not yet been tested out of sample.
 - **Where it is weak.** The Pantanal has few areas and an anomalous 2020, so its results carry a warning. The model covers less outside the fire season (62% in the Amazon).
 - **The conversion assumes** the sensor ratio of 2003 to 2011 was similar to 2012 to 2024, which cannot be tested. In exceptional years (2020 and 2024 in the Amazon) the estimate errs more.
 - **Sensor change.** S-NPP is the VIIRS source until October 2026 and NOAA-20 from November 2026, and the risk model was tested for the switch with no harm.
-- **Independent reference.** The harmonized series was compared with INPE's Programa Queimadas (monthly correlation of 0.94 to 0.99 in all six biomes) and the risk model with INPE's fire-risk index.
+- **Independent references.** The series and the risk model were compared with INPE and with NASA burned area, with the biases of each comparison declared (see "How we checked it").
 - **People under pressure.** Large touch targets, shape and text besides colour, a colour scale readable with colour-vision deficiency, and no login.
+- **The virtual assistant stays inside the data.** It answers only with figures returned by our own API and shows its sources.
 - **A decision aid, not a decision.** The tool ranks where to look. It does not replace field information, wind, or the judgment of the commander.
 
-### How we used AI tools
+### Next steps
 
-The idea, the method and every pass or fail criterion are the team's, and were fixed before the runs. We used AI coding assistants (Claude Code, OpenAI Codex, Antigravity and Lovable) to write and review **code and documents** from those decisions, test-first where possible, and every change entered through a pull request with automated tests. The AI-assisted parts, file by file, are in the "Uso de IA" table of the repository README. **No image, video or audio in the project or in the demo was generated by AI: Grok only captured and edited real recordings of the live site and of the team's narration.** The optional virtual assistant in the site calls a language model at run time and gets every figure in its answers from our own API.
+- **Field updates from the fire line.** A login area for fire commanders and crews to report the conditions of each fire in real time (active, controlled, out, front advancing), so the map joins what the satellite sees with what the crews see on the ground.
+- **Geostationary satellites for faster updates.** VIIRS passes over each place a few times a day. The GOES-19 satellite (GOES-East, NOAA and NASA) watches Brazil continuously and its fire product (ABI Fire Detection and Characterization) is updated about every 10 minutes. Harmonizing GOES with VIIRS, the same way we joined MODIS and VIIRS, could cut the time between a fire starting and it appearing on the map, at the cost of a coarser pixel (about 2 km).
+- **Wind for spread danger.** Integrate a wind forecast API (for example NOAA's GFS) to show where an active fire is likely to spread and how fast. Today the tool ranks where fire may occur, not where it moves.
+- **Climate scenarios set by the user.** Let the user enter an El Niño or La Niña forecast (NOAA's Oceanic Niño Index) and see the scenario for the coming season. We tested the index as an input to the risk model and it did not help, because 13 years hold few El Niño episodes and the effect differs by region; so it would enter as a clearly labelled "what if" scenario, not as part of the measured model.
+
+### Machine learning and AI tools
+
+**Machine learning inside the product.** firesync uses two machine-learning models, both trained only on NASA data:
+
+- **The 14-day risk model** (gradient boosting, scikit-learn). It exists because a fixed rule cannot weigh ten fire signals at once across six biomes and every season. Against the best simple rule we found (fire in the last 30 days plus the average of the same season), it gains about 2 points in the top 10% of areas, in 8 of 8 years; against INPE's fire-risk index, about 30 points. The gain over the simple rule is small and we say so: most of the skill comes from recent fire, and new information (weather forecast, vegetation dryness) is what could raise it.
+- **A detection classifier** that learns the chance that MODIS saw each VIIRS fire, from fire power, temperature, confidence, month, day or night, biome and pixel size. It does not produce the conversion factor. It shows which fires MODIS misses (mostly the weak ones) and serves as a cross-check of the factor.
+
+**AI tools to build it.** The idea, the method and every pass or fail criterion are the team's, and were fixed before the runs. We used AI coding assistants (Claude Code, OpenAI Codex, Antigravity and Lovable) to write and review **code and documents** from those decisions, test-first where possible, and every change entered through a pull request with automated tests. The AI-assisted parts, file by file, are in the "Uso de IA" table of the repository README. **No image, video or audio in the project or in the demo was generated by AI: Grok only captured and edited real recordings of the live site and of the team's narration.** The optional virtual assistant in the site calls a language model at run time and gets every figure in its answers from our own API.
 
 ## NASA Data
 
@@ -190,6 +213,7 @@ No image, video or audio in the project or in the demo was generated by AI: Grok
 | --- | --- |
 | NASA FIRMS (Fire Information for Resource Management System) | https://firms.modaps.eosdis.nasa.gov/ |
 | NASA FIRMS active fire data: MODIS Collection 6.1 and VIIRS 375 m Collection 2 | https://firms.modaps.eosdis.nasa.gov/active_fire/ |
+| NASA FIRMS API (near real time, current month and recent detections map) | https://firms.modaps.eosdis.nasa.gov/api/ |
 | NASA GIBS (Global Imagery Browse Services): Blue Marble, Black Marble and Coastlines | https://www.earthdata.nasa.gov/gibs |
 | NASA 3D Resources: Aqua and Suomi NPP models | https://github.com/nasa/NASA-3D-Resources |
 | NASA MCD64A1 burned area (independent check of the risk model) | https://lpdaac.usgs.gov/products/mcd64a1v061/ |
