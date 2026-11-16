@@ -22,15 +22,15 @@ Os tempos são os da legenda. Grave cada tomada mais longa (3 a 5 s de sobra) e 
 | # | Tempo | Fala | Tela (site) | Texto sobreposto (inglês) |
 | --- | --- | --- | --- | --- |
 | 1 | 0,15–3,43 | "The Amazon is burning. Where should firefighters act first?" | Abrir <https://firesync.nogranlabs.com.br>. A descida do globo termina no mapa em tela cheia, aba `Fire now`, com os focos da Amazônia | Topo: `FireSync · Team [NAME] · [MEMBERS] · NASA Space Apps 2026 · MODIS and VIIRS Hot Spots` |
-| 2 | 3,43–6,81 | "I am Mateus, and FireSync shows which areas are critical today." | No painel `Where to look first`, clicar no primeiro item `Critical`. O mapa centraliza na área | — |
-| 3 | 6,81–12,44 | "We combined 24 years of data from NASA's MODIS and VIIRS satellites into a fire history calendar" | Rolar até o calendário, logo abaixo do mapa. Se a área não for a Amazônia, escolher a região `Amazônia` no painel de seleção (período inteiro, 2003 a 2026). Passar o mouse num mês hachurado (era MODIS) para mostrar a faixa de incerteza | Canto: `NASA FIRMS · MODIS C6.1 (2003–2012) + VIIRS C2 (2012–2026), one harmonized series`. Embaixo dele: `Checked against INPE: monthly correlation 0.94–0.99` |
-| 4 | 12,44–14,64 | "and a risk map for the following days." | Voltar ao mapa e clicar na aba `Risk, next 14 days` | — |
-| 5 | 14,64–22,88 | "In tests, our AI predicted half of the Amazon's major fire outbreaks, about ten days ahead. That's time to act before fires spread." | Abrir `Ask firesync`, colar o prompt abaixo e enviar. A resposta aparece com `Critical fire now` e `Very high 14-day risk` | Topo: `Tested on Amazon 2021–2024 · trained only on past years · 51 of 100 significant outbreaks warned, half of them 10+ days ahead`. Junto do painel: `AI assistant · answers only with FireSync numbers, each one checked` |
-| 6 | 22,88–29,80 | "With crews on the ground, that could save over 700,000 acres. Starting with the Amazon, then forests worldwide." | Fechar o assistente. Mapa de risco escurecido (ou o globo se afastando) | Centro, grande: `Could mean 700,000+ fewer acres burned (~290,000 ha)`. Embaixo: `In a year like 2024 (Jun–Aug) · based on a Cerrado brigade study (−12% burned area) · pilot hypothesis`. Rodapé: `Data: NASA FIRMS (MODIS, VIIRS), NASA GIBS · INPE · Open source, no login · firesync.nogranlabs.com.br` |
+| 2 | 3,43–6,81 | "I am Mateus, and FireSync shows which areas are critical today." | No seletor `Region: All Brazil`, escolher `Amazônia` (o mapa enquadra a Amazônia). Abrir `Indicators`, que mostra o painel `Where to look first`, e clicar no primeiro cartão com `Compared with usual Critical`. O mapa aproxima na área | — |
+| 3 | 6,81–12,44 | "We combined 24 years of data from NASA's MODIS and VIIRS satellites into a fire history calendar" | Clicar no aviso `Calendar below now shows Amazônia · See it`. O calendário da Amazônia aparece, de 2003 a 2026. Passar o mouse num mês hachurado (era MODIS) para mostrar a faixa de incerteza | Canto: `NASA FIRMS · MODIS C6.1 (2003–2012) + VIIRS C2 (2012–2026), one harmonized series`. Embaixo dele: `Checked against INPE: monthly correlation 0.94–0.99` |
+| 4 | 12,44–14,64 | "and a risk map for the following days." | Rolar de volta ao mapa do topo e clicar na aba `Risk, next 14 days`. O painel `Where to look first` passa a agrupar as áreas em `Very high`, `High` e as outras faixas | — |
+| 5 | 14,64–22,88 | "In tests, our AI predicted half of the Amazon's major fire outbreaks, about ten days ahead. That's time to act before fires spread." | Rolar para baixo do mapa do topo, onde o botão do chat aparece. Abrir `Ask firesync`, colar o prompt abaixo e enviar. A resposta aparece com `Critical fire now` e `Very high 14-day risk` | Topo: `Tested on Amazon 2021–2024 · trained only on past years · 51 of 100 significant outbreaks warned, half of them 10+ days ahead`. Junto do painel: `AI assistant · answers only with FireSync numbers, each one checked` |
+| 6 | 22,88–29,80 | "With crews on the ground, that could save over 700,000 acres. Starting with the Amazon, then forests worldwide." | Fechar o assistente e voltar ao mapa do topo, aba `Risk, next 14 days`, escurecido na edição (ou o globo se afastando) | Centro, grande: `Could mean 700,000+ fewer acres burned (~290,000 ha)`. Embaixo: `In a year like 2024 (Jun–Aug) · based on a Cerrado brigade study (−12% burned area) · pilot hypothesis`. Rodapé: `Data: NASA FIRMS (MODIS, VIIRS), NASA GIBS · INPE · Open source, no login · firesync.nogranlabs.com.br` |
 
-O assistente (chatbot) aparece na tomada 5. O botão dele só surge depois da animação do hero.
+O assistente (chatbot) aparece na tomada 5. O botão dele fica escondido enquanto o mapa do topo ocupa a tela: role a página para baixo até ele aparecer. Como cada tomada é gravada separada, a ordem de gravação não precisa ser a do vídeo.
 
-Se o assistente falhar na tomada 5 (`Daily limit reached`, `Assistant unavailable` ou `429`), troque por zoom nas áreas `Very high` da aba `Risk, next 14 days`, com o mesmo texto sobreposto.
+Se o assistente falhar na tomada 5 (`Daily limit reached`, `Assistant unavailable` ou `429`), troque por zoom nas áreas `Very high` da aba `Risk, next 14 days`, com o grupo `Very high` aberto em `Indicators`, com o mesmo texto sobreposto.
 
 ## Textos sobrepostos contra os requisitos e os critérios
 
@@ -75,13 +75,13 @@ Setup: browser in full screen at 1920x1080 (or 1280x720), no other tabs, no noti
 Perform these shots in order. Pause about 3 seconds before and after each one so the editor can cut. Move the mouse slowly and directly; no hovering over unrelated elements.
 
 1. Open https://firesync.nogranlabs.com.br and wait until the globe animation ends on the full-screen map with the "Fire now" tab selected. Hold still for 4 seconds.
-2. In the "Where to look first" panel, click the first item marked Critical. Wait until the map is centered on it. Hold 4 seconds.
-3. Scroll down to the fire calendar right below the map. If its area is not the Amazon, pick the region "Amazônia" in the selection panel, whole period (2003 to the latest month). Hover one hatched month from the MODIS era (2003–2011) so its uncertainty range shows. Hold 6 seconds.
-4. Go back to the map and click the "Risk, next 14 days" tab. Hold 3 seconds.
-5. Open the "Ask firesync" chat. Paste exactly this text and press Enter:
+2. In the "Region: All Brazil" dropdown at the top, choose "Amazônia" and wait until the map frames the Amazon. Click "Indicators" to open the "Where to look first" panel, then click the first card that says "Compared with usual Critical". Wait until the map zooms in on it. Hold 4 seconds.
+3. Click the notice "Calendar below now shows Amazônia · See it". When the fire calendar appears (2003 to the latest month), hover one hatched month from the MODIS era (2003–2011) so its uncertainty range shows. Hold 6 seconds.
+4. Scroll back up to the top map and click the "Risk, next 14 days" tab. Hold 3 seconds.
+5. Scroll down below the top map until the chat button appears, then open the "Ask firesync" chat. Paste exactly this text and press Enter:
    Answer in English. I lead fire crews in the Amazon. Which areas are critical today, and where is fire risk very high for the next 14 days? Three short bullets with place coordinates. No probabilities, no cell IDs.
    Wait for the answer and hold 8 seconds. If the answer is not in English, shows probabilities, or shows an error, stop and report it instead of retrying more than once (the assistant allows only 5 requests per IP).
-6. Close the chat and stay on the "Risk, next 14 days" map. Hold 7 seconds.
+6. Close the chat, scroll back up to the top map on the "Risk, next 14 days" tab. Hold 7 seconds.
 
 At the end, report what you did in each shot and anything that looked different from these steps.
 ```
