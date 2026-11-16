@@ -80,7 +80,12 @@ firesync answers three questions for the people who decide where to send fire cr
 
 ### How we checked it
 
-Every check had its pass or fail criterion fixed before the run, and we tried to refute each result before reporting it.
+Every check had its pass or fail criterion fixed before the run, and we tried to refute each result before reporting it. The full results, with tables, limits and the scripts to rerun them, are in the repository (in Portuguese):
+
+- Risk model, tests and comparison with INPE's index: https://github.com/27threads/firesync/blob/main/docs/rfcs/0003-modelo-risco.md
+- Check with NASA burned area (MCD64A1): https://github.com/27threads/firesync/blob/main/docs/validacao-area-queimada.md
+- MODIS-to-VIIRS harmonization and comparison with INPE's Programa Queimadas: https://github.com/27threads/firesync/blob/main/docs/decisoes-harmonizacao.md
+- Alert rule (Normal, Attention, Critical) backtest: https://github.com/27threads/firesync/blob/main/docs/validacao-alerta.md
 
 - **The harmonized series, year by year.** We left one overlap year out, rebuilt the factors with the other years and compared the estimate with the real VIIRS count of the year left out. In the Amazon the error is about 6% a year, and the uncertainty range holds the real value about 8 times in 10.
 - **The harmonized series against INPE's Programa Queimadas**, Brazil's official fire monitoring (2003 to 2025). The two series have the same shape in all six biomes: monthly correlation of 0.94 to 0.99, the same peak month (within one month) in 83% to 100% of the years, and 4 or 5 of the 5 worst years in common. **The bias we declare:** INPE's series is almost Aqua itself (monthly correlation of 0.998), so this comparison checks the shape of the curve and the 2012 sensor switch, not the size of the factor; the year-by-year test above is what checks the factor. INPE is compared only by the shape of the curve, never by absolute value, because it counts on the scale of one satellite. The switch leaves no artificial jump in the Amazon (−0.6%) and up to about 7% in the Cerrado, Caatinga and Pantanal. In the Atlantic Forest (−12.7%) and the Pampa (+12.3%) the step is larger, and we say so in the method.
