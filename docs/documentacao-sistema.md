@@ -4,7 +4,7 @@ O **firesync** transforma detecções MODIS e VIIRS do NASA FIRMS em um calendá
 
 Síntese para desenvolvimento, testes e revisão, organizada por requisitos, projeto, operação e qualidade do software. Os requisitos e as decisões específicas permanecem nos documentos vinculados; esta visão geral descreve a implementação e o fluxo de trabalho do projeto.
 
-**Aplicação:** [firesync.nogranlabs.com.br](https://firesync.nogranlabs.com.br) · **API:** [firesync-api.nogranlabs.com.br](https://firesync-api.nogranlabs.com.br).
+**Aplicação:** [firesync.nogranlabs.com.br](https://firesync.nogranlabs.com.br) · **API:** [firesync-api.nogranlabs.com.br](https://firesync-api.nogranlabs.com.br/docs).
 
 Antes de contribuir, leia [CLAUDE.md](../CLAUDE.md), [premiação](premiacao.md) e o [ordem de leitura do README](../README.md#para-agentes-ordem-de-leitura). Esta documentação contribui para **Validity** e **Presentation**.
 
