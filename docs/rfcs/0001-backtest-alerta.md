@@ -161,7 +161,7 @@ Plano histórico. Branch nova `a-backtest-alerta`, a partir da `main` depois do 
 1. **Autoteste e funções puras** (`test_backtest_alerta.py` + contas do item 2), sem banco. ~1 h.
 2. **Leitura do banco e saída CSV.** Rodar no banco de teste, com o tempo e os números no PR. ~1 h.
 3. **`eventos_conhecidos.csv`** com as fontes, mais o `eventos.csv` gerado. ~1 h.
-4. **PR** com o `backtest.csv` colado (ou anexado), o resumo para a frente B e a linha na tabela "Uso de IA" do README. A esteira roda `ruff` e `vulture`.
+4. **PR** com o `backtest.csv` colado (ou anexado), o resumo para a frente B e a linha na tabela "AI use" do README. A esteira roda `ruff` e `vulture`.
 
 ## Perguntas respondidas pela frente B (Weberson, 15/11/2026)
 

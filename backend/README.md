@@ -111,6 +111,6 @@ $env:FRONTEND_URL = 'http://127.0.0.1:5173'
 node frontend/e2e/node_modules/@playwright/test/cli.js test -c backend/tests/e2e/playwright.config.cjs
 ```
 
-As duas jornadas novas usam os cinco endpoints reais, conferem o calendário, a janela recente, o mapa, o ZIP e a ausência de cobertura no desktop e celular. A CI executa esse fluxo além das 18 jornadas existentes com API simulada. A implementação foi verificada com dados sintéticos; desempenho e números da carga real aguardam o [roteiro do Eduardo](../docs/validacao-api-eduardo.md). D7/M2 permanece com essa pendência explícita.
+As duas jornadas novas usam os cinco endpoints reais, conferem o calendário, a janela recente, o mapa, o ZIP e a ausência de cobertura no desktop e celular. A CI executa esse fluxo além das 18 jornadas existentes com API simulada. A implementação foi verificada com dados sintéticos e depois com a carga real no site no ar em 15/11 (D7/M2).
 
 Referências: [Python](https://docs.python.org/3/), [FastAPI](https://fastapi.tiangolo.com/), [Starlette](https://www.starlette.io/), [Uvicorn](https://www.uvicorn.org/), [HTTPX](https://www.python-httpx.org/), [H3](https://uber.github.io/h3-py/), [Shapely](https://shapely.readthedocs.io/), [pyproj](https://pyproj4.github.io/pyproj/), [Psycopg](https://www.psycopg.org/psycopg3/docs/), [pytest](https://docs.pytest.org/), [Playwright](https://playwright.dev/).

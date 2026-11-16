@@ -4,7 +4,7 @@ Nov 13, 2026 · @Mateus Nogueira
 
 Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele só **sugere** (aparece como "pode considerar"). Assim fica claro o mínimo para entregar e o que dá pontos extras.
 
-**Situação em 14/11/2026:** ✅ implementado e verificado no escopo indicado · ⏳ parcial. C1–C6 e a integração técnica D7 passaram com PostGIS sintético e navegador, além dos testes unitários/HTTP. A carga científica real não foi acessada nesta entrega: Eduardo executa o [roteiro de validação](validacao-api-eduardo.md) antes de fechar D7/M2. Deploy público segue pendente.
+**Situação em 15/11/2026:** ✅ implementado e verificado no escopo indicado · ⏳ parcial. C1–C6 passaram com PostGIS sintético e navegador, além dos testes unitários/HTTP. O site está no ar com a carga real, e a integração D7 (M2) foi conferida nele em 15/11, no desktop e no celular.
 
 ## 1. Requisitos obrigatórios
 
@@ -16,7 +16,7 @@ Este documento separa o que o desafio **exige** (está nos Objetivos) do que ele
   - resolução espacial (VIIRS \~375 m, MODIS \~1 km)
   - sensibilidade de detecção (o VIIRS detecta mais focos pequenos)
   - horário em que cada satélite passa
-- [ ] **RF04:** Cobrir o período **do início dos anos 2000 até hoje**, com dados atualizados. ⏳ **parcial:** histórico de 2003 até hoje no banco de teste e job NRT a cada 3 h pronto (`job_nrt.py`). Falta rodar na VPS.
+- [x] **RF04:** Cobrir o período **do início dos anos 2000 até hoje**, com dados atualizados. ✅ histórico de 2003 até hoje no banco do site e job NRT a cada 3 h rodando na VPS (`job_nrt.py`, ver RNF03).
 - [x] **RF05:** Entregar os dados harmonizados como **entrada da aplicação web**. ✅ `agregados`, `agregados_diarios`, `fatores_harmonizacao`, `dias_sem_dados`, `cobertura` e `config` no formato do [api.md](api.md) ([banco.md](banco.md)).
 
 ### Parte B: Aplicação web (frontend + API)
@@ -61,11 +61,11 @@ Não vêm do texto do desafio. São necessários porque o sistema é público e 
   - Acima do limite: HTTP `429` com o código `rate_limited` e o cabeçalho `Retry-After`.
   - Um segundo limite no Cloudflare (WAF), antes de o pedido chegar à API.
 - [x] **RNF09:** **Frescor do risco.** A nota de risco só aparece se for recente: a API ignora notas mais velhas que `RISK_MAX_AGE_DAYS` dias (padrão 2) e o mapa fica como antes. ✅ implementado na API (PR 97) e o `job-risco` grava uma nota por dia na VPS desde 15/11; lá o valor é 10, para o mapa segurar a última nota se o job parar ([deploy.md](deploy.md)).
-- [ ] **RNF07:** **Monitoramento.** ⏳ **parcial:** front avisa sobre dados com mais de 6 h; API registra endpoint, duração, células e status; pipeline e job NRT gravam logs estruturados em JSON ([pipeline-dados.md](pipeline-dados.md), seção "Logs estruturados"). Canal de aviso à equipe aguarda deploy.
+- [ ] **RNF07:** **Monitoramento.** ⏳ **parcial:** front avisa sobre dados com mais de 6 h; API registra endpoint, duração, células e status; pipeline e job NRT gravam logs estruturados em JSON ([pipeline-dados.md](pipeline-dados.md), seção "Logs estruturados"). Falta o canal de aviso à equipe.
   - **Dado velho:** se o `updated_at` passar de **6 horas** (duas rodadas do job NRT perdidas), a equipe recebe um aviso, e a tela mostra ao usuário que os dados podem estar desatualizados. Para o público de emergência, mostrar dado velho como se fosse atual é pior do que avisar.
   - **Logs da API:** cada pedido registra o endpoint, o tempo de resposta, o número de células da área e o status HTTP.
   - **Logs do job NRT:** cada rodada registra quantos focos entraram, quanto tempo levou e os erros.
-  - O canal do aviso (e-mail, Discord, Telegram) é decidido no deploy.
+  - O canal do aviso (e-mail, Discord, Telegram) ainda não foi escolhido.
 - [x] **RNF08:** **Testes automáticos (CI).** Todo PR com código roda os testes sozinho, pelo GitHub Actions, e só entra na `main` se passar. Detalhes em [arquitetura.md](arquitetura.md), seção "Qualidade e testes". ✅ esteira no GitHub Actions (pipeline, integração com PostGIS, contrato da API, jornadas E2E); `main` protegida.
 
 ## 4. Decisões que o texto deixa em aberto
@@ -107,9 +107,9 @@ Texto de cada campo em [pagina-projeto.md](pagina-projeto.md). Marcado = texto p
 
 ### Aplicação
 
-- [ ] Interface em inglês
-- [ ] Crédito ao FIRMS visível no app
-- [ ] Identificar código gerado com IA em texto descritivo ou metadados (ex.: README)
+- [x] Interface em inglês (D1)
+- [x] Crédito ao FIRMS visível no app (selo "NASA FIRMS data" e seção Data & credits, D1)
+- [x] Identificar código gerado com IA em texto descritivo ou metadados: tabela "AI use" do [README](../README.md)
 - [x] Pedir a classificação FortiGuard do site para os jurados não terem o acesso bloqueado (recomendado, não obrigatório). ✅ site e API classificados como Business; reclassificação para Information Technology pedida em 15/11 (C8)
 
 ### Elegibilidade

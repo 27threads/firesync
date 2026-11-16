@@ -206,7 +206,7 @@ Antes da submissão, no escopo mínimo abaixo. Cada etapa é um PR pequeno, com 
 
 1. **Backend (C11):** `ports/llm.py`, `application/assistant.py`, `assistant_tools.py` com `LlmClient` falso; rota `POST /api/v1/ask` com validação, erros, rate limit, teto diário e cache dos chips; adaptador `openai.py` com a cadeia de provedores (testado com o HTTP mockado, a esteira não acessa rede); seção nova no `api.md` e variáveis no `infra/.env.example` e no `backend/README.md`.
 2. **Ferramentas:** `list_regions`, `get_calendar`, `get_recent`, `get_fire_map` primeiro. `build_report` entra se sobrar tempo; sem ela, "report" responde com `get_calendar` + `download_export`.
-3. **Front (D11):** `frontend/src/assistant/` com Vitest e uma jornada Playwright (abre a bolinha, clica num chip, vê a resposta e o calendário aplicado) com a API falsa.
+3. **Front (D13):** `frontend/src/assistant/` com Vitest e uma jornada Playwright (abre a bolinha, clica num chip, vê a resposta e o calendário aplicado) com a API falsa.
 4. **Deploy:** chaves na VPS, conferir as 5 perguntas dos chips contra o calendário na tela e aquecer o cache dos chips antes de enviar a submissão.
 
 ## Perguntas em aberto

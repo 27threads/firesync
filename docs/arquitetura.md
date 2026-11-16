@@ -1,6 +1,6 @@
 # Arquitetura e stack
 
-Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir" precisa de um responsável e de uma escolha antes de alguém escrever código naquela parte.
+Este documento registra as escolhas técnicas do projeto. Cada ponto tem um responsável e uma escolha; um ponto novo entra na tabela antes de alguém escrever código naquela parte.
 
 **Status:** decisões dos pontos 1–14 registradas na tabela abaixo.
 
@@ -16,7 +16,7 @@ Este documento registra as escolhas técnicas do projeto. Cada linha "a decidir"
 | Consulta | Pré-agregada. A API não consulta o FIRMS na hora | [requisitos.md](requisitos.md), RNF04 |
 | Início do calendário | Janeiro de 2003 | [plano-extracao-amazonia.md](plano-extracao-amazonia.md) |
 
-## A decidir
+## Decisões por parte
 
 | # | Ponto | Opções levantadas | Escolha | Responsável |
 | --- | --- | --- | --- | --- |

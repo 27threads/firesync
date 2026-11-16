@@ -2,7 +2,7 @@
 
 ## Estado da entrega
 
-C1–C6 implementados em `c-api-http-routes`. Foram testados os cinco endpoints, cálculos históricos/recentes, erros, rate limit, cache e ZIP com dados sintéticos, incluindo PostgreSQL/PostGIS e navegador em desktop/celular. **A carga real não foi acessada nesta entrega.** Conforme combinado, Eduardo executa os testes abaixo antes de fechar D7/M2. Este documento é o roteiro de repasse, não um relatório de resultados reais.
+C1–C6 implementados em `c-api-http-routes`. Foram testados os cinco endpoints, cálculos históricos/recentes, erros, rate limit, cache e ZIP com dados sintéticos, incluindo PostgreSQL/PostGIS e navegador em desktop/celular. A integração com a carga real (D7/M2) foi conferida no site no ar em 15/11. Este documento é o roteiro dos testes com a carga real, não um relatório de resultados.
 
 A tarefa melhora **Validity** (números verificáveis), **Impact** (janela atual disponível para decisão) e sustenta a categoria **Best Use of Science** (contagens, fatores e método no ZIP).
 
