@@ -39,7 +39,8 @@ test.describe('Jornadas do usuário', () => {
 
   test('J3: digita latitude, longitude e raio (RD02)', async ({ page }) => {
     await simularApi(page);
-    const pedido = page.waitForRequest('**/api/v1/calendar');
+    // Ao abrir, o site já pede o calendário da primeira região; esta jornada espera o pedido do ponto digitado.
+    const pedido = page.waitForRequest((r) => r.url().includes('/api/v1/calendar') && r.postDataJSON()?.area?.type === 'point');
     await page.goto('/');
     await page.getByText(/more options/i).click();
     await page.getByLabel(/latitude/i).fill('-3.1');
@@ -47,6 +48,21 @@ test.describe('Jornadas do usuário', () => {
     await page.getByLabel(/radius/i).fill('25');
     await page.getByRole('button', { name: /search|show this area/i }).click();
     expect((await pedido).postDataJSON().area).toMatchObject({ type: 'point', lat: -3.1, lon: -60, radius_km: 25 });
+  });
+
+  test('J12: escolhe uma região no mapa do hero e o calendário logo abaixo passa a ser dela', async ({ page }) => {
+    await simularApi(page);
+    await page.goto('/');
+    // A busca inicial da primeira região terminou (ela também pede a região 1).
+    await expect(page.locator('.selection-bar__fields dd').first()).toHaveText('Amazônia');
+    // O mapa do hero só monta e liga quando a abertura chega nele.
+    await page.locator('.opening').evaluate((el) => window.scrollTo(0, el.offsetTop + el.offsetHeight - window.innerHeight));
+    const doMapa = page.locator('.hm-select select');
+    await expect(doMapa.locator('option', { hasText: 'Amazônia' })).toBeAttached();
+    const pedido = page.waitForRequest((r) => r.url().includes('/api/v1/calendar'));
+    await doMapa.selectOption({ label: 'Amazônia' });
+    expect((await pedido).postDataJSON().area).toEqual({ type: 'region', region_id: 1 });
+    await expect(page.getByText('Calendar below now shows')).toBeVisible();
   });
 
   test('J4: área fora da cobertura mostra aviso, nunca um calendário de zeros', async ({ page }) => {

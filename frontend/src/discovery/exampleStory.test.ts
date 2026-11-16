@@ -18,9 +18,17 @@ describe('guided discovery built from the response fields', () => {
 
   it('names the month with the highest median from seasonality[]', () => {
     const season = story.find((s) => s.id === 'season')!;
-    const peak = [...data.seasonality].sort((a, b) => b.median - a.median)[0];
+    const peak = [...data.seasonality].sort((a, b) => (b.median ?? 0) - (a.median ?? 0))[0];
     expect(season.monthIndex).toBe(peak.month_of_year - 1);
     expect(season.answer).toContain('Sep');
+  });
+
+  it('skips the peak question when the period has no complete year (the API sends null medians)', () => {
+    const noCompleteYear = {
+      ...data,
+      seasonality: data.seasonality.map((s) => ({ ...s, median: null, mean: null, min: null, max: null, n_years: 0 })),
+    };
+    expect(buildExampleStory(noCompleteYear).find((s) => s.id === 'season')).toBeUndefined();
   });
 
   it('names the first-ranked complete year, never an incomplete one', () => {

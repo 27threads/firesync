@@ -31,7 +31,17 @@ export function OrbitalOpening() {
     if (!element) return;
     let frame = 0;
     let previous = performance.now();
+    // Fora da tela (o usuário já está no calendário) o loop não mede nem atualiza nada, como a cena 3D.
+    let onScreen = true;
+    const visibility =
+      typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(([entry]) => { onScreen = entry?.isIntersecting ?? true; });
+    visibility?.observe(element);
     const update = () => {
+      frame = requestAnimationFrame(update);
+      if (!onScreen) {
+        previous = performance.now();
+        return;
+      }
       // A descida usa a altura da seção sem a parada final, em que o mapa em tela cheia fica à mostra.
       const target = journeyProgress(element.getBoundingClientRect().top, element.offsetHeight - window.innerHeight * MAP_ARRIVAL_HOLD, window.innerHeight);
       const now = performance.now();
@@ -45,10 +55,12 @@ export function OrbitalOpening() {
       setMapActive(progress.current >= 0.98 && target >= 0.98);
       // Com movimento reduzido a seção não rola: o capítulo muda só pelos botões.
       if (!prefersReducedMotion()) setChapter(chapterAt(progress.current));
-      frame = requestAnimationFrame(update);
     };
     update();
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+      visibility?.disconnect();
+    };
   }, []);
 
   const showChapter = (index: number) => {

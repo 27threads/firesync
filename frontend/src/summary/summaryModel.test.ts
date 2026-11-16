@@ -1,6 +1,6 @@
 import example from '../../../docs/api-exemplo.json';
 import type { CalendarResponse, RecentWindow, YearTotal } from '../api/types';
-import { buildRanking, buildSeasonality, compareToTypical, rangeStripScale, sourceLabel } from './summaryModel';
+import { buildRanking, buildSeasonality, compareToTypical, completeSeasonality, rangeStripScale, sourceLabel } from './summaryModel';
 
 const response = example as unknown as CalendarResponse;
 
@@ -81,7 +81,7 @@ describe('buildRanking', () => {
 });
 
 describe('buildSeasonality', () => {
-  const model = buildSeasonality(response.seasonality);
+  const model = buildSeasonality(completeSeasonality(response.seasonality)!);
 
   it('has the 12 months in calendar order with their names', () => {
     expect(model.months.map((m) => m.name)).toEqual([
