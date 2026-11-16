@@ -1,4 +1,4 @@
-// Geometria da abertura com o globo (portada do protótipo em lovable/). Funções puras: a cena só desenha.
+// Geometria da abertura com o globo (portada do protótipo feito no Lovable). Funções puras: a cena só desenha.
 
 /** Enquadramento final da descida: o Brasil no centro, no zoom 4 dos tiles do NASA GIBS. */
 export const SURFACE_VIEW = { latitude: -14, longitude: -52, zoom: 4, radius: 1.6, fov: 34 };

@@ -157,7 +157,7 @@ The idea, the method and every pass or fail criterion are the team's, and were f
 - Data pipeline and models: pandas, PyArrow, GeoPandas, pyogrio, Shapely, h3, psycopg, scikit-learn (HistGradientBoostingClassifier).
 - Tests and quality: pytest, pytest-cov, httpx, Ruff, Vulture.
 - Database and infrastructure: PostgreSQL, PostGIS (`postgis/postgis` image), Docker Compose, Cloudflare Workers, Cloudflare Tunnel, GitHub Actions.
-- Opening animation prototype (`lovable/` folder): built with Lovable (TanStack Start).
+- Opening animation prototype: built with Lovable (TanStack Start), then ported to the React front end.
 
 ## Use of Super Intelligence
 
@@ -168,7 +168,7 @@ We used AI coding assistants to write and review code and documents from those d
 - **Claude Code** (Anthropic; Claude Opus, Sonnet and Fable models): data pipeline, calibration and validation scripts, risk model job, database schema, front-end interface and method screen, deployment configuration, tests, and drafting of documents, including this page.
 - **OpenAI Codex**: API domain, ports and adapters, HTTP routes, tests and documentation updates.
 - **Antigravity**: front-end area selection, recent detections layer, API integration and downloads.
-- **Lovable**: the opening animation prototype in the `lovable/` folder.
+- **Lovable**: the opening animation prototype, later ported to the React front end.
 
 The app itself also uses a language model at run time: the chat assistant. It only chooses which API function to call and words the answer; the numbers come from the API and are checked before the answer is shown.
 
