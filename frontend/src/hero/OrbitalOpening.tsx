@@ -1,10 +1,11 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useMediaQuery } from '../ui/useMediaQuery';
-import { chapterAt, journeyProgress, STACKED_OPENING_MAX_WIDTH } from './globeTransition';
+import { chapterAt, journeyProgress, MAP_ARRIVAL_HOLD, smoothPhase, STACKED_OPENING_MAX_WIDTH } from './globeTransition';
 import { prefersReducedMotion } from './heroIntro';
 import { OPENING_AUDIENCE, OPENING_CHAPTERS, OPENING_DATA_CREDIT } from './openingCopy';
 
 const OrbitalScene = lazy(() => import('./OrbitalScene'));
+const HeroMap = lazy(() => import('./HeroMap'));
 
 // Ponto do scroll em que cada capítulo do texto aparece (o mesmo corte de chapterAt).
 const CHAPTER_STOPS = [0, 0.3, 0.7];
@@ -18,6 +19,8 @@ export function OrbitalOpening() {
   const section = useRef<HTMLElement>(null);
   const progress = useRef(0);
   const [chapter, setChapter] = useState(0);
+  const [mapActive, setMapActive] = useState(false);
+  const [mountMap, setMountMap] = useState(false);
   const [playing, setPlaying] = useState(() => !prefersReducedMotion());
   // A mesma regra de openingLayout, que a cena usa para enquadrar o globo.
   const stacked = useMediaQuery(`(max-width: ${STACKED_OPENING_MAX_WIDTH}px)`);
@@ -28,13 +31,17 @@ export function OrbitalOpening() {
     let frame = 0;
     let previous = performance.now();
     const update = () => {
-      const target = journeyProgress(element.getBoundingClientRect().top, element.offsetHeight, window.innerHeight);
+      // A descida usa a altura da seção sem a parada final, em que o mapa em tela cheia fica à mostra.
+      const target = journeyProgress(element.getBoundingClientRect().top, element.offsetHeight - window.innerHeight * MAP_ARRIVAL_HOLD, window.innerHeight);
       const now = performance.now();
       const delta = Math.min((now - previous) / 1000, 0.05);
       previous = now;
       const value = prefersReducedMotion() ? target : progress.current + (target - progress.current) * (1 - Math.exp(-delta * 9));
       progress.current = Math.abs(target - value) < 0.001 ? target : value;
       element.style.setProperty('--journey-progress', progress.current.toFixed(3));
+      element.style.setProperty('--map-blend', smoothPhase(progress.current, 0.9, 0.98).toFixed(3));
+      if (progress.current > 0.4) setMountMap(true);
+      setMapActive(progress.current >= 0.98 && target >= 0.98);
       // Com movimento reduzido a seção não rola: o capítulo muda só pelos botões.
       if (!prefersReducedMotion()) setChapter(chapterAt(progress.current));
       frame = requestAnimationFrame(update);
@@ -50,7 +57,7 @@ export function OrbitalOpening() {
       setChapter(index);
       return;
     }
-    const distance = Math.max(1, element.offsetHeight - window.innerHeight);
+    const distance = Math.max(1, element.offsetHeight - window.innerHeight * (1 + MAP_ARRIVAL_HOLD));
     const top = window.scrollY + element.getBoundingClientRect().top + distance * (CHAPTER_STOPS[index] ?? 0);
     window.scrollTo({ top, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   };
@@ -63,6 +70,11 @@ export function OrbitalOpening() {
         <Suspense fallback={<div className="orbital-canvas" />}>
           <OrbitalScene playing={playing} progress={progress} />
         </Suspense>
+        {mountMap && !prefersReducedMotion() && (
+          <Suspense fallback={null}>
+            <HeroMap active={mapActive} onReturn={() => showChapter(0)} onNext={goToExplorer} />
+          </Suspense>
+        )}
         <div className="opening__copy">
           <p className="opening__kicker">{OPENING_AUDIENCE}</p>
           <h1 id="opening-title" className="opening__brand">

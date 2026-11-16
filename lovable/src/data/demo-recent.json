@@ -50,7 +50,9 @@
         "n_medium": 18,
         "n_high": 8,
         "alert_cell": "84a8101ffffffff",
-        "alert_level": "critical"
+        "alert_level": "critical",
+        "risk_prob": 0.71,
+        "risk_tier": "very_high"
       }
     }
   ],
@@ -70,8 +72,39 @@
         "center": [
           -60.2,
           -3.1
-        ]
+        ],
+        "risk_prob": 0.71,
+        "risk_tier": "very_high"
       }
-    ]
+    ],
+    "risk": {
+      "scored_at": "2026-11-14T15:00:00Z",
+      "data_ref": "2026-11-14",
+      "model_version": "demo",
+      "horizon_days": 14,
+      "rules_version": "demo",
+      "tiers": [
+        {
+          "tier": "very_high",
+          "min_prob": 0.6,
+          "historical_share": 0.82
+        },
+        {
+          "tier": "high",
+          "min_prob": 0.4,
+          "historical_share": 0.46
+        },
+        {
+          "tier": "medium",
+          "min_prob": 0.2,
+          "historical_share": 0.27
+        },
+        {
+          "tier": "lower",
+          "min_prob": 0.0,
+          "historical_share": 0.03
+        }
+      ]
+    }
   }
 }
