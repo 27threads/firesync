@@ -23,7 +23,7 @@ Escopo: consulta pública da cobertura disponível no Brasil, com calendário de
 
 **Caso de uso central — analisar uma área:** o visitante seleciona área e período válidos; a API consulta o banco carregado; a tela apresenta calendário, indicadores e opções de exportação. Pré-condição: serviços e dados disponíveis. Pós-condição: análise vinculada à seleção. Fora da cobertura, aparece “sem dados”; entrada inválida ou excesso de pedidos produz mensagem específica, nunca zeros que simulem observações.
 
-**Telas/protótipo:** abertura com globo → mapa e seleção → resumo recente → calendário e gráficos → Método e créditos. `lovable/` guarda o protótipo; `frontend/` contém a aplicação principal. Detalhes e critérios: [requisitos](requisitos.md), [UX](ux-telas.md) e [tarefas](tarefas.md). O assistente do [RFC 0004](rfcs/0004-assistente-virtual.md) já está implementado. A interface depende de `VITE_ENABLE_ASSISTANT=true` no build e o backend de `ASSISTANT_PROVIDERS`; a existência do código não implica ativação em produção.
+**Telas/protótipo:** abertura com globo → mapa e seleção → resumo recente → calendário e gráficos → Método e créditos. `frontend/` contém a aplicação. Detalhes e critérios: [requisitos](requisitos.md), [UX](ux-telas.md) e [tarefas](tarefas.md). O assistente do [RFC 0004](rfcs/0004-assistente-virtual.md) já está implementado. A interface depende de `VITE_ENABLE_ASSISTANT=true` no build e o backend de `ASSISTANT_PROVIDERS`; a existência do código não implica ativação em produção.
 
 ## 2. Projeto de software
 

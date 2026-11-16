@@ -9,7 +9,7 @@ import fastEarthUrl from './assets/earth-fast.jpg?url';
 import { SPACECRAFT_LABELS } from './openingCopy';
 import { advanceGlobeRotation, BLUE_MARBLE_TILES, mercatorLatitude, openingLayout, smoothPhase, SPACECRAFT_LIGHT, surfaceCameraDistance, SURFACE_VIEW, tilePosition } from './globeTransition';
 
-// Portada do protótipo em lovable/. Geometria só de apresentação: não são efemérides nem coordenadas de focos.
+// Portada do protótipo feito no Lovable. Geometria só de apresentação: não são efemérides nem coordenadas de focos.
 export default function OrbitalScene({ playing, progress, onSurfaceReady, onGlobeReady }: { playing: boolean; progress: MutableRefObject<number>; onSurfaceReady?: () => void; onGlobeReady?: () => void }) {
   const host = useRef<HTMLDivElement>(null);
   const animate = useRef(playing);
