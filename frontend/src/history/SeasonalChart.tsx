@@ -4,7 +4,10 @@ import { formatCount } from '../format';
 import { buildSeasonality } from '../summary/summaryModel';
 import { NARROW_QUERY, useMediaQuery } from '../ui/useMediaQuery';
 
-const M = { top: 16, right: 8, bottom: 26, left: 44 };
+const M = { top: 16, right: 8, bottom: 26 };
+// Room for the Y axis numbers: about 6.2 units per character at the chart's font size, plus the gap to the plot.
+const CHAR_W = 6.2;
+const AXIS_GAP = 10;
 
 interface SeasonalChartProps {
   seasonality: SeasonalityMonth[];
@@ -19,8 +22,9 @@ export function SeasonalChart({ seasonality, includesEstimatedYears, highlightMo
   const H = narrow ? 220 : 250;
   const model = buildSeasonality(seasonality);
   const y = scaleLinear().domain([0, model.maxValue || 1]).nice().range([H - M.bottom, M.top]);
-  const band = (W - M.left - M.right) / 12;
   const ticks = y.ticks(4);
+  const left = Math.ceil(AXIS_GAP + CHAR_W * Math.max(...ticks.map((t) => formatCount(t).length)));
+  const band = (W - left - M.right) / 12;
   const peakIndex = model.months.indexOf(model.peak);
   const hi = highlightMonthIndex ?? peakIndex;
 
@@ -43,14 +47,14 @@ export function SeasonalChart({ seasonality, includesEstimatedYears, highlightMo
       >
         {ticks.map((t) => (
           <g key={t}>
-            <line className="chart__grid" x1={M.left} x2={W - M.right} y1={y(t)} y2={y(t)} />
-            <text x={M.left - 6} y={y(t) + 4} textAnchor="end">
+            <line className="chart__grid" x1={left} x2={W - M.right} y1={y(t)} y2={y(t)} />
+            <text x={left - 6} y={y(t) + 4} textAnchor="end">
               {formatCount(t)}
             </text>
           </g>
         ))}
         {model.months.map((m, i) => {
-          const cx = M.left + band * i + band / 2;
+          const cx = left + band * i + band / 2;
           return (
             <g key={m.name} className={i === hi ? 'chart__peak' : undefined}>
               <title>{`${m.name}: median ${formatCount(m.median)}, lowest ${formatCount(m.min)}, highest ${formatCount(m.max)}`}</title>

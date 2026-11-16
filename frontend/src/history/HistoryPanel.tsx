@@ -13,6 +13,7 @@ import { Tooltip } from '../ui/Tooltip';
 import { NARROW_QUERY, useMediaQuery } from '../ui/useMediaQuery';
 import { MonthPanel } from './MonthPanel';
 import { SeasonalChart } from './SeasonalChart';
+import { YearLinesChart } from './yearLines';
 import { YearRanking } from './YearRanking';
 
 function monthLabel(key: string): string {
@@ -32,7 +33,14 @@ interface HistoryPanelProps {
   request: CalendarRequest | null;
 }
 
-function CalendarTable({ data }: { data: CalendarResponse }) {
+interface CalendarTableProps {
+  data: CalendarResponse;
+  selectedKey: string | null;
+  onSelectKey: (key: string) => void;
+}
+
+/** Month by month, next to the calendar: a click on a month opens it in the month detail, like a click on the calendar. */
+export function CalendarTable({ data, selectedKey, onSelectKey }: CalendarTableProps) {
   return (
     <div className="cal-table-wrap">
       <table className="cal-table">
@@ -40,24 +48,47 @@ function CalendarTable({ data }: { data: CalendarResponse }) {
         <thead>
           <tr>
             <th scope="col">Month</th>
-            <th scope="col">Detections</th>
+            <th scope="col" className="n">
+              Detections
+            </th>
             <th scope="col">Source</th>
-            <th scope="col">Uncertainty range</th>
-            <th scope="col">Days without data</th>
+            <th scope="col" className="n">
+              Uncertainty range
+            </th>
+            <th scope="col" className="n">
+              Days without data
+            </th>
             <th scope="col">Notes</th>
           </tr>
         </thead>
         <tbody>
           {data.months.map((m) => {
             const d = describeMonth(m);
+            const selected = m.month === selectedKey;
+            const notes = [m.incomplete && 'Incomplete', m.provisional && 'Provisional'].filter((n): n is string => Boolean(n));
+            const rowClass = [m.month.endsWith('-01') && 'cal-table__year-start', selected && 'is-selected'].filter(Boolean).join(' ');
             return (
-              <tr key={m.month}>
-                <th scope="row">{d.title}</th>
+              <tr key={m.month} className={rowClass || undefined}>
+                <th scope="row">
+                  <button type="button" className="cal-table__month" aria-pressed={selected} onClick={() => onSelectKey(m.month)}>
+                    {d.title}
+                  </button>
+                </th>
                 <td className="n">{d.value.replace(' detections', '')}</td>
-                <td>{m.source === 'estimated_modis' ? 'Estimated (MODIS)' : 'Observed (VIIRS)'}</td>
-                <td>{d.range ? d.range.replace('Uncertainty range ', '') : '—'}</td>
-                <td className="n">{m.missing_days}</td>
-                <td>{[m.incomplete && 'Incomplete', m.provisional && 'Provisional'].filter(Boolean).join(', ')}</td>
+                <td>
+                  <span className={`cal-src cal-src--${m.source === 'estimated_modis' ? 'modis' : 'viirs'}`}>
+                    {m.source === 'estimated_modis' ? 'Estimated · MODIS' : 'Observed · VIIRS'}
+                  </span>
+                </td>
+                <td className="n">{d.range ? d.range.replace('Uncertainty range ', '') : '—'}</td>
+                <td className="n">{m.missing_days || '—'}</td>
+                <td>
+                  {notes.map((n) => (
+                    <span key={n} className="cal-note">
+                      {n}
+                    </span>
+                  ))}
+                </td>
               </tr>
             );
           })}
@@ -106,7 +137,6 @@ export function HistoryPanel({
   const svgRef = useRef<SVGSVGElement>(null);
   const overlayRef = useRef<SVGSVGElement>(null);
   const playedRef = useRef(false);
-  const [asTable, setAsTable] = useState(false);
   const [hover, setHover] = useState<{ cell: CalendarCell; anchor: DOMRect } | null>(null);
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const narrow = useMediaQuery(NARROW_QUERY);
@@ -171,25 +201,20 @@ export function HistoryPanel({
       <section aria-labelledby="history-title">
         <div className="section-head">
           <div>
-            <h2 id="history-title">A longer view of fire activity</h2>
+            <h2 id="history-title">Fire calendar</h2>
             <p>
               Monthly detections on the VIIRS scale, {periodLabel}. One row per year, January to December.
               {shown?.isDemo ? ' Demo data.' : ''}
             </p>
           </div>
-          {data && (
-            <div className="section-head__actions">
-              <button type="button" className="btn btn--quiet" aria-pressed={asTable} onClick={() => setAsTable((v) => !v)}>
-                View as table
-              </button>
-            </div>
-          )}
         </div>
 
         {!data || !model ? (
           <EmptyHistory result={result} />
         ) : (
           <div className={result.kind === 'loading' ? 'is-loading' : undefined}>
+            {/* Chart and table side by side: the calendar is the core of the challenge (review on 15/11). */}
+            <div className="cal-duo">
             <div className="calendar-block">
               <div>
                 <div className="calendar-scroll" style={{ position: 'relative' }}>
@@ -249,7 +274,10 @@ export function HistoryPanel({
               </div>
               <MonthPanel month={selectedMonth} months={data.months} />
             </div>
-            {asTable && <CalendarTable data={data} />}
+            <CalendarTable data={data} selectedKey={selectedKey} onSelectKey={onSelectKey} />
+            </div>
+
+            <YearLinesChart months={data.months} seasonality={data.seasonality} highlightYear={highlightYear} />
 
             <div className="context-grid">
               <SeasonalChart seasonality={data.seasonality} includesEstimatedYears={includesEstimatedYears} highlightMonthIndex={highlightMonthIndex} />

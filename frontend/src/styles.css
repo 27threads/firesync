@@ -389,46 +389,6 @@ select {
   color: var(--fog-200);
 }
 
-.opening__controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 18px;
-}
-
-.opening__controls button {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius);
-  background: transparent;
-  color: var(--fog-200);
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.opening__controls button:hover,
-.opening__controls button:focus-visible {
-  background: var(--graphite-800);
-}
-
-.opening__step span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--fog-400);
-  transition: width var(--t-fast) var(--ease);
-}
-
-.opening__step[aria-pressed='true'] span {
-  width: 18px;
-  border-radius: 3px;
-  background: var(--amber);
-}
-
 .opening__credit {
   margin: 14px 0 0;
   font-size: 12px;
@@ -985,9 +945,10 @@ select {
   color: var(--fog-200);
 }
 
+/* Controls and summary side by side; the map that sat between them moved up to the hero (#149). */
 .ws-top {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   min-height: 620px;
   border-bottom: 1px solid var(--graphite-700);
 }
@@ -995,7 +956,7 @@ select {
 .ws-map {
   position: relative;
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
   border-right: 1px solid var(--graphite-700);
 }
@@ -1486,6 +1447,17 @@ select {
   border-top: 2px solid var(--ink);
 }
 
+/* Wide screens: the last 7 days and the month to date side by side, so the range strips keep a readable size. */
+@media (min-width: 1100px) {
+  .ws-top .summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 40px;
+  }
+  .ws-top .summary > :not(.window-card) {
+    grid-column: 1 / -1;
+  }
+}
+
 .window-card--secondary {
   border-top: 1px solid var(--rule-strong);
 }
@@ -1829,12 +1801,87 @@ select {
 .cal-table thead th {
   position: sticky;
   top: 0;
+  z-index: 2;
+  padding-top: 10px;
+  padding-bottom: 10px;
   background: var(--paper-raised);
+  border-bottom: 2px solid var(--ink);
+  color: var(--ink-soft);
+  font-size: 11.5px;
   font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.cal-table td.n {
+.cal-table .n {
   text-align: right;
+}
+
+/* The month stays in view while the other columns scroll sideways. */
+.cal-table th[scope='row'],
+.cal-table thead th:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--paper-raised);
+}
+.cal-table thead th:first-child {
+  z-index: 3;
+}
+.cal-table th[scope='row'] {
+  z-index: 1;
+  padding: 0;
+}
+
+.cal-table__month {
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cal-table tbody tr:hover td,
+.cal-table tbody tr:hover th[scope='row'] {
+  background: #eef0ec;
+}
+
+.cal-table tbody tr.is-selected td,
+.cal-table tbody tr.is-selected th[scope='row'] {
+  background: #fdf1dc;
+}
+.cal-table tbody tr.is-selected th[scope='row'] {
+  box-shadow: inset 3px 0 0 var(--amber);
+}
+
+/* A stronger line at each January, so the years read as blocks. */
+.cal-table tr.cal-table__year-start > * {
+  border-top: 1px solid var(--rule-strong);
+}
+
+.cal-src,
+.cal-note {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.cal-src--viirs {
+  background: #e3e8f4;
+  color: #213a7a;
+}
+.cal-src--modis {
+  background: repeating-linear-gradient(135deg, #ebebe6 0 4px, #e0e0da 4px 8px);
+  color: #4b535c;
+}
+.cal-note {
+  margin-right: 4px;
+  background: #f6e7c8;
+  color: #6b4a0f;
 }
 
 .context-grid {
@@ -1894,6 +1941,108 @@ select {
 
 .chart__row--highlight .chart__bar {
   fill: var(--amber-ink);
+}
+
+/* "Is this year normal?": the chosen year over the range of the complete years. */
+.year-lines {
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid var(--rule-strong);
+}
+.year-lines .chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.year-lines__band {
+  fill: var(--rule-strong);
+  opacity: 0.55;
+}
+.year-lines__median {
+  fill: none;
+  stroke: var(--ink-soft);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+.year-lines__prev {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.4;
+  opacity: 0.45;
+}
+.year-lines__other {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1;
+  opacity: 0.2;
+}
+.year-lines__range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.year-lines__range select {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+.year-lines__year {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+.year-lines__dot {
+  fill: var(--amber);
+  stroke: var(--paper, #fff);
+  stroke-width: 1.5;
+}
+.year-lines__key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.year-lines__key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.year-lines__swatch {
+  display: inline-block;
+  width: 22px;
+  height: 0;
+  border-top: 3px solid var(--amber);
+}
+.year-lines__swatch--prev {
+  border-top: 1.5px solid var(--ink);
+  opacity: 0.45;
+}
+.year-lines__swatch--other {
+  border-top: 1px solid var(--ink);
+  opacity: 0.3;
+}
+.year-lines__swatch--median {
+  border-top: 1.5px dashed var(--ink-soft);
+}
+.year-lines__swatch--band {
+  height: 10px;
+  border: 0;
+  background: var(--rule-strong);
+  opacity: 0.55;
 }
 
 .ranking-incomplete {
@@ -2221,7 +2370,6 @@ select {
 
 /* Tela de toque: botões pequenos com pelo menos 44 px de área de toque. */
 @media (pointer: coarse) {
-  .opening__controls button,
   .story__dot {
     width: 44px;
     height: 44px;
@@ -2585,4 +2733,27 @@ select {
 .assistant-msg__list {
   margin: 4px 0;
   padding-left: 18px;
+}
+
+/* Fire calendar: chart and month-by-month table side by side on wide screens. */
+.cal-duo {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 24px;
+  align-items: start;
+}
+.cal-duo .cal-table-wrap {
+  max-height: 560px;
+  overflow: auto;
+  margin: 0;
+}
+/* Side by side only where the wide calendar (660 px at least) still fits next to the table; below that, stacked. */
+@media (max-width: 1279px) {
+  .cal-duo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* minmax(0, …): a plain 1fr grows to the calendar's min-width and pushed the month detail over the table. */
+.cal-duo .calendar-block {
+  grid-template-columns: minmax(0, 1fr);
 }

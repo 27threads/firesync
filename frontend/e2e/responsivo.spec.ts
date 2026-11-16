@@ -58,14 +58,8 @@ test.describe('Responsividade', () => {
   test('R5: na tela de toque, os botões pequenos têm pelo menos 44 px', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'celular', 'só na tela de toque');
     await abrirSemApi(page, CELULAR);
-    // O mapa só carrega quando aparece na tela.
-    await page.locator('.map-stage').scrollIntoViewIfNeeded();
     const botoes = [
-      page.getByRole('button', { name: 'Pause the globe' }),
-      page.getByRole('button', { name: /^Chapter 1/ }),
       page.getByRole('button', { name: /^Question 1/ }),
-      // O hero também tem um mapa com zoom: mede o do explorador, que é o que foi rolado até a tela.
-      page.locator('.map-stage').getByRole('button', { name: 'Zoom in' }),
     ];
     for (const botao of botoes) {
       await botao.scrollIntoViewIfNeeded();
@@ -81,22 +75,71 @@ test.describe('Responsividade', () => {
     await expect(link).toHaveAttribute('href', '/img/curva_deteccao_2024.png');
   });
 
-  test('R7: na tela de toque, 1 dedo no mapa permite rolar a página e 2 dedos movem o mapa', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'celular', 'só na tela de toque');
+  test('R8: no celular, os controles do mapa do hero não se cobrem, com a legenda aberta ou fechada', async ({ page }) => {
     await abrirSemApi(page, CELULAR);
-    const viewport = page.getByRole('region', { name: /area selection map/i });
-    await viewport.scrollIntoViewIfNeeded();
-    const container = viewport.locator('.leaflet-container');
-    await expect(container).toHaveClass(/leaflet-touch-zoom/);
-    await expect(container).not.toHaveClass(/leaflet-touch-drag/);
-    await expect(container).toHaveCSS('touch-action', 'pan-x pan-y');
+    // O mapa do hero só monta quando a abertura chega nele.
+    await page.getByText('Explore an area', { exact: true }).first().click();
+    await expect(page.locator('.hm-next')).toBeVisible({ timeout: 15_000 });
+    const pares = [
+      ['.hm-toolbar', '.hm-filters'],
+      ['.hm-toolbar', '.hm-right'],
+      ['.hm-legend', '.hm-next'],
+      ['.hm-legend', '.hm-back'],
+      ['.hm-zoom', '.hm-next'],
+      ['.hm-zoom', '.hm-back'],
+      ['.hm-next', '.hm-back'],
+    ];
+    const sobrepostos = () =>
+      page.evaluate((lista) => {
+        const caixa = (s: string) => document.querySelector(s)!.getBoundingClientRect();
+        return lista
+          .filter(([a, b]) => {
+            const r1 = caixa(a);
+            const r2 = caixa(b);
+            return r1.left < r2.right && r2.left < r1.right && r1.top < r2.bottom && r2.top < r1.bottom;
+          })
+          .map((par) => par.join(' x '));
+      }, pares);
+    expect(await sobrepostos()).toEqual([]);
+    await page.locator('.hm-legend__head').dispatchEvent('click');
+    expect(await sobrepostos()).toEqual([]);
+  });
 
-    await viewport.evaluate((el) => {
-      const touch = (x: number, y: number, id = 0) =>
-        new Touch({ identifier: id, target: el, clientX: x, clientY: y, pageX: x, pageY: y });
-      el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [touch(150, 200)] }));
-      el.dispatchEvent(new TouchEvent('touchmove', { bubbles: true, cancelable: true, touches: [touch(150, 140)] }));
-    });
-    await expect(page.getByText('Use two fingers to move the map.')).toBeVisible();
+  test('R11: em telas médias, o detalhe do mês e o calendário não ficam por cima da tabela', async ({ page }) => {
+    await abrirSemApi(page, { width: 1100, height: 900 });
+    await page.locator('#explore [role="gridcell"]').nth(20).click();
+    const caixa = async (s: string) => (await page.locator(s).first().boundingBox())!;
+    const tabela = await caixa('.cal-table-wrap');
+    for (const s of ['.month-detail', '.calendar-scroll']) {
+      const r = await caixa(s);
+      const cobre = r.x < tabela.x + tabela.width && tabela.x < r.x + r.width && r.y < tabela.y + tabela.height && tabela.y < r.y + r.height;
+      expect(cobre, s).toBe(false);
+    }
+  });
+
+  test('R9: no celular, a página não rola para o lado', async ({ page }) => {
+    await abrirSemApi(page, CELULAR);
+    const { largura, visivel } = await page.evaluate(() => ({
+      largura: document.body.scrollWidth,
+      visivel: document.documentElement.clientWidth,
+    }));
+    expect(largura).toBeLessThanOrEqual(visivel);
+  });
+
+  test('R10: no celular, os números dos eixos dos gráficos não são cortados', async ({ page }) => {
+    await abrirSemApi(page, CELULAR);
+    await page.locator('#explore svg.chart').first().scrollIntoViewIfNeeded();
+    const cortados = await page.locator('#explore svg.chart').evaluateAll((svgs) =>
+      svgs.flatMap((svg) => {
+        const borda = svg.getBoundingClientRect();
+        return [...svg.querySelectorAll('text')]
+          .filter((t) => {
+            const r = t.getBoundingClientRect();
+            return r.width > 0 && (r.left < borda.left - 0.5 || r.right > borda.right + 0.5);
+          })
+          .map((t) => t.textContent);
+      }),
+    );
+    expect(cortados).toEqual([]);
   });
 });

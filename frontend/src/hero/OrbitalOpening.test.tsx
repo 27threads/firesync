@@ -22,11 +22,8 @@ describe('OrbitalOpening', () => {
     expect(explore.scrollIntoView).toHaveBeenCalled();
   });
 
-  it('lets the viewer pause the moving globe', () => {
+  it('has no pause button or chapter dots: the globe tells its story by scrolling', () => {
     render(<OrbitalOpening />);
-    const toggle = screen.getByRole('button', { name: /pause the globe|play the globe/i });
-    const before = toggle.getAttribute('aria-pressed');
-    fireEvent.click(toggle);
-    expect(toggle.getAttribute('aria-pressed')).not.toBe(before);
+    expect(screen.queryByRole('button', { name: /pause the globe|play the globe|chapter/i })).toBeNull();
   });
 });

@@ -1,6 +1,12 @@
 import type { PriorityCell, RecentHexagonProperties } from '../api/types';
 import {
   DEFAULT_FILTERS,
+  HERO_AREA_EVENT,
+  announceArea,
+  hexQueryZoom,
+  hexSummary,
+  place,
+  pointSummary,
   ZERO_COLOR,
   agoLabel,
   brasiliaLabel,
@@ -106,5 +112,61 @@ describe('ícone, horário e frescor', () => {
     expect(staleness('2026-11-15T13:00:00Z', now)).toBe('current');
     expect(staleness('2026-11-15T07:00:00Z', now)).toBe('delayed');
     expect(staleness('2026-11-14T10:00:00Z', now)).toBe('outdated');
+  });
+});
+
+describe('what a click on the map tells', () => {
+  it('writes places with hemispheres instead of minus signs', () => {
+    expect(place(-3.1, -52.4)).toBe('3.10°S, 52.40°W');
+    expect(place(1.5, 10)).toBe('1.50°N, 10.00°E');
+  });
+
+  it('summarises a hexagon: hot spots, strength, compared with usual and risk with its past share', () => {
+    const p = { h3: 'x', detections: 12, n_high: 2, n_medium: 4, n_low: 6, alert_level: 'critical', risk_tier: 'very_high' } as RecentHexagonProperties;
+    const summary = hexSummary(p, -3.1, -52.4, 24, { very_high: 0.82 });
+    expect(summary.title).toBe('Area near 3.10°S, 52.40°W');
+    expect(summary.lines).toEqual([
+      '12 hot spots in the last 24 h',
+      'Fire strength: 2 strong · 4 medium · 6 weak',
+      'Much more fire than usual for this time of year',
+      'Next 14 days: very high risk (fire followed in 82% of similar past cases)',
+      'Zoom in to see each fire point.',
+    ]);
+  });
+
+  it('says so when a cell has no fire now', () => {
+    const p = { h3: 'x', detections: 0, n_high: 0, n_medium: 0, n_low: 0 } as RecentHexagonProperties;
+    expect(hexSummary(p, 0, 0, 72).lines[0]).toBe('No hot spots in the last 72 h');
+  });
+
+  it('summarises one detection: where, when, satellite, strength and confidence', () => {
+    const summary = pointSummary(
+      { satellite: 'N20', acquired_utc: '2026-11-15T17:30:00Z', confidence: 'nominal', intensity: 'high', daynight: 'D' },
+      -10.5,
+      -48.25,
+    );
+    expect(summary.lines[0]).toBe('Where: 10.50°S, 48.25°W');
+    expect(summary.lines[2]).toBe('Seen by: NOAA-20 (VIIRS sensor), during the day');
+    expect(summary.lines[3]).toBe('Fire strength: strong');
+    expect(summary.lines[4]).toBe('Detection confidence: medium');
+  });
+});
+
+describe('hero area to the explorer', () => {
+  it('announces the chosen area as a window event', () => {
+    const seen: unknown[] = [];
+    const listener = (event: Event) => seen.push((event as CustomEvent).detail);
+    window.addEventListener(HERO_AREA_EVENT, listener);
+    announceArea({ type: 'region', region_id: 6 });
+    window.removeEventListener(HERO_AREA_EVENT, listener);
+    expect(seen).toEqual([{ type: 'region', region_id: 6 }]);
+  });
+});
+
+describe('hexQueryZoom', () => {
+  it('keeps the hexagons of the opening view when zooming in: never asks for a zoom past 4 (H3 resolution 4)', () => {
+    expect(hexQueryZoom(3.2)).toBe(3.2);
+    expect(hexQueryZoom(4)).toBe(4);
+    expect(hexQueryZoom(9.3)).toBe(4);
   });
 });

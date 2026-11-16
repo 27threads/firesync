@@ -268,7 +268,8 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
-  max-height: calc(100% - 100px);
+  /* Room for the zoom buttons and the footer below it. */
+  max-height: calc(100% - var(--hm-foot, 30px) - 150px);
 }
 .hm-status {
   width: 100%;
@@ -415,7 +416,8 @@
 .hm-legend {
   position: absolute;
   left: 12px;
-  bottom: 40px;
+  /* Always above the footer, whose height changes with the tab and the screen width (it hid the controls before). */
+  bottom: calc(var(--hm-foot, 30px) + 10px);
   width: auto;
   padding: 4px 8px;
   display: flex;
@@ -469,8 +471,9 @@
 .hm-zoom {
   position: absolute;
   right: 12px;
-  bottom: 40px;
+  bottom: calc(var(--hm-foot, 30px) + 10px);
   display: flex;
+  flex-direction: column; /* the usual map pattern: zoom stacked in the lower right corner */
   padding: 2px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.96);
@@ -483,19 +486,25 @@
   font-size: 17px;
 }
 .hm-zoom button + button {
-  border-left: 1px solid #e5e7eb;
+  border-top: 1px solid #e5e7eb;
 }
 .hm-next {
   position: absolute;
   left: 50%;
-  bottom: 44px;
+  bottom: calc(var(--hm-foot, 30px) + 12px);
   transform: translateX(-50%);
-  width: 44px;
   height: 44px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.96);
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: #2f4fd6 !important;
+  color: #fff !important;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-  font-size: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
   animation: hm-bob 1.8s ease-in-out infinite;
 }
 @keyframes hm-bob {
@@ -539,25 +548,18 @@
     transform: none;
     max-width: none;
   }
+  /* Right below the toolbar, however many lines it wraps to. */
   .hm-filters {
-    top: 100px;
+    top: calc(var(--hm-top, 88px) + 8px);
+    width: min(178px, calc(50vw - 18px));
   }
+  /* Status and Indicators stay at the top right, like on a large screen; the status shows only its main line. */
   .hm-right {
-    top: auto;
-    bottom: 44px;
-    max-height: 55%;
-    flex-direction: column-reverse;
+    top: calc(var(--hm-top, 88px) + 8px);
+    width: min(220px, calc(50vw - 18px));
   }
-  .hm-right .hm-status {
+  .hm-right .hm-status span:not(.hm-alert) {
     display: none;
-  }
-  .hm-legend {
-    display: none;
-  }
-  .hm-zoom {
-    right: auto;
-    left: 12px;
-    bottom: 48px;
   }
 }
 
@@ -569,4 +571,91 @@
 .hm-next,
 .hm-footnote {
   z-index: 10;
+}
+
+.hm-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.hm-tool svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+/* What a click on a hexagon or a fire point tells. */
+.hm-popup .leaflet-popup-content-wrapper {
+  border-radius: 10px;
+}
+.hm-popup .leaflet-popup-content {
+  margin: 10px 12px;
+}
+.hm-pop {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #1c1f24;
+}
+.hm-pop strong {
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+.hm-pop span:last-child {
+  color: #6b7280;
+}
+
+.hm-next svg {
+  width: 22px;
+  height: 22px;
+}
+/* After a region, drawing or coordinates: the calendar below already follows that area. */
+.hm-announce {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--hm-foot, 30px) + 66px);
+  transform: translateX(-50%);
+  z-index: 10;
+  max-width: calc(100% - 140px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #2f4fd6 !important;
+  color: #fff !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  font-size: 12.5px;
+}
+
+/* The way back up to the opening, now that the wheel over the map only zooms. */
+.hm-back {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9) !important;
+  font-size: 12px;
+}
+.hm-back svg {
+  width: 14px;
+  height: 14px;
+}
+/* On the phone the legend and the zoom take the bottom corners: the two buttons stack above the legend, open or closed. */
+@media (max-width: 899px) {
+  .hm-next {
+    bottom: calc(var(--hm-foot, 30px) + var(--hm-legend, 40px) + 18px);
+  }
+  .hm-back {
+    top: auto;
+    bottom: calc(var(--hm-foot, 30px) + var(--hm-legend, 40px) + 70px);
+  }
+  .hm-announce {
+    bottom: calc(var(--hm-foot, 30px) + var(--hm-legend, 40px) + 106px);
+  }
 }

@@ -21,7 +21,8 @@ export function OrbitalOpening() {
   const [chapter, setChapter] = useState(0);
   const [mapActive, setMapActive] = useState(false);
   const [mountMap, setMountMap] = useState(false);
-  const [playing, setPlaying] = useState(() => !prefersReducedMotion());
+  // Sem botão de pausa (pedido do Eduardo): o globo para sozinho só com movimento reduzido.
+  const [playing] = useState(() => !prefersReducedMotion());
   // A mesma regra de openingLayout, que a cena usa para enquadrar o globo.
   const stacked = useMediaQuery(`(max-width: ${STACKED_OPENING_MAX_WIDTH}px)`);
 
@@ -92,29 +93,6 @@ export function OrbitalOpening() {
           <button type="button" className="btn btn--primary" onClick={goToExplorer}>
             Explore an area
           </button>
-          <div className="opening__controls">
-            <button
-              type="button"
-              className="opening__play"
-              aria-label={playing ? 'Pause the globe' : 'Play the globe'}
-              aria-pressed={!playing}
-              onClick={() => setPlaying((value) => !value)}
-            >
-              {playing ? '❚❚' : '▶'}
-            </button>
-            {OPENING_CHAPTERS.map((item, index) => (
-              <button
-                key={item.label}
-                type="button"
-                className="opening__step"
-                aria-label={`Chapter ${index + 1}: ${item.label}`}
-                aria-pressed={index === chapter}
-                onClick={() => showChapter(index)}
-              >
-                <span />
-              </button>
-            ))}
-          </div>
           <p className="opening__credit">{OPENING_DATA_CREDIT}</p>
         </div>
         <p className="opening__foot">Earth and spacecraft: NASA · Illustrative scale and orbits</p>
