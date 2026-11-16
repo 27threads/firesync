@@ -5,7 +5,6 @@ const { readFile } = require('node:fs/promises');
 test('uses all five real endpoints and downloads the audit ZIP', async ({ page }) => {
   const calendarResponse = page.waitForResponse(r => r.url().includes('/api/v1/calendar') && r.status() === 200);
   await page.goto('/');
-  const mapResponse = page.waitForResponse(r => r.url().includes('/api/v1/detections/recent') && r.status() === 200);
   await page.getByRole('combobox', { name: /region/i }).selectOption({ label: 'Synthetic demo' });
   const response = await calendarResponse;
   const calendar = await response.json();
@@ -16,6 +15,9 @@ test('uses all five real endpoints and downloads the audit ZIP', async ({ page }
   await expect(page.getByRole('region', { name: /last 7 days/i })).toContainText('7');
   await expect(page.getByText(/NASA FIRMS/).first()).toBeVisible();
 
+  // The hero map asks for the recent hot spots once the opening reaches it; the explorer map that asked on load left in #149.
+  const mapResponse = page.waitForResponse(r => r.url().includes('/api/v1/detections/recent') && r.status() === 200);
+  await page.locator('.opening').evaluate((el) => window.scrollTo(0, el.offsetTop + el.offsetHeight - window.innerHeight));
   const map = await (await mapResponse).json();
   expect(map.type).toBe('FeatureCollection');
   expect(map.total_detections).toBeGreaterThan(0);
