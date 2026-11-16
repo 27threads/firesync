@@ -1,12 +1,18 @@
 # firesync
 
-**Is this fire normal? Here, this season.** NASA FIRMS shows where fire is. firesync tells you if it's normal.
+**The Amazon is burning. Where should firefighters act first?**
 
-NASA Space Apps Challenge 2026 · challenge [MODIS and VIIRS Hot Spots](https://www.spaceappschallenge.org/2026/challenges/modis-and-viirs-hot-spots/)
+firesync turns NASA satellite fire data into answers for fire crews: which areas are critical today, whether today's fire is normal for this place and season, and where fire risk is very high for the next 14 days.
 
-- **Live app:** https://firesync.nogranlabs.com.br (no login, desktop and mobile)
+## 🔥 Try it: **[firesync.nogranlabs.com.br](https://firesync.nogranlabs.com.br)**
+
+Free, no login, desktop and mobile.
+
+- **Live app:** https://firesync.nogranlabs.com.br
 - **Public API:** https://firesync-api.nogranlabs.com.br/docs
 - **Project page text, with the full method, results and references:** [docs/pagina-projeto.md](docs/pagina-projeto.md)
+- **Challenge:** [MODIS and VIIRS Hot Spots](https://www.spaceappschallenge.org/2026/challenges/modis-and-viirs-hot-spots/) · NASA Space Apps Challenge 2026
+- **Team page:** [27 Threads · Uberlândia, Brazil](https://www.spaceappschallenge.org/2026/find-a-team/27-threads-uberlandia/)
 
 ![firesync opening: the Earth with the Aqua (MODIS) and S-NPP/NOAA-20 (VIIRS) satellites](docs/img/site/opening.png)
 
@@ -17,9 +23,9 @@ Fire teams in Brazil can see where satellites detect fire today, but not whether
 ![Fire calendar of the Amazon biome, January 2003 to November 2026, with estimated MODIS months hatched](docs/img/site/fire-calendar.png)
 
 - **Fire calendar** (months × years) for any area drawn in Brazil, with the seasonal pattern and the highest-fire years.
-- **Now against normal:** the last 7 days against the same dates in earlier years, with a versioned alert rule (Normal, Attention, Critical).
-- **Recent detections map** and a **14-day fire risk** per area from a model trained only on past data.
-- **Chat assistant** that answers in the language of the question, using the same API functions as the screen, with every number checked.
+- **Where to look first:** areas ranked by alert level (Normal, Attention, Critical), comparing the last 7 days with the same dates in earlier years, and by a **14-day fire risk** from a model trained only on past data.
+- **Recent detections map** for the last 24 hours, 72 hours or 7 days.
+- **Ask firesync:** a chat assistant that answers in the language of the question, using the same API functions as the screen, with every number checked.
 - **Audit package:** a ZIP with raw counts, factors and formula, so anyone can rebuild every number.
 
 ## What we measured
@@ -29,217 +35,226 @@ All numbers below were measured, with pass criteria fixed before each run. Detai
 | Check | Result |
 | --- | --- |
 | Calibration, leave-one-year-out (Amazon) | 5.7% average yearly error in 2012–2021, 6.4% in 2022–2024 |
-| Independent check against INPE (2003–2025) | monthly correlation 0.94 to 0.99 in all six biomes; no artificial jump at the 2012 sensor switch in the Amazon (−0.6%) |
+| Independent check against INPE, Brazil's space agency (2003–2025) | monthly correlation 0.94 to 0.99 in all six biomes; no artificial jump at the 2012 sensor switch in the Amazon (−0.6%) |
 | Uncertainty range (P5–P95) | real value inside the range in 0.76–0.80 of months in five biomes, 0.87 in the Amazon fire season |
 | Alert rule v1, backtest 2013–2024 | 6.0 points more than a persistence rule at the same alert frequency (95% interval 4.1–8.0); Critical 40 days before the 2020 Pantanal emergency decree |
+| 14-day risk, early warning (Amazon, 2021–2024, trained only on earlier years) | warned of 51 in every 100 starts of significant fire; median lead time of 10 days among the warned |
 | 14-day risk map against **NASA MCD64A1 burned area** (Amazon, 2021–2024) | AUC 0.898; the very high tier is 11% of predictions and held 75.5% of all burned area |
 | Speed | 100 × 100 km calendar in 2–9 ms, whole Amazon in about 0.8 s |
 
+**Potential, not a measured result:** in a year like 2024 (June to August), acting on these warnings could mean about 290,000 hectares (710,000 acres) less burned area in the Amazon. This is a pilot hypothesis based on a Cerrado brigade study (about −12% burned area); its assumptions are in [docs/pagina-projeto.md](docs/pagina-projeto.md).
+
 **NASA data:** FIRMS (MODIS C6.1 and VIIRS C2, archive and near real time) is the core of every number. MCD64A1 v061 burned area checks the risk map. GIBS provides the base maps and the globe texture. NASA 3D Resources provides the satellite models.
 
-**AI use:** the idea and the method are the team's. AI coding assistants (Claude Code, OpenAI Codex, Antigravity, Lovable) wrote and reviewed code and documents from the team's decisions. Lovable also made the first concept of the interface, later rebuilt in the official front end. Grok assembled the demo video from the team's narration, script and subtitles. The file-by-file list is in the [AI use table](#uso-de-ia) below (in Portuguese, like the internal team documents in `docs/`).
+**AI use:** the idea and the method are the team's. AI coding assistants (Claude Code, OpenAI Codex, Antigravity, Lovable) wrote and reviewed code and documents from the team's decisions. Lovable also made the first concept of the interface, later rebuilt in the official front end. Grok assembled the demo video from the team's narration, script and subtitles. The file-by-file list is in the [AI use table](#ai-use) below.
+
+## Team 27 Threads · Uberlândia, Brazil
+
+- Mateus Nogueira
+- Weberson David Azevedo Ramos
+- Rafael Lopes Fraga
+- Carlos Eduardo da Silva Pechiori
+- Vinicius Lucas Guimarães
+- Eduardo Lopes Valerio
 
 ---
 
-*Internal team documentation (in Portuguese) starts here.*
+## Team documentation
 
-**[Documentação do Sistema](docs/documentacao-sistema.md):** requisitos, arquitetura, integração, operação e qualidade em uma visão resumida.
+The team's internal documents in `docs/` are written in Portuguese. **[System documentation](docs/documentacao-sistema.md)** gives a short overview of requirements, architecture, integration, operations and quality.
 
-Calendário harmonizado de focos de calor (MODIS + VIIRS) para o NASA Space Apps 2026, desafio [MODIS and VIIRS Hot Spots](https://www.spaceappschallenge.org/2026/challenges/modis-and-viirs-hot-spots/).
+The user picks an area and a period and sees a months × years calendar with the number of fire detections. The series joins MODIS (2003 onward) and VIIRS (2012 onward) on a single scale, so the source sensor no longer matters to whoever reads the calendar.
 
-O usuário escolhe uma área e um período e vê um calendário meses × anos com o número de focos de calor. A série junta MODIS (2003 em diante) e VIIRS (2012 em diante) numa escala única, então o sensor de origem não importa mais para quem lê o calendário.
+**Goal: win a global award.** First, high scores on the 5 judging criteria, which decide who reaches the final. Then the target categories (Best Use of Data, Best Use of Science and Local Impact), which guide the story on the project page and in the video. All in [docs/premiacao.md](docs/premiacao.md). Read it before any task.
 
-**Prazo da submissão:** domingo, 15/11/2026, 23h59 (horário do evento local).
+## For agents: reading order
 
-**Objetivo: ganhar um prêmio global.** Primeiro, nota alta nos 5 critérios de julgamento, que decidem quem chega à final. Depois, as categorias-alvo (Best Use of Data, Best Use of Science e Local Impact), que guiam a história na página e no vídeo. Tudo em [docs/premiacao.md](docs/premiacao.md). Leia antes de qualquer tarefa.
+Read in this order before writing code. The documents are the source of truth. If the code and a document disagree, ask before changing either one.
 
-## Para agentes: ordem de leitura
-
-Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdade. Se o código e um documento discordarem, pergunte antes de mudar qualquer um dos dois.
-
-| # | Documento | O que define | Quando ler |
+| # | Document | What it defines | When to read |
 | --- | --- | --- | --- |
-| 1 | [Requisitos](docs/requisitos.md) | O que o desafio exige (RF), o que dá pontos (RD), requisitos não funcionais e checklist da submissão | Sempre |
-| 2 | [FIRMS — extração e dados disponíveis](docs/firms-extracao-dados.md) | Sensores, datas, formas de baixar (arquivo, API, WMS), colunas dos CSVs | Antes de mexer em importação ou API do FIRMS |
-| 3 | [Plano de extração — Brasil (Amazônia)](docs/plano-extracao-amazonia.md) | Quais dados baixar, papel de cada satélite, dados de validação (IBGE, INPE), jobs de atualização | Antes de mexer no pipeline |
-| 4 | [Importação de novas regiões](docs/importacao-regioes.md) | Importador, tabelas, chave única, fatores de harmonização por região, como adicionar região | Antes de mexer no banco, no pipeline ou na API |
-| 5 | [Arquitetura e stack](docs/arquitetura.md) | Stack de cada componente, o que já está decidido e o que falta decidir | Antes de escrever qualquer código |
-| 6 | [Tarefas](docs/tarefas.md) | Frentes, responsáveis, branches, pastas de cada um, marcos e status | Antes de começar qualquer tarefa |
-| 7 | [Pipeline de dados — o que já foi feito](docs/pipeline-dados.md) | Download do histórico, filtros de qualidade, análise por satélite, achados | Antes de mexer em `data-pipeline/` |
-| 8 | [Banco de dados — decisões para o backend](docs/banco.md) | Imagem, H3, resolução, schema, consulta da API, carga na VPS, benchmark | Antes de mexer no banco ou na API |
-| 9 | [Contrato da API](docs/api.md) | Endpoints, pedido, resposta, erros, export de auditoria. JSON de exemplo em [api-exemplo.json](docs/api-exemplo.json) | Antes de mexer na API ou no front |
-| 10 | [Prompt do frontend](docs/prompt-frontend.md) | Prompt para o agente que constrói o front: direção de design, regras de dado na tela, animação, performance e etapas de construção | Antes de começar a frente D |
-| 11 | [Critérios de julgamento e prêmios](docs/premiacao.md) | Os 5 critérios, as categorias-alvo e as regras de prioridade da equipe | Antes de qualquer tarefa |
-| 12 | [Decisões da harmonização](docs/decisoes-harmonizacao.md) | Fator Aqua → S-NPP, faixa P5–P95, resultado da calibração e limites a declarar no Método | Antes de mexer em calibração, agregação ou na conta da API |
-| 13 | [Regras entre as variáveis](docs/regras-variaveis.md) | Colunas de cada sensor, regras de remoção e de duplicata, classificador complementar | Antes de mexer nos filtros do pipeline |
-| 14 | [UX: racional das telas](docs/ux-telas.md) | Objetivo, tarefas e decisões do usuário em cada tela | Antes de mexer no front |
-| 15 | [Pitch e vídeo](docs/pitch.md) | Roteiro de 30 s, legenda em inglês e como gravar | Antes de montar a demo |
-| 16 | [Testes e esteira](docs/testes.md) | TDD, regra dos bugs, cobertura, jornadas e jobs do GitHub Actions | Antes de escrever código |
-| 17 | [Versionamento (SemVer)](docs/versionamento.md) | Tipo no commit e no título do PR, como lançar uma versão | Antes do primeiro commit |
-| 18 | [Validação do nível de alerta](docs/validacao-alerta.md) | Solução A + B da issue #9: teste retroativo com "o que veio depois" e eventos conhecidos, no lugar da área queimada | Antes de mexer no alerta ou no `alert_rules.json` |
-| 19 | [RFC 0001: backtest do alerta](docs/rfcs/0001-backtest-alerta.md) | Como implementar a solução A + B: consultas, janelas, contas, saídas, autoteste e plano | Antes de implementar o backtest do alerta |
-| 20 | [Validação da API com a carga real](docs/validacao-api-eduardo.md) | Roteiro para o Eduardo conferir números, cobertura, ZIP e latência antes de fechar D7/M2 | Ao integrar a API com a carga real |
-| 21 | [Simulação e auditoria pelos logs](docs/simulacao.md) | Como rodar o sistema de ponta a ponta num banco descartável e auditar pelos logs se ele entrega o que os critérios cobram | Antes de rodar a simulação ou investigar um problema |
-| 22 | [Restrições para o mundo](docs/escala-mundial.md) | O que muda quando a cobertura passar do Brasil para o mundo, com a saída proposta para cada ponto | Antes de mexer em cobertura, seleção de área ou camada de focos |
-| 23 | [Deploy](docs/deploy.md) | Front no Cloudflare, banco/API/job NRT na VPS pelo Cloudflare Tunnel, variáveis e segurança da VPS | Antes de publicar ou mexer em `infra/` |
-| 24 | [Página do projeto](docs/pagina-projeto.md) | Texto em inglês de cada campo da página do projeto no Space Apps (C9) | Antes de preencher ou mudar a página da submissão |
-| 25 | [RFC 0004: assistente virtual](docs/rfcs/0004-assistente-virtual.md) | Chat no site que responde perguntas com tool-use sobre os casos de uso da API: ferramentas, contrato `/ask`, front, riscos e plano | Antes de mexer no assistente |
-| 26 | [Documentação do Sistema](docs/documentacao-sistema.md) | Síntese formal dos requisitos, arquitetura, operação e qualidade | Para uma visão geral do sistema e revisão documental |
-| 27 | [Gravação da demo](docs/gravacao-demo.md) | Tomadas do vídeo v5 casadas com a legenda, prompt do assistente e do agente que opera o navegador. Legendas em [docs/video/](docs/video/) | Antes de gravar a tela do site |
-| 28 | [Validação com a área queimada da NASA](docs/validacao-area-queimada.md) | Em linguagem simples: como o modelo de risco foi testado contra o MCD64A1, o resultado, as queimadas não avisadas e por que o acerto medido é um piso | Antes de falar do acerto do mapa de risco na tela, no pitch ou no vídeo |
+| 1 | [Requirements](docs/requisitos.md) | What the challenge requires (RF), what earns points (RD), non-functional requirements and the submission checklist | Always |
+| 2 | [FIRMS: extraction and available data](docs/firms-extracao-dados.md) | Sensors, dates, download options (archive, API, WMS), CSV columns | Before touching the import or the FIRMS API |
+| 3 | [Extraction plan: Brazil (Amazon)](docs/plano-extracao-amazonia.md) | Which data to download, the role of each satellite, validation data (IBGE, INPE), update jobs | Before touching the pipeline |
+| 4 | [Importing new regions](docs/importacao-regioes.md) | Importer, tables, unique key, harmonization factors per region, how to add a region | Before touching the database, the pipeline or the API |
+| 5 | [Architecture and stack](docs/arquitetura.md) | Stack of each component, and the reason for each decision | Before writing any code |
+| 6 | [Tasks](docs/tarefas.md) | Workstreams, owners, branches, folders, milestones and status | Before starting any task |
+| 7 | [Data pipeline: what was done](docs/pipeline-dados.md) | History download, quality filters, per-satellite analysis, findings | Before touching `data-pipeline/` |
+| 8 | [Database: decisions for the backend](docs/banco.md) | Image, H3, resolution, schema, API query, VPS load, benchmark | Before touching the database or the API |
+| 9 | [API contract](docs/api.md) | Endpoints, request, response, errors, audit export. Example JSON in [api-exemplo.json](docs/api-exemplo.json) | Before touching the API or the front end |
+| 10 | [Front-end prompt](docs/prompt-frontend.md) | Prompt for the agent that builds the front end: design direction, on-screen data rules, animation, performance and build steps | Before starting workstream D |
+| 11 | [Judging criteria and awards](docs/premiacao.md) | The 5 criteria, the target categories and the team's priority rules | Before any task |
+| 12 | [Harmonization decisions](docs/decisoes-harmonizacao.md) | Aqua → S-NPP factor, P5–P95 range, calibration result and limits to declare in Method | Before touching calibration, aggregation or the API calculation |
+| 13 | [Rules between variables](docs/regras-variaveis.md) | Columns of each sensor, removal and duplicate rules, complementary classifier | Before touching the pipeline filters |
+| 14 | [UX: screen rationale](docs/ux-telas.md) | Goal, tasks and user decisions on each screen | Before touching the front end |
+| 15 | [Pitch and video](docs/pitch.md) | 30 s script, English subtitles and how to record | Before building the demo |
+| 16 | [Tests and CI](docs/testes.md) | TDD, bug rule, coverage, user journeys and GitHub Actions jobs | Before writing code |
+| 17 | [Versioning (SemVer)](docs/versionamento.md) | Type in the commit and PR title, how to release a version | Before the first commit |
+| 18 | [Alert level validation](docs/validacao-alerta.md) | Solution A + B from issue #9: backtest with "what came next" and known events, instead of burned area | Before touching the alert or `alert_rules.json` |
+| 19 | [RFC 0001: alert backtest](docs/rfcs/0001-backtest-alerta.md) | How to implement solution A + B: queries, windows, calculations, outputs, self-test and plan | Before implementing the alert backtest |
+| 20 | [API validation with the real load](docs/validacao-api-eduardo.md) | Script to check numbers, coverage, ZIP and latency against the real load | When checking the API against the real load |
+| 21 | [Simulation and log audit](docs/simulacao.md) | How to run the system end to end on a disposable database and audit from the logs whether it delivers what the criteria ask | Before running the simulation or investigating a problem |
+| 22 | [Constraints for worldwide coverage](docs/escala-mundial.md) | What changes when coverage goes from Brazil to the world, with the proposed answer for each point | Before touching coverage, area selection or the detections layer |
+| 23 | [Deploy](docs/deploy.md) | Front end on Cloudflare, database/API/NRT job on the VPS through Cloudflare Tunnel, variables and VPS security | Before publishing or touching `infra/` |
+| 24 | [Project page](docs/pagina-projeto.md) | English text for each field of the Space Apps project page (C9) | Before filling in or changing the submission page |
+| 25 | [RFC 0004: virtual assistant](docs/rfcs/0004-assistente-virtual.md) | Site chat that answers questions with tool use over the API use cases: tools, `/ask` contract, front end, risks and plan | Before touching the assistant |
+| 26 | [System documentation](docs/documentacao-sistema.md) | Formal summary of requirements, architecture, operations and quality | For an overview of the system and documentation review |
+| 27 | [Demo recording](docs/gravacao-demo.md) | Shots of the v5 video matched to the subtitles, prompts for the assistant and for the agent that drives the browser. Subtitles in [docs/video/](docs/video/) | Before recording the site |
+| 28 | [Validation with NASA burned area](docs/validacao-area-queimada.md) | In plain words: how the risk model was tested against MCD64A1, the result, the unwarned fires and why the measured hit rate is a floor | Before talking about the risk map's accuracy on screen, in the pitch or in the video |
 
-Regras para agentes: [CLAUDE.md](CLAUDE.md).
+Rules for agents: [CLAUDE.md](CLAUDE.md).
 
-## Estrutura do repositório
+## Repository structure
 
 ```
 firesync/
-├── README.md              este arquivo (mapa do projeto)
-├── CLAUDE.md              regras para agentes
-├── docs/                  todos os documentos do projeto (tabela acima)
-├── data-pipeline/         download, importação, calibração, agregação e job NRT (frentes A e B)
-│   ├── migrations/        schema do banco, aplicado em ordem
-│   └── data/              ZIPs do FIRMS (Brasil, 2024, SP) para testes
-├── backend/               API que serve o calendário, a janela recente e o export (frente C)
-├── frontend/              aplicação web: mapa, calendário, alerta, downloads (frente D)
-├── config/                regras que mudam sem mudar o código, como o alert_rules.json
-└── infra/                 deploy na VPS: docker-compose com Cloudflare Tunnel, .env.example (frente C)
+├── README.md              this file (project map)
+├── CLAUDE.md              rules for agents
+├── docs/                  all project documents (table above)
+├── data-pipeline/         download, import, calibration, aggregation and NRT job (workstreams A and B)
+│   ├── migrations/        database schema, applied in order
+│   └── data/              FIRMS ZIPs (Brazil, 2024, SP) for tests
+├── backend/               API serving the calendar, the recent window and the export (workstream C)
+├── frontend/              web app: map, calendar, alert, downloads (workstream D)
+├── config/                rules that change without changing code, such as alert_rules.json
+└── infra/                 VPS deploy: docker-compose with Cloudflare Tunnel, .env.example (workstream C)
 ```
 
-Cada pasta tem um `README.md` com o que vai nela, quem é responsável e as regras que valem ali. `backend/` tem as cinco rotas HTTP, histórico, janela recente, camada de focos, ZIP auditável e testes unitários, HTTP, PostGIS e E2E com dados sintéticos. `frontend/` já traz o esqueleto (D1), a seleção de área, período e camada de focos recentes no mapa (D2–D3, RD07), o calendário (D4), os indicadores/gráficos (D5), os downloads e pacote de auditoria (D6), o proxy e integração com a API (D7) e os testes E2E em `frontend/e2e/`. `infra/` tem o compose da VPS (banco, API, jobs NRT e de risco e túnel) e o `.env.example`. `data-pipeline/data/` tem os quatro ZIPs de teste:
+Each folder has a `README.md` with what goes in it, who owns it and the rules that apply there. `backend/` has the HTTP routes (history, recent window, detections layer, auditable ZIP and assistant) with unit, HTTP, PostGIS and E2E tests on synthetic data. `frontend/` has the globe opening, area, period and recent detections selection on the map, the calendar, indicators and charts, downloads and audit package, the assistant and E2E tests in `frontend/e2e/`. `infra/` has the VPS compose (database, API, NRT and risk jobs, and tunnel) and `.env.example`. `data-pipeline/data/` has the four test ZIPs:
 
-| Arquivo | Conteúdo |
+| File | Content |
 | --- | --- |
 | `DL_FIRE_M-C61_848018.zip` | MODIS C6.1 (Terra + Aqua) |
 | `DL_FIRE_SV-C2_848021.zip` | VIIRS S-NPP |
 | `DL_FIRE_J1V-C2_848019.zip` | VIIRS NOAA-20 |
 | `DL_FIRE_J2V-C2_848020.zip` | VIIRS NOAA-21 |
 
-## Rodar localmente
+## Run locally
 
-Com `DATABASE_URL` configurada no ambiente e o banco carregado:
+With `DATABASE_URL` set in the environment and the database loaded:
 
 ```powershell
 python -m pip install -e './backend[test]'
 python -m uvicorn backend.adapters.inbound.http.app:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
-Em outro terminal, `cd frontend`, `npm ci` e `npm run dev`. O proxy `/api` aponta para `http://localhost:8000`; `VITE_DEV_API_PROXY` permite usar `http://127.0.0.1:8000` quando necessário. Variáveis, rate limit, testes e carga sintética estão em [backend/README.md](backend/README.md). A validação da carga científica real será feita pelo Eduardo, conforme o [roteiro M2](docs/validacao-api-eduardo.md).
+In another terminal, `cd frontend`, `npm ci` and `npm run dev`. The `/api` proxy points to `http://localhost:8000`; `VITE_DEV_API_PROXY` lets you use `http://127.0.0.1:8000` when needed. Variables, rate limit, tests and synthetic load are in [backend/README.md](backend/README.md).
 
-## Como os dados fluem
+## How the data flows
 
 ```
-CSV do FIRMS (arquivo SP ou API NRT)
-  → importador         normaliza colunas, calcula H3, upsert em `focos`
-  → recorte por região polígono em `regioes` (bioma IBGE)
-  → calibração         fatores por região em `fatores_harmonizacao` (congelados após a carga)
-  → agregação          `agregados`: célula H3 × ano × mês, focos harmonizados
-  → API                soma as células da área desenhada, responde "sem dados" fora da `cobertura`
-  → frontend           calendário, sazonalidade, ranking de anos, anomalias, downloads
+FIRMS CSV (SP archive or NRT API)
+  → importer           normalizes columns, computes H3, upserts into `focos`
+  → region clip        polygon in `regioes` (IBGE biome)
+  → calibration        factors per region in `fatores_harmonizacao` (frozen after the load)
+  → aggregation        `agregados`: H3 cell × year × month, harmonized detections
+  → API                sums the cells of the drawn area, answers "no data" outside `cobertura`
+  → frontend           calendar, seasonality, year ranking, anomalies, downloads
 ```
 
-Detalhes de cada etapa: [importacao-regioes.md](docs/importacao-regioes.md).
+Details of each step: [importacao-regioes.md](docs/importacao-regioes.md). Database tables and columns are in Portuguese; the API translates them to the English names of the contract.
 
-## Regras que não mudam sem falar com a equipe
+## Rules that do not change without talking to the team
 
-- O calendário começa em **janeiro de 2003**. Terra não entra no cálculo, só Aqua.
-- **Um VIIRS por período, nunca a soma.** S-NPP até 02/11/2026, NOAA-20 depois. NOAA-21 só como reserva no NRT.
-- Escala VIIRS: Aqua × fator (bioma × mês × dia/noite, um cenário por ano) de jan/2003 a jan/2012; S-NPP real de fev/2012 a out/2026; NOAA-20 real (fator 1) de nov/2026 em diante. Só confiança nominal ou alta e `type = 0`.
-- Fatores ficam congelados depois da carga histórica. Jobs de atualização só aplicam o fator.
-- Chave única do foco: (`satelite`, `lat`, `lon`, `datahora_utc`). Recarga SP apaga o NRT do período e insere o SP numa transação.
-- Mês com falha de satélite (tabela `dias_sem_dados`) é diferente de mês com zero focos.
-- Front e API não conhecem regiões específicas. Adicionar região é dado, não código.
-- Interface em inglês, com crédito ao FIRMS visível.
+- The calendar starts in **January 2003**. Terra is not used in the calculation, only Aqua.
+- **One VIIRS per period, never the sum.** S-NPP until 2026-11-02, NOAA-20 after that. NOAA-21 only as a backup in NRT.
+- VIIRS scale: Aqua × factor (biome × month × day/night, one scenario per year) from Jan 2003 to Jan 2012; real S-NPP from Feb 2012 to Oct 2026; real NOAA-20 (factor 1) from Nov 2026 onward. Only nominal or high confidence and `type = 0`.
+- Factors are frozen after the historical load. Update jobs only apply the factor.
+- Unique key of a detection: (`satelite`, `lat`, `lon`, `datahora_utc`). An SP reload deletes the NRT of the period and inserts the SP data in one transaction.
+- A month with a satellite outage (table `dias_sem_dados`) is different from a month with zero detections.
+- Front end and API know no specific regions. Adding a region is data, not code.
+- Interface in English, with the FIRMS credit visible.
 
-## Estado atual
+## Current status
 
-- [x] Requisitos e checklist da submissão
-- [x] Levantamento do FIRMS e plano de extração
-- [x] Modelo de dados e processo de importação
-- [x] Dados de teste (Brasil, 2024)
-- [x] Stack e arquitetura definidas (pipeline, banco, API, front, mapa e gráficos decididos em [arquitetura.md](docs/arquitetura.md))
-- [ ] Contrato da API ([api.md](docs/api.md) na `main`; falta A e D confirmarem, tarefa T02)
-- [x] Histórico do FIRMS baixado e análise por satélite ([pipeline-dados.md](docs/pipeline-dados.md))
-- [x] Importador, pipeline, agregação, job NRT e série do INPE ([pipeline-dados.md](docs/pipeline-dados.md))
-- [x] API HTTP C1–C6 (validação com dados sintéticos; conferência da carga real pelo Eduardo em [validacao-api-eduardo.md](docs/validacao-api-eduardo.md))
-- [x] Frontend (D1–D7 prontos e conferidos com a carga real no site no ar em 15/11; aviso antecipado D10 no ar, conferido com a API real em 15/11; a demo D8 segue pendente)
-- [x] Deploy público (front em <https://firesync.nogranlabs.com.br>, API em <https://firesync-api.nogranlabs.com.br/docs>; [deploy.md](docs/deploy.md))
-- [x] Texto da página do projeto ([pagina-projeto.md](docs/pagina-projeto.md); falta o link da demo)
+- [x] Requirements and submission checklist
+- [x] FIRMS survey and extraction plan
+- [x] Data model and import process
+- [x] Test data (Brazil, 2024)
+- [x] Stack and architecture defined (pipeline, database, API, front end, map and charts decided in [arquitetura.md](docs/arquitetura.md))
+- [ ] API contract ([api.md](docs/api.md) on `main`; sign-off from workstreams A and D pending, task T02)
+- [x] FIRMS history downloaded and per-satellite analysis ([pipeline-dados.md](docs/pipeline-dados.md))
+- [x] Importer, pipeline, aggregation, NRT job and INPE series ([pipeline-dados.md](docs/pipeline-dados.md))
+- [x] HTTP API C1–C6 (validated with synthetic data; checked against the real load on the live site on 2026-11-15, D7)
+- [x] Front end (D1–D7 done and checked against the real load on the live site on 2026-11-15; early warning D10 live, checked against the real API on 2026-11-15; demo D8 still pending)
+- [x] Public deploy (front end at <https://firesync.nogranlabs.com.br>, API at <https://firesync-api.nogranlabs.com.br/docs>; [deploy.md](docs/deploy.md))
+- [x] Project page text ([pagina-projeto.md](docs/pagina-projeto.md); the demo link is missing)
 - [ ] Demo (D8)
 
-## Uso de IA
+## AI use
 
-A submissão exige identificar o código gerado com IA. Registre aqui quais partes foram geradas ou assistidas por IA, e com qual ferramenta, à medida que o código entra.
+The submission requires identifying AI-generated code. Record here which parts were generated or assisted by AI, and with which tool, as the code comes in.
 
-| Parte | Ferramenta | Como foi usada |
+| Part | Tool | How it was used |
 | --- | --- | --- |
-| Documentação formal (`docs/documentacao-sistema.md`) | OpenAI Codex | Síntese das fontes do repositório, diagramas e revisão documental conforme comentários do PR #141; revisão da equipe pendente. |
-| Integração do PR #26 com a `main`, resolução de `data-pipeline/.coveragerc` e limpeza das pendências da B6 em `docs/` | OpenAI Codex | Preservação do mínimo de cobertura de 71% e atualização dos documentos conforme a issue #68; sem alteração das contas |
-| `data-pipeline/pipeline.py`, `agregar.py`, `eda.py`, `test_pipeline.py`, `test_banco.py`, `job_nrt.py`, `Dockerfile`, `migrations/` | Claude Code (Claude Opus 5.5) | Código gerado a partir das especificações de filtro escritas pelo time de dados. Revisado pela equipe |
-| `docs/banco.md`, `data-pipeline/migrations/001_inicial.sql` | Claude Code (Claude Opus 5.5) | Schema e documento de decisões gerados a partir dos docs do repo e de um benchmark local. Revisado pela equipe |
-| `docs/pipeline-dados.md` | Claude Code (Claude Opus 5.5) | Redação do relatório do que foi feito e dos achados da análise exploratória |
-| Teste de paridade API/backtest e calendário bissexto (issue #64) | OpenAI Codex | Comparação desde a série diária sintética, testes de limites e correção de 29/02 no backtest após falha reproduzida |
-| Indicador anual da API, testes, contrato e tipo do frontend (issue #78) | OpenAI Codex | Ajuste em TDD para mediana dos anos de referência por cenário, conforme decisão da equipe na #75; integração do campo `reference_median` |
-| Código e testes em `backend/src/`, `backend/tests/`, configuração Python e CI do backend | OpenAI Codex | Implementação assistida do domínio, portas, PostgreSQL e análise histórica; C1–C6 com cinco rotas FastAPI, janelas recentes, alerta com piso contínuo da issue #59 e configuração v1.0, intensidade, rate limit/cache, ZIP auditável, carga sintética em `backend/scripts/`, testes HTTP/PostGIS e E2E via proxy. TDD e CI conforme documentação da equipe |
-| Estrutura e documentação do `backend/`, ajustes em `docs/arquitetura.md`, `docs/tarefas.md`, `docs/importacao-regioes.md` e `docs/api.md` | OpenAI Codex | Organização das camadas e revisão da documentação; atualização dos READMEs, requisitos, tarefas, testes e roteiro `docs/validacao-api-eduardo.md`. Decisões de método referenciadas nos registros da equipe |
-| `docs/prompt-frontend.md` | Claude Code (Claude Opus 5.5) | Prompt do front escrito a partir dos docs do repo. A equipe aprova antes de usar |
-| `docs/api.md`, `docs/api-exemplo.json` (issues #22 e #29) | Claude Code (Claude Opus 5.5) | Correções do contrato escritas a partir das issues da auditoria. Revisado pela equipe |
-| `docs/validacao-alerta.md`, `docs/rfcs/0001-backtest-alerta.md` | Claude Code (Claude Opus 5.5) | Proposta de validação do alerta e RFC de implementação, escritos a partir da issue #9 e da revisão do PR #42. Revisado pela equipe |
-| `data-pipeline/validacao/backtest_alerta.py`, `data-pipeline/tests/test_backtest_alerta.py`, `data-pipeline/referencia/eventos_conhecidos.csv` | Claude Code (Claude Opus 5.5) | Backtest do alerta escrito a partir do RFC 0001, com TDD; correção dos eventos conhecidos e da regra atual para o piso contínuo da `v1` (issue #66) e achados da revisão do PR #71 (piso da grade pelo JSON, limite e continuidade da antecedência). As fontes dos eventos foram conferidas nas páginas oficiais. Revisado pela equipe |
-| Limpeza dos `.md` (README, CLAUDE.md, `docs/`, READMEs das pastas) | Claude Code (Claude Opus 5.5) | Levantamento do que estava desatualizado, comparando os docs com o código da `main`, e correção dos trechos. Revisado pela equipe no PR |
-| `.github/workflows/ci.yml` (job "Só documentação?"), `.github/scripts/roda_testes.sh`, `test_roda_testes.sh` | Claude Code (Claude Opus 5.5) | Filtro que pula os testes de código em PR só de `.md`. Revisado pela equipe |
-| `data-pipeline/harmonizacao/` (`calibrar.py`, `validar_inpe.py`, `modelo_a.py`, `test_calibrar.py`, `test_validar_inpe.py`), `data-pipeline/tests/test_harmonizacao.py`, `test_calibrar_integracao.py`, `test_modelo_a.py` | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Código escrito a partir das decisões de método do Weberson (escala VIIRS, fator por bioma, mês e dia ou noite, cenários por ano, faixa P5 a P95, critério de 1,5×, regras de limpeza e o modelo A pelo caminho C, RFC 0002). Os erros achados na revisão do PR #26 foram corrigidos com um teste para cada um. Revisado pelo Mateus |
-| `docs/decisoes-harmonizacao.md`, `docs/regras-variaveis.md`, `docs/ux-telas.md`, seção de harmonização de `docs/importacao-regioes.md` | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Redação e análise feitas a partir das decisões do Weberson e dos resultados rodados pela frente A. As escolhas de método são da equipe e estão marcadas como tal nos documentos. Revisado pela equipe |
-| `data-pipeline/validacao/modelo_risco.py`, `data-pipeline/tests/test_modelo_risco.py`, `docs/rfcs/0003-modelo-risco.md` | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Experimento do modelo de risco escrito com TDD a partir das decisões do Weberson (alvo, pistas, validação em avanço e regra de decisão fixada antes das rodadas de clima). A série dos dados públicos foi conferida contra a rodada da frente A no banco. O modelo da pergunta "fogo acima do normal?" não entra no produto. A equipe revisa no PR |
-| Nível de urgência no mapa de focos recentes (`backend/src/domain/calculations/cell_alerts.py`, `map_features.py`, `alert.py`, `adapters/outbound/postgres/api.py`, `config/alert_rules.json` 1.1, testes e `docs/api.md`) | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Escrito com TDD a partir da decisão do Weberson (risco dos próximos 14 dias pela `v1`, na célula de resolução 4 em que ela foi testada). Reaproveita a função `alert_level` da API, com teste de paridade com o `recent`. Rafael e Eduardo revisam no PR |
-| `data-pipeline/risco_celulas.py`, `data-pipeline/tests/test_risco_celulas.py`, `data-pipeline/migrations/005_risco_celulas.sql`, `config/risk_rules.json` | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Job do risco por célula com o modelo treinado ("onde vai ter fogo nos próximos 14 dias"), escrito com TDD a partir das decisões do Weberson (pergunta, alvo, variáveis, treino só com o passado, faixas por probabilidade e critério de decisão fixado antes de rodar). Reaproveita as funções do experimento do RFC 0003. A equipe revisa no PR |
-| `data-pipeline/validacao/area_queimada.py`, `data-pipeline/tests/test_area_queimada.py`, seção "Validação com área queimada da NASA" de `docs/rfcs/0003-modelo-risco.md`, `docs/validacao-area-queimada.md`, roteiro de `docs/pitch.md` com o mapa de risco | Claude Code (Claude Opus 5.5) | Validação das faixas de risco com a área queimada MCD64A1 v061 (issue #107): script e testes em TDD, critério fixado antes de rodar, conferência do processamento e redação do resultado. Revisado pela frente A |
-| Decisões do front em `docs/arquitetura.md` (pontos 5 a 8) e `frontend/README.md` | Claude Code (Claude Opus 5.5) | Levantamento das opções e redação das justificativas. As escolhas foram feitas pela equipe |
-| Ponto 4 de `docs/arquitetura.md` e responsáveis em `docs/tarefas.md` | Claude Code (Claude Opus 5.5) | Redação da justificativa e levantamento dos responsáveis pelos autores dos commits. As escolhas foram feitas pela equipe |
-| `frontend/` (D9: nova interface, `index.html`, `src/hero/`, `src/calendar/CalendarSvg.tsx`, `src/map/`, `src/summary/`, `src/history/`, `src/discovery/`, `src/state/`, `src/styles.css` e testes) | Claude Code (Claude Opus 5.5) | Abertura com GSAP, área de análise, descoberta guiada, tela de Método e diagrama da harmonização, escritos a partir do prompt de direção de arte da frente D, do `api.md` e do `ux-telas.md`. Reaproveita o cliente da API e os modelos de D1–D7. A equipe revisa no PR |
-| `data-pipeline/logs.py`, logs em `pipeline.py`, `agregar.py`, `job_nrt.py`, `tests/test_logs.py`, `docs/simulacao.md` | Claude Code (Claude Opus 5.5) | Logs estruturados gerados a partir do RNF07 e dos pontos de decisão do pipeline. Revisado pela equipe |
-| `frontend/` (D1–D7: `index.html`, `src/`, configuração do Vite, testes unitários e E2E) | Claude Code (Claude Opus 5.5) em D1, D4, D5 e na fonte do decreto em Data & credits (#65); Antigravity em D2, D3, D6 e D7 | Esqueleto (D1), calendário (D4) e indicadores/gráficos (D5) gerados a partir do `prompt-frontend.md`, `api.md` e `ux-telas.md`. Seleção de área e período (D2–D3: mapa Leaflet + Geoman em `src/controls/`, cliente API `src/api/client.ts`, validação UTC, fallback demo), camada de focos recentes e integração com a API (D7: `GET /api/v1/detections/recent` em hexágonos `cividis` log e pontos por intensidade, proxy `/api` no Vite) e downloads/exportação (D6: pacote de auditoria `POST /api/v1/export`, CSVs e PNG do calendário em `src/export/` e todas as jornadas J1–J9 em `e2e/jornadas.spec.ts`) escritos em TDD a partir dos docs. A equipe revisa no PR |
-| `docs/rfcs/0004-assistente-virtual.md` | Claude Code (Claude Opus 5.5) | RFC do assistente virtual escrito a partir da leitura do código da API (`application/api.py`, `ports/api.py`, rotas do `app.py`) e dos docs; decisão por tool-use no lugar de text-to-SQL; pontos da revisão do Mateus no PR #121 aplicados (risco, `hours`, idioma, validação de `messages[]`, custo e cadeia de provedores) |
-| Mapa base padrão NASA GIBS (`frontend/src/map/MapStage.tsx`, `MapStage.test.tsx`) | Claude Code (Claude Opus 5.5) | Revisão das fontes de dados do projeto e troca do padrão em TDD. A equipe revisa no PR |
-| Deploy (`infra/docker-compose.yml`, `infra/.env.example`, `backend/Dockerfile`, `.dockerignore`, `frontend/wrangler.jsonc`, `frontend/public/_headers`, `docs/deploy.md`) e IP real no rate limit atrás do Cloudflare (`app.py`, testes) | Claude Code (Claude Opus 5.5) | Configuração escrita a partir da decisão de pôr o front no Cloudflare e a API atrás do túnel; o bug do rate limit foi reproduzido num teste antes da correção. A equipe revisa no PR |
-| Job de risco no deploy (`data-pipeline/Dockerfile`, serviço `job-risco` e `RISK_MAX_AGE_DAYS` em `infra/docker-compose.yml` e `infra/.env.example`, `docs/deploy.md`) | Claude Code (Claude Opus 5.5) | Configuração escrita a partir da issue #96 e testada rodando o job na imagem contra um Postgres descartável. A equipe revisa no PR |
-| Carga do banco na VPS e status da C7 (`docs/tarefas.md`, `docs/deploy.md`, `README.md`; issue #98) | Claude Code (Claude Opus 5.5) | Roteiro de carga, acesso temporário para o dump e conferência guiados pela IA, executados e conferidos pela equipe na VPS; documentos atualizados com os endereços no ar |
-| Aviso antecipado no mapa (D10: `frontend/src/map/alertsModel.ts`, `EarlyWarning.tsx`, tooltip em `src/controls/recentDetectionsModel.ts`, tipos, estilos e jornadas J10 e J11) | Claude Code (Claude Opus 5.5) | Escrito em TDD a partir do contrato dos PRs #86 e #97 e do texto do PR #103, com todos os campos novos opcionais; a correção do foco do mapa veio de uma jornada que falhava. A equipe revisa no PR |
-| Resultados da frente B na tela de Método (`frontend/index.html`, `frontend/public/img/`, `src/index-html.test.ts`) | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Textos em inglês escritos a partir de `docs/decisoes-harmonizacao.md` e do RFC 0003, com os números copiados dos documentos, e testes antes do texto. A equipe revisa no PR |
-| `docs/pagina-projeto.md` (C9) | Claude Code (Claude Opus 5.5) | Texto em inglês da página do projeto, escrito a partir dos docs do repo, da tela de Método e desta tabela, com os números copiados dos documentos. A equipe revisa no PR |
-| `RISK_MAX_AGE_DAYS` na tabela de variáveis do `backend/README.md` e status de RNF03, RNF09 e B9 (`docs/requisitos.md`, `docs/tarefas.md`, `docs/deploy.md`, `infra/.env.example`) | Claude Code (Claude Opus 5.5) | Texto escrito a partir dos logs do `job-nrt` e do `job-risco` e do `docker stats` da VPS em 15/11, colados pela equipe. A equipe revisa no PR |
-| Abertura com o globo em `frontend/` (`src/hero/OrbitalOpening.tsx`, `OrbitalScene.tsx`, `globeTransition.ts`, `openingCopy.ts`, `assets/`, testes) e indicadores em destaque do RD06 (`src/summary/indicatorsModel.ts`, `IndicatorRow.tsx`, teste) | Claude Code (Claude Opus 5.5) | Porte da abertura do protótipo feito no Lovable para o front oficial (Vite + React), com a descida terminando no mapa do explorador (mesmo enquadramento e mesma camada do GIBS), correção da emenda pontilhada da textura, tema claro pelas variáveis do `styles.css` e fileira de indicadores com os campos `indicators` da API. Teste antes do código; conferido no navegador no desktop e no celular. A equipe revisa no PR |
-| Luz dos satélites da abertura (`frontend/src/hero/globeTransition.ts`, `OrbitalScene.tsx`, teste) | Claude Code (Claude Opus 5.5) | Diagnóstico dos modelos da NASA desbotados para branco (luz ambiente 2.2 + sol 3 iluminava a textura a 1,65×) e redução para 0.8 + 2.3. Teste que reproduz o bug antes da correção; conferido em Chromium com GPU, antes e depois. A equipe revisa no PR |
-| CSP das texturas dos satélites (`frontend/public/_headers`, teste `frontend/src/security-headers.test.ts`) | Claude Code (Claude Opus 5.5) | Diagnóstico dos satélites ainda brancos no site no ar: o CSP sem `blob:` no `connect-src` bloqueava as texturas do GLTFLoader. Teste que reproduz o bug antes da correção; conferido no build de produção servido com o CSP do `_headers`. A equipe revisa no PR |
-| Responsividade do front (`src/ui/useMediaQuery.ts`, `openingLayout` em `src/hero/globeTransition.ts`, geometrias estreitas em `src/calendar/CalendarSvg.tsx`, `src/history/SeasonalChart.tsx`, `YearRanking.tsx`, `styles.css`, link da curva no `index.html`, `e2e/responsivo.spec.ts`) | Claude Code (Claude Opus 5.5) | Teste no navegador a 375 px e 768 px, testes Playwright que reproduzem cada problema antes da correção, e as correções: abertura sem o globo sobre o texto no tablet, gráficos legíveis no celular, botões de 44 px na tela de toque. Conferido com capturas do Playwright. A equipe revisa no PR |
-| Modo simples do explorador (`frontend/src/summary/verdictModel.ts`, `Verdict.tsx`, "More options" em `src/controls/SelectionPanel.tsx`, estilos, testes, jornadas J3 e J4, `docs/ux-telas.md`) | Claude Code (Claude Opus 5.5) | Veredito em uma frase e controles avançados recolhidos, a pedido do Mateus ("simples até para uma criança"). Usa a mesma régua P25–P75 do cartão dos 7 dias, sem número novo. Teste antes do código; conferido no navegador no desktop e no celular. A equipe revisa no PR |
-| Unificação do calendário animado (`frontend/src/history/HistoryPanel.tsx`, `src/hero/heroIntro.ts`, `src/App.tsx`, `index.html`, testes) | Antigravity | A animação da faixa cronológica MODIS → VIIRS se dobrando no calendário passa para o calendário principal do explorador e remove a segunda grade repetida logo abaixo. A equipe revisa no PR |
-| Assistente virtual: `backend/src/application/assistant.py`, `assistant_tools.py`, `backend/src/ports/llm.py`, `backend/src/adapters/outbound/llm/openai.py`, rota `/ask` no `app.py`, bucket `ask` no `limits.py`, `frontend/src/assistant/`, `askAssistant` no cliente, testes `test_assistant.py`, `test_ask_route.py` e `AssistantBubble.test.tsx` | Claude Code (Claude Opus 5.5) | Implementação do RFC 0004 com TDD: ferramentas sobre os casos de uso existentes, validação do `messages[]`, cadeia de provedores, teto diário e bolinha atrás de `VITE_ENABLE_ASSISTANT`. Depois da auditoria: fontes e checagem dos números na resposta, prazo total por pergunta, leitura curta no banco por ferramenta e foco preso no painel. Testado com Cerebras, Groq, Gemini e OpenRouter no banco local |
-| Toque no mapa no celular (`frontend/src/map/MapStage.tsx`, `MapStage.test.tsx`, `src/hero/OrbitalScene.tsx`, `src/styles.css`, `e2e/responsivo.spec.ts`) | Antigravity | Rolagem da página com 1 dedo sobre o mapa (com aviso temporário `"Use two fingers to move the map."`), arrasto e zoom do mapa com 2 dedos via `L.Handler.TouchZoom`, desenho de retângulo com 1 dedo quando o modo de desenho está ativo e preservação de `touch-action: pan-y` no canvas 3D da abertura. A equipe revisa no PR |
-| Roteiro final de 30 s e frase de potencial de impacto (`docs/pitch.md`, `docs/pagina-projeto.md`; issues #116 e #135) | Claude Code (Claude Opus 5.5) e Antigravity | Redação da seção de potencial de impacto (Weberson, frente B) e consolidação do roteiro final de 30 s no arco Problema → Decisão → Entrega (harmonização MODIS e VIIRS) → Prova → Impacto Global, alinhado ao Project Submission Guide com racional de UX do frontend e referências na página do projeto. Revisado pelo Mateus |
-| Crédito de IA completo em Data & credits (`frontend/index.html`, `src/index-html.test.ts`) | Claude Code (Claude Opus 5.5) | Alinhamento da linha de IA do site com esta tabela (Claude Code, OpenAI Codex, Antigravity e Lovable), conforme a regra 7 do `docs/premiacao.md`. Teste escrito com a lista das quatro ferramentas. A equipe revisa no PR |
-| Botão do assistente só depois do hero (`frontend/src/hero/useLeftHero.ts`, `src/assistant/AssistantBubble.tsx`, `src/App.tsx`, testes) | Claude Code (Claude Sonnet 5.5) | O botão flutuante do assistente só aparece quando a abertura com o globo já saiu da tela, para não tomar espaço do hero. Hook com IntersectionObserver e teste antes do código; conferido no navegador em quatro pontos do scroll. A equipe revisa no PR |
-| Auditoria do assistente: continuação de conversa e dado velho no prompt e na rodada de correção (`backend/src/application/assistant.py`), regiões no contexto, frescor do mapa e rótulo das ações (`assistant_tools.py`), pausa do provedor que falhou (`adapters/outbound/llm/openai.py`), "Try again", rolagem e rótulos na bolinha (`frontend/src/assistant/`), bateria `backend/scripts/assistant_benchmark.py` e testes | Claude Code (Claude Opus 5.5) | Achados de uma auditoria reproduzidos com conversas reais na API local antes da correção, e conferidos depois pela bateria (10/10 na Cerebras em 3 de 4 rodadas) |
-| Mapa em tela cheia no hero do site (`frontend/src/hero/HeroMap.tsx`, `heroMap.css`, `heroMapModel.ts` e teste, ajustes em `OrbitalOpening.tsx`, `OrbitalScene.tsx`, `globeTransition.ts`, `styles.css`) | Claude Code (Claude Sonnet 5.5) | Porte para o `frontend/` do mapa do protótipo feito no Lovable e das telas do Figma: abas Fire now e Risk, next 14 days, filtros, status, painel Indicators agrupado por risco, legenda compacta, ícones de Critical e Attention, cividis logarítmica, zoom suave pela roda e seta de descer. Regras do mapa em funções puras com 12 testes; conferido no navegador com a API real. A equipe revisa no PR |
-| Celular e fim do calendário (controles do mapa do hero que se cobriam, popup visível, hexágonos sempre na resolução H3 4 com `hexQueryZoom`, eixo do Seasonal pattern, gráfico "Is this year normal?" em `frontend/src/history/yearLines.tsx`, resumo sem a coluna vazia do segundo mapa, testes R8–R10 e de Vitest, retirada das jornadas R7, J2, J10 e J11 do segundo mapa) | Claude Code (Claude Opus 5.5) | Testes escritos antes de cada correção e vistos falhando; conferido no navegador em 375 px e 1280 px com dados reais da produção. A equipe revisa no PR |
-| `docs/gravacao-demo.md` | Claude Code (Claude Opus 5.5) | Plano de tomadas escrito a partir da legenda gravada pela equipe (`docs/video/`, feita pela equipe) e do pitch; prompt do assistente testado na API no ar. Revisado pela equipe |
-| Vídeo de demonstração (montagem) | Grok | Gravação da tela do site no ar e rolagem seguindo `docs/gravacao-demo.md`, junção da narração gravada pelo Mateus com as legendas de `docs/video/` e renderização. Fala, roteiro e legenda são da equipe. Revisado pela equipe antes de subir |
-| Concepção do front (protótipo no Lovable: abertura com o globo, primeiras telas e direção visual; a pasta `lovable/` saiu do repositório depois do porte) | Lovable | O Mateus descreveu no Lovable tudo o que a interface devia ter e ajustou o resultado em várias rodadas de prompts; o Lovable gerou o código. Serviu de base para a abertura e o mapa do hero portados para o `frontend/` (ver as linhas da abertura e do mapa em tela cheia nesta tabela) |
-| `docs/video/youtube-titulo.txt`, `docs/video/youtube-descricao.txt` | Claude Code (Claude Opus 5.5) | Título e descrição do YouTube escritos a partir do pitch, da gravação e da página do projeto; equipe e membros copiados da página do time no Space Apps. Revisado pela equipe |
-| Aviso de download no chat (`frontend/src/assistant/AssistantBubble.tsx`, teste, `styles.css`) | Claude Code (Claude Opus 5.5) | O botão "Download audit package" do assistente vira "Preparing audit package…" e fica desativado até o ZIP chegar, igual ao botão da barra de export, para o usuário não clicar várias vezes. Teste antes do código. A equipe revisa no PR |
-| Idioma e nomes internos na resposta do assistente (`backend/src/application/assistant.py`, `assistant_tools.py`, cache do `/ask` no `app.py`, testes `test_assistant.py` e `test_ask_route.py`) | Claude Code (Claude Opus 5.5) | Bug visto na API no ar: chip em inglês respondido em português e com `look_first`, `very_high`, probabilidade crua e ID H3. Teste com o modelo falso antes do código; rodada de correção para idioma e nome interno, resposta errada fora do cache, ferramentas sem ID de célula nem probabilidade. A equipe revisa no PR |
-| Correções da auditoria do front (`completeSeasonality` em `summaryModel.ts` e aviso sem ano completo nos dois gráficos e na pergunta guiada, timeout dos pedidos em `api/client.ts` sem `AbortSignal.any`, loop da abertura parado fora da tela, remoção do `HeroCalendar.tsx`, dos campos sem uso do `useExplorer` e de ~490 linhas de CSS órfão, fim do gancho `navigator.webdriver` e jornada J12) | Claude Code (Claude Opus 5.5) | Auditoria feita antes com a skill ponytail-audit; cada bug com teste que falhou antes da correção; o `null` da sazonalidade foi confirmado na API de produção. A equipe revisa no PR |
-| Seção em inglês para os jurados no topo do README (com capturas do site no ar em `docs/img/site/`), validação com o MCD64A1 na tela de Método e em Data & credits (`frontend/index.html`, teste em `src/index-html.test.ts`) e atualização de `docs/pagina-projeto.md` (MCD64A1, assistente, three.js, abertura no app) | Claude Code (Claude Opus 5.5) | Auditoria do README, da página do projeto e do site pelos critérios do `docs/premiacao.md`; números copiados de `docs/validacao-area-queimada.md` e da página do projeto, teste antes do texto. A equipe revisa no PR |
-| Visual do assistente (`frontend/src/assistant/AssistantBubble.tsx`, teste e `styles.css`): botão em pílula com ícone, painel com cabeçalho e mensagens em balões, campo "What do you want to monitor?" | Claude Code (Claude Opus 5.5) | Teste do texto novo escrito antes; nomes acessíveis mantidos; conferido na tela no celular e no desktop. A equipe revisa no PR |
-| Cadeia de provedores do assistente (`docs/rfcs/0004-assistente-virtual.md`, `backend/README.md`) | Claude Code (Claude Opus 5.5) | Pesquisa das camadas gratuitas da Cerebras e da Groq e registro da troca do Qwen pelo `gpt-oss-120b`, decidida pela equipe. A bateria do assistente com a cadeia nova ainda roda antes do deploy |
-| Correções da auditoria de API e pipeline (cache do mapa sem respostas de pontos em `app.py`, exportação em streaming com cursor nomeado em `postgres/api.py` e `zip_export.py`, parse vazio do missing_data em `pipeline.py`, janela do job NRT em blocos de 5 dias em `job_nrt.py`, limite de chamadas por rodada do assistente em `assistant.py`, testes) | Claude Code (Claude Opus 5.5) | Auditoria feita antes com a skill ponytail-audit; cada correção com teste que falhou antes. O cursor nomeado da exportação só roda nos testes de integração com PostGIS. A equipe revisa no PR |
+| Formal documentation (`docs/documentacao-sistema.md`) | OpenAI Codex | Synthesis of the repository sources, diagrams and documentation review following the comments on PR #141; team review pending |
+| Merge of PR #26 into `main`, resolution of `data-pipeline/.coveragerc` and cleanup of the B6 open items in `docs/` | OpenAI Codex | Kept the 71% minimum coverage and updated the documents following issue #68; no change to the calculations |
+| `data-pipeline/pipeline.py`, `agregar.py`, `eda.py`, `test_pipeline.py`, `test_banco.py`, `job_nrt.py`, `Dockerfile`, `migrations/` | Claude Code (Claude Opus 5.5) | Code generated from the filter specifications written by the data team. Reviewed by the team |
+| `docs/banco.md`, `data-pipeline/migrations/001_inicial.sql` | Claude Code (Claude Opus 5.5) | Schema and decision document generated from the repository docs and a local benchmark. Reviewed by the team |
+| `docs/pipeline-dados.md` | Claude Code (Claude Opus 5.5) | Writing of the report on what was done and the findings of the exploratory analysis |
+| API/backtest parity test and leap-year calendar (issue #64) | OpenAI Codex | Comparison from the synthetic daily series, boundary tests and fix of Feb 29 in the backtest after a reproduced failure |
+| API yearly indicator, tests, contract and front-end type (issue #78) | OpenAI Codex | TDD change to the median of the reference years per scenario, following the team's decision in #75; integration of the `reference_median` field |
+| Code and tests in `backend/src/`, `backend/tests/`, Python configuration and backend CI | OpenAI Codex | Assisted implementation of the domain, ports, PostgreSQL and historical analysis; C1–C6 with five FastAPI routes, recent windows, alert with the continuous floor from issue #59 and configuration v1.0, intensity, rate limit/cache, auditable ZIP, synthetic load in `backend/scripts/`, HTTP/PostGIS tests and E2E through the proxy. TDD and CI as in the team documentation |
+| Structure and documentation of `backend/`, changes to `docs/arquitetura.md`, `docs/tarefas.md`, `docs/importacao-regioes.md` and `docs/api.md` | OpenAI Codex | Layer organization and documentation review; update of the READMEs, requirements, tasks, tests and the `docs/validacao-api-eduardo.md` script. Method decisions referenced in the team's records |
+| `docs/prompt-frontend.md` | Claude Code (Claude Opus 5.5) | Front-end prompt written from the repository docs. The team approves before use |
+| `docs/api.md`, `docs/api-exemplo.json` (issues #22 and #29) | Claude Code (Claude Opus 5.5) | Contract fixes written from the audit issues. Reviewed by the team |
+| `docs/validacao-alerta.md`, `docs/rfcs/0001-backtest-alerta.md` | Claude Code (Claude Opus 5.5) | Alert validation proposal and implementation RFC, written from issue #9 and the review of PR #42. Reviewed by the team |
+| `data-pipeline/validacao/backtest_alerta.py`, `data-pipeline/tests/test_backtest_alerta.py`, `data-pipeline/referencia/eventos_conhecidos.csv` | Claude Code (Claude Opus 5.5) | Alert backtest written from RFC 0001 with TDD; fix of the known events and of the current rule to the continuous floor of `v1` (issue #66) and findings from the review of PR #71 (grid floor from the JSON, limit and continuity of the lead time). Event sources checked on the official pages. Reviewed by the team |
+| Cleanup of the `.md` files (README, CLAUDE.md, `docs/`, folder READMEs) | Claude Code (Claude Opus 5.5) | Survey of what was out of date, comparing the docs with the code on `main`, and fixes. Reviewed by the team in the PR |
+| `.github/workflows/ci.yml` ("Docs only?" job), `.github/scripts/roda_testes.sh`, `test_roda_testes.sh` | Claude Code (Claude Opus 5.5) | Filter that skips the code tests on `.md`-only PRs. Reviewed by the team |
+| `data-pipeline/harmonizacao/` (`calibrar.py`, `validar_inpe.py`, `modelo_a.py`, `test_calibrar.py`, `test_validar_inpe.py`), `data-pipeline/tests/test_harmonizacao.py`, `test_calibrar_integracao.py`, `test_modelo_a.py` | Claude Code (Claude Sonnet 5.5, Opus 5.5 and Fable 5.2) | Code written from Weberson's method decisions (VIIRS scale, factor by biome, month and day or night, scenarios per year, P5 to P95 range, 1.5× criterion, cleanup rules and model A by path C, RFC 0002). Errors found in the review of PR #26 were fixed with a test for each. Reviewed by Mateus |
+| `docs/decisoes-harmonizacao.md`, `docs/regras-variaveis.md`, `docs/ux-telas.md`, harmonization section of `docs/importacao-regioes.md` | Claude Code (Claude Sonnet 5.5, Opus 5.5 and Fable 5.2) | Writing and analysis from Weberson's decisions and the results run by workstream A. Method choices are the team's and are marked as such in the documents. Reviewed by the team |
+| `data-pipeline/validacao/modelo_risco.py`, `data-pipeline/tests/test_modelo_risco.py`, `docs/rfcs/0003-modelo-risco.md` | Claude Code (Claude Sonnet 5.5, Opus 5.5 and Fable 5.2) | Risk model experiment written with TDD from Weberson's decisions (target, features, forward validation and decision rule fixed before the climate runs). The public data series was checked against workstream A's run in the database. The "fire above normal?" model is not part of the product. The team reviews in the PR |
+| Urgency level on the recent detections map (`backend/src/domain/calculations/cell_alerts.py`, `map_features.py`, `alert.py`, `adapters/outbound/postgres/api.py`, `config/alert_rules.json` 1.1, tests and `docs/api.md`) | Claude Code (Claude Sonnet 5.5, Opus 5.5 and Fable 5.2) | Written with TDD from Weberson's decision (14-day risk by `v1`, on the resolution 4 cell where it was tested). Reuses the API's `alert_level` function, with a parity test against `recent`. Rafael and Eduardo review in the PR |
+| `data-pipeline/risco_celulas.py`, `data-pipeline/tests/test_risco_celulas.py`, `data-pipeline/migrations/005_risco_celulas.sql`, `config/risk_rules.json` | Claude Code (Claude Sonnet 5.5, Opus 5.5 and Fable 5.2) | Per-cell risk job with the trained model ("where will there be fire in the next 14 days"), written with TDD from Weberson's decisions (question, target, variables, training only on the past, tiers by probability and decision criterion fixed before running). Reuses the functions of the RFC 0003 experiment. The team reviews in the PR |
+| `data-pipeline/validacao/area_queimada.py`, `data-pipeline/tests/test_area_queimada.py`, section "Validação com área queimada da NASA" of `docs/rfcs/0003-modelo-risco.md`, `docs/validacao-area-queimada.md`, script of `docs/pitch.md` with the risk map | Claude Code (Claude Opus 5.5) | Validation of the risk tiers with MCD64A1 v061 burned area (issue #107): script and tests with TDD, criterion fixed before running, processing check and write-up of the result. Reviewed by workstream A |
+| Front-end decisions in `docs/arquitetura.md` (points 5 to 8) and `frontend/README.md` | Claude Code (Claude Opus 5.5) | Survey of the options and writing of the rationale. The choices were made by the team |
+| Point 4 of `docs/arquitetura.md` and owners in `docs/tarefas.md` | Claude Code (Claude Opus 5.5) | Writing of the rationale and survey of the owners from the commit authors. The choices were made by the team |
+| `frontend/` (D9: new interface, `index.html`, `src/hero/`, `src/calendar/CalendarSvg.tsx`, `src/map/`, `src/summary/`, `src/history/`, `src/discovery/`, `src/state/`, `src/styles.css` and tests) | Claude Code (Claude Opus 5.5) | GSAP opening, analysis area, guided discovery, Method screen and harmonization diagram, written from workstream D's art direction prompt, `api.md` and `ux-telas.md`. Reuses the API client and the D1–D7 models. The team reviews in the PR |
+| `data-pipeline/logs.py`, logs in `pipeline.py`, `agregar.py`, `job_nrt.py`, `tests/test_logs.py`, `docs/simulacao.md` | Claude Code (Claude Opus 5.5) | Structured logs generated from RNF07 and the pipeline's decision points. Reviewed by the team |
+| `frontend/` (D1–D7: `index.html`, `src/`, Vite configuration, unit and E2E tests) | Claude Code (Claude Opus 5.5) in D1, D4, D5 and the decree source in Data & credits (#65); Antigravity in D2, D3, D6 and D7 | Skeleton (D1), calendar (D4) and indicators/charts (D5) generated from `prompt-frontend.md`, `api.md` and `ux-telas.md`. Area and period selection (D2–D3: Leaflet + Geoman map in `src/controls/`, API client `src/api/client.ts`, UTC validation, demo fallback), recent detections layer and API integration (D7: `GET /api/v1/detections/recent` in `cividis` log hexagons and points by intensity, `/api` proxy in Vite) and downloads/export (D6: audit package `POST /api/v1/export`, CSVs and calendar PNG in `src/export/` and all journeys J1–J9 in `e2e/jornadas.spec.ts`) written with TDD from the docs. The team reviews in the PR |
+| `docs/rfcs/0004-assistente-virtual.md` | Claude Code (Claude Opus 5.5) | Virtual assistant RFC written from reading the API code (`application/api.py`, `ports/api.py`, `app.py` routes) and the docs; decision for tool use instead of text-to-SQL; points from Mateus's review in PR #121 applied (risk, `hours`, language, `messages[]` validation, cost and provider chain) |
+| NASA GIBS default base map (`frontend/src/map/MapStage.tsx`, `MapStage.test.tsx`) | Claude Code (Claude Opus 5.5) | Review of the project's data sources and change of the default with TDD. The team reviews in the PR |
+| Deploy (`infra/docker-compose.yml`, `infra/.env.example`, `backend/Dockerfile`, `.dockerignore`, `frontend/wrangler.jsonc`, `frontend/public/_headers`, `docs/deploy.md`) and real IP in the rate limit behind Cloudflare (`app.py`, tests) | Claude Code (Claude Opus 5.5) | Configuration written from the decision to put the front end on Cloudflare and the API behind the tunnel; the rate limit bug was reproduced in a test before the fix. The team reviews in the PR |
+| Risk job in the deploy (`data-pipeline/Dockerfile`, `job-risco` service and `RISK_MAX_AGE_DAYS` in `infra/docker-compose.yml` and `infra/.env.example`, `docs/deploy.md`) | Claude Code (Claude Opus 5.5) | Configuration written from issue #96 and tested by running the job in the image against a disposable Postgres. The team reviews in the PR |
+| Database load on the VPS and C7 status (`docs/tarefas.md`, `docs/deploy.md`, `README.md`; issue #98) | Claude Code (Claude Opus 5.5) | Load script, temporary access for the dump and checks guided by the AI, run and checked by the team on the VPS; documents updated with the live addresses |
+| Early warning on the map (D10: `frontend/src/map/alertsModel.ts`, `EarlyWarning.tsx`, tooltip in `src/controls/recentDetectionsModel.ts`, types, styles and journeys J10 and J11) | Claude Code (Claude Opus 5.5) | Written with TDD from the contract of PRs #86 and #97 and the text of PR #103, with all new fields optional; the map focus fix came from a failing journey. The team reviews in the PR |
+| Workstream B results on the Method screen (`frontend/index.html`, `frontend/public/img/`, `src/index-html.test.ts`) | Claude Code (Claude Sonnet 5.5, Opus 5.5 and Fable 5.2) | English text written from `docs/decisoes-harmonizacao.md` and RFC 0003, with the numbers copied from the documents, and tests before the text. The team reviews in the PR |
+| `docs/pagina-projeto.md` (C9) | Claude Code (Claude Opus 5.5) | English text of the project page, written from the repository docs, the Method screen and this table, with the numbers copied from the documents. The team reviews in the PR |
+| `RISK_MAX_AGE_DAYS` in the variables table of `backend/README.md` and status of RNF03, RNF09 and B9 (`docs/requisitos.md`, `docs/tarefas.md`, `docs/deploy.md`, `infra/.env.example`) | Claude Code (Claude Opus 5.5) | Text written from the `job-nrt` and `job-risco` logs and the VPS `docker stats` on 2026-11-15, pasted by the team. The team reviews in the PR |
+| Globe opening in `frontend/` (`src/hero/OrbitalOpening.tsx`, `OrbitalScene.tsx`, `globeTransition.ts`, `openingCopy.ts`, `assets/`, tests) and RD06 highlighted indicators (`src/summary/indicatorsModel.ts`, `IndicatorRow.tsx`, test) | Claude Code (Claude Opus 5.5) | Port of the opening from the Lovable prototype to the official front end (Vite + React), with the descent ending on the explorer map (same framing and same GIBS layer), fix of the dotted texture seam, light theme through the `styles.css` variables and the indicators row with the API's `indicators` fields. Test before code; checked in the browser on desktop and mobile. The team reviews in the PR |
+| Lighting of the opening satellites (`frontend/src/hero/globeTransition.ts`, `OrbitalScene.tsx`, test) | Claude Code (Claude Opus 5.5) | Diagnosis of the NASA models washed out to white (ambient light 2.2 + sun 3 lit the texture at 1.65×) and reduction to 0.8 + 2.3. Test reproducing the bug before the fix; checked in Chromium with GPU, before and after. The team reviews in the PR |
+| CSP for the satellite textures (`frontend/public/_headers`, test `frontend/src/security-headers.test.ts`) | Claude Code (Claude Opus 5.5) | Diagnosis of the satellites still white on the live site: the CSP without `blob:` in `connect-src` blocked the GLTFLoader textures. Test reproducing the bug before the fix; checked on the production build served with the `_headers` CSP. The team reviews in the PR |
+| Front-end responsiveness (`src/ui/useMediaQuery.ts`, `openingLayout` in `src/hero/globeTransition.ts`, narrow geometries in `src/calendar/CalendarSvg.tsx`, `src/history/SeasonalChart.tsx`, `YearRanking.tsx`, `styles.css`, curve link in `index.html`, `e2e/responsivo.spec.ts`) | Claude Code (Claude Opus 5.5) | Browser test at 375 px and 768 px, Playwright tests reproducing each problem before the fix, and the fixes: opening without the globe over the text on tablet, readable charts on mobile, 44 px buttons on touch screens. Checked with Playwright screenshots. The team reviews in the PR |
+| Simple mode of the explorer (`frontend/src/summary/verdictModel.ts`, `Verdict.tsx`, "More options" in `src/controls/SelectionPanel.tsx`, styles, tests, journeys J3 and J4, `docs/ux-telas.md`) | Claude Code (Claude Opus 5.5) | One-sentence verdict and advanced controls collapsed, at Mateus's request ("simple enough for a child"). Uses the same P25–P75 range as the 7-day card, no new number. Test before code; checked in the browser on desktop and mobile. The team reviews in the PR |
+| Merge of the animated calendar (`frontend/src/history/HistoryPanel.tsx`, `src/hero/heroIntro.ts`, `src/App.tsx`, `index.html`, tests) | Antigravity | The animation of the MODIS → VIIRS timeline folding into the calendar moves to the explorer's main calendar and removes the second, repeated grid below it. The team reviews in the PR |
+| Virtual assistant: `backend/src/application/assistant.py`, `assistant_tools.py`, `backend/src/ports/llm.py`, `backend/src/adapters/outbound/llm/openai.py`, `/ask` route in `app.py`, `ask` bucket in `limits.py`, `frontend/src/assistant/`, `askAssistant` in the client, tests `test_assistant.py`, `test_ask_route.py` and `AssistantBubble.test.tsx` | Claude Code (Claude Opus 5.5) | Implementation of RFC 0004 with TDD: tools over the existing use cases, `messages[]` validation, provider chain, daily cap and bubble behind `VITE_ENABLE_ASSISTANT`. After the audit: sources and number checks in the answer, total deadline per question, short database read per tool and focus trapped in the panel. Tested with Cerebras, Groq, Gemini and OpenRouter on the local database |
+| Map touch on mobile (`frontend/src/map/MapStage.tsx`, `MapStage.test.tsx`, `src/hero/OrbitalScene.tsx`, `src/styles.css`, `e2e/responsivo.spec.ts`) | Antigravity | Page scroll with one finger over the map (with a temporary `"Use two fingers to move the map."` hint), map drag and zoom with two fingers via `L.Handler.TouchZoom`, rectangle drawing with one finger when drawing mode is on, and `touch-action: pan-y` kept on the opening's 3D canvas. The team reviews in the PR |
+| Final 30 s script and impact potential sentence (`docs/pitch.md`, `docs/pagina-projeto.md`; issues #116 and #135) | Claude Code (Claude Opus 5.5) and Antigravity | Writing of the impact potential section (Weberson, workstream B) and consolidation of the final 30 s script in the Problem → Decision → Delivery (MODIS and VIIRS harmonization) → Proof → Global Impact arc, aligned with the Project Submission Guide, with the front end's UX rationale and references on the project page. Reviewed by Mateus |
+| Full AI credit in Data & credits (`frontend/index.html`, `src/index-html.test.ts`) | Claude Code (Claude Opus 5.5) | Alignment of the site's AI line with this table (Claude Code, OpenAI Codex, Antigravity and Lovable), following rule 7 of `docs/premiacao.md`. Test written with the list of the four tools. The team reviews in the PR |
+| Assistant button only after the hero (`frontend/src/hero/useLeftHero.ts`, `src/assistant/AssistantBubble.tsx`, `src/App.tsx`, tests) | Claude Code (Claude Sonnet 5.5) | The floating assistant button only appears once the globe opening has left the screen, so it does not take space from the hero. Hook with IntersectionObserver and test before code; checked in the browser at four scroll positions. The team reviews in the PR |
+| Assistant audit: conversation continuation and stale data in the prompt and in the correction round (`backend/src/application/assistant.py`), regions in the context, map freshness and action labels (`assistant_tools.py`), pause of the failing provider (`adapters/outbound/llm/openai.py`), "Try again", scrolling and labels in the bubble (`frontend/src/assistant/`), `backend/scripts/assistant_benchmark.py` battery and tests | Claude Code (Claude Opus 5.5) | Audit findings reproduced with real conversations on the local API before the fix, and checked afterwards by the battery (10/10 on Cerebras in 3 of 4 runs) |
+| Full-screen map in the site hero (`frontend/src/hero/HeroMap.tsx`, `heroMap.css`, `heroMapModel.ts` and test, changes to `OrbitalOpening.tsx`, `OrbitalScene.tsx`, `globeTransition.ts`, `styles.css`) | Claude Code (Claude Sonnet 5.5) | Port to `frontend/` of the map from the Lovable prototype and the Figma screens: Fire now and Risk, next 14 days tabs, filters, status, Indicators panel grouped by risk, compact legend, Critical and Attention icons, logarithmic cividis, smooth wheel zoom and scroll-down arrow. Map rules in pure functions with 12 tests; checked in the browser with the real API. The team reviews in the PR |
+| Mobile and end of the calendar (hero map controls covering each other, visible popup, hexagons always at H3 resolution 4 with `hexQueryZoom`, Seasonal pattern axis, "Is this year normal?" chart in `frontend/src/history/yearLines.tsx`, summary without the empty column of the second map, tests R8–R10 and Vitest, removal of journeys R7, J2, J10 and J11 of the second map) | Claude Code (Claude Opus 5.5) | Tests written before each fix and seen failing; checked in the browser at 375 px and 1280 px with real production data. The team reviews in the PR |
+| `docs/gravacao-demo.md` | Claude Code (Claude Opus 5.5) | Shot plan written from the subtitles recorded by the team (`docs/video/`, made by the team) and the pitch; assistant prompt tested on the live API. Reviewed by the team |
+| Demo video (editing) | Grok | Screen recording of the live site and scrolling following `docs/gravacao-demo.md`, joining Mateus's recorded narration with the subtitles in `docs/video/`, and rendering. Speech, script and subtitles are the team's. Reviewed by the team before upload |
+| Front-end concept (Lovable prototype: globe opening, first screens and visual direction; the `lovable/` folder left the repository after the port) | Lovable | Mateus described in Lovable everything the interface should have and refined the result over several rounds of prompts; Lovable generated the code. It was the base for the opening and the hero map ported to `frontend/` (see the opening and full-screen map rows in this table) |
+| `docs/video/youtube-titulo.txt`, `docs/video/youtube-descricao.txt` | Claude Code (Claude Opus 5.5) | YouTube title and description written from the pitch, the recording and the project page; team and members copied from the team's Space Apps page. Reviewed by the team |
+| Download notice in the chat (`frontend/src/assistant/AssistantBubble.tsx`, test, `styles.css`) | Claude Code (Claude Opus 5.5) | The assistant's "Download audit package" button becomes "Preparing audit package…" and stays disabled until the ZIP arrives, like the export bar button, so the user does not click several times. Test before code. The team reviews in the PR |
+| Language and internal names in the assistant's answer (`backend/src/application/assistant.py`, `assistant_tools.py`, `/ask` cache in `app.py`, tests `test_assistant.py` and `test_ask_route.py`) | Claude Code (Claude Opus 5.5) | Bug seen on the live API: an English chip answered in Portuguese and with `look_first`, `very_high`, raw probability and H3 ID. Test with the fake model before code; correction round for language and internal names, wrong answer kept out of the cache, tools without cell ID or probability. The team reviews in the PR |
+| Front-end audit fixes (`completeSeasonality` in `summaryModel.ts` and the no-complete-year notice in both charts and the guided question, request timeout in `api/client.ts` without `AbortSignal.any`, opening loop stopped off screen, removal of `HeroCalendar.tsx`, of unused `useExplorer` fields and ~490 lines of orphan CSS, end of the `navigator.webdriver` hook and journey J12) | Claude Code (Claude Opus 5.5) | Audit done first with the ponytail-audit skill; each bug with a test that failed before the fix; the seasonality `null` was confirmed on the production API. The team reviews in the PR |
+| English section for the judges at the top of the README (with screenshots of the live site in `docs/img/site/`), MCD64A1 validation on the Method screen and in Data & credits (`frontend/index.html`, test in `src/index-html.test.ts`) and update of `docs/pagina-projeto.md` (MCD64A1, assistant, three.js, opening in the app) | Claude Code (Claude Opus 5.5) | Audit of the README, the project page and the site against the criteria in `docs/premiacao.md`; numbers copied from `docs/validacao-area-queimada.md` and the project page, test before text. The team reviews in the PR |
+| Assistant visuals (`frontend/src/assistant/AssistantBubble.tsx`, test and `styles.css`): pill button with icon, panel with header and messages in bubbles, "What do you want to monitor?" field | Claude Code (Claude Opus 5.5) | Test for the new text written first; accessible names kept; checked on screen on mobile and desktop. The team reviews in the PR |
+| Assistant provider chain (`docs/rfcs/0004-assistente-virtual.md`, `backend/README.md`) | Claude Code (Claude Opus 5.5) | Research of the Cerebras and Groq free tiers and record of the switch from Qwen to `gpt-oss-120b`, decided by the team. The assistant battery with the new chain still runs before the deploy |
+| API and pipeline audit fixes (map cache without point responses in `app.py`, streaming export with a named cursor in `postgres/api.py` and `zip_export.py`, empty missing_data parse in `pipeline.py`, NRT job window in 5-day blocks in `job_nrt.py`, call limit per assistant round in `assistant.py`, tests) | Claude Code (Claude Opus 5.5) | Audit done first with the ponytail-audit skill; each fix with a test that failed before. The export's named cursor only runs in the PostGIS integration tests. The team reviews in the PR |
+| README in English with the live site link and the team, status fixes in `docs/` (`requisitos.md`, `tarefas.md`, `ux-telas.md`, `arquitetura.md`, `validacao-api-eduardo.md`, RFC 0004, `backend/README.md`) | Claude Code (Claude Opus 5.5) | Translation of the README and comparison of the docs' statuses with the code on `main`; claims copied from `docs/pagina-projeto.md`. The team reviews in the PR |
 
-## Dados e créditos
+## Data and credits
 
-- Focos de calor: [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) (MODIS C6.1 e VIIRS C2)
-- Polígonos de biomas: IBGE, Biomas do Brasil 1:250.000
-- Série de validação: INPE, Programa Queimadas
-- Textura da Terra na abertura (`frontend/src/hero/`): [NASA GIBS](https://www.earthdata.nasa.gov/gibs), camada `BlueMarble_ShadedRelief_Bathymetry`
-- Modelos 3D do Aqua e do Suomi NPP: [NASA 3D Resources](https://github.com/nasa/NASA-3D-Resources)
-- Limites de países: [datasets/geo-countries](https://github.com/datasets/geo-countries) (Natural Earth)
-- Área queimada (validação do modelo de risco): [NASA MCD64A1 v061](https://lpdaac.usgs.gov/products/mcd64a1v061/) (MODIS Burned Area, 500 m)
+- Fire detections: [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) (MODIS C6.1 and VIIRS C2)
+- Biome polygons: IBGE, Biomas do Brasil 1:250,000
+- Validation series: INPE, Programa Queimadas
+- Earth texture in the opening (`frontend/src/hero/`): [NASA GIBS](https://www.earthdata.nasa.gov/gibs), layer `BlueMarble_ShadedRelief_Bathymetry`
+- 3D models of Aqua and Suomi NPP: [NASA 3D Resources](https://github.com/nasa/NASA-3D-Resources)
+- Country borders: [datasets/geo-countries](https://github.com/datasets/geo-countries) (Natural Earth)
+- Burned area (risk model validation): [NASA MCD64A1 v061](https://lpdaac.usgs.gov/products/mcd64a1v061/) (MODIS Burned Area, 500 m)

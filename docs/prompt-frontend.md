@@ -142,11 +142,11 @@ Construa em etapas, **uma por vez**. Cada etapa termina com commit na `d-fronten
 | 7. Primeira tela | O conceito aprovado: sequência de carregamento, pin na rolagem ou interação com cursor/dedo, versão estática para `prefers-reduced-motion` | — | Impressiona gravada em 30 s; FPS e LCP dentro das metas | — |
 | 8. Momentos interativos | O conceito volta em 2 ou 3 pontos da ferramenta (ver "Direção de design") e as transições de estado | — | Cada momento ajuda a ler o dado, não só enfeita | — |
 | 9. Qualidade e performance | Screenshots de todas as seções (inclusive no meio das animações), teste de todas as interações, screenshot sem JS, Playwright com CPU 4× mais lenta, Lighthouse, simulação de daltonismo. Desligar um efeito por vez para achar o que pesa | — | Metas de "Performance" e "Qualidade mínima" batidas, ou o desvio explicado | M3 (com o deploy da frente C) |
-| 10. Demo e entrega | Captura de 30 s da primeira tela até um resultado na ferramenta, base do vídeo ou dos slides; linha na tabela "Uso de IA" do README | D8 | Link público testado em janela anônima | M4 |
+| 10. Demo e entrega | Captura de 30 s da primeira tela até um resultado na ferramenta, base do vídeo ou dos slides; linha na tabela "AI use" do README | D8 | Link público testado em janela anônima | M4 |
 
 Se o tempo apertar, as etapas 7 e 8 encolhem (primeira tela mais simples, um momento interativo só). As etapas 2 a 6 não são cortadas.
 
-Regras de todas as etapas: registre na tabela "Uso de IA" do README o que foi gerado, no mesmo commit do código. Sem `Co-Authored-By` nos commits.
+Regras de todas as etapas: registre na tabela "AI use" do README o que foi gerado, no mesmo commit do código. Sem `Co-Authored-By` nos commits.
 
 Entrega final: link local e/ou público, resumo curto do conceito, título e meta description, screenshots, números de performance e a lista de pendências (`TODO(confirm)`, campos do contrato que ainda não existem na API, textos que dependem de decisão da equipe).
 
