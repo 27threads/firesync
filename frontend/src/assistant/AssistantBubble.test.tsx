@@ -47,6 +47,31 @@ test('a long earlier answer goes back as history cut to the API limit', async ()
   expect(body.messages.map((m: { content: string }) => m.content.length)).toEqual([SUGGESTED_QUESTIONS[4].length, 4000, 9]);
 });
 
+test('the audit download says it is preparing and blocks a second click until it ends', async () => {
+  const download = { type: 'download_export', area: { type: 'region', region_id: 6 }, start: '2020-01', end: '2020-12' };
+  let finishZip: (response: Response) => void = () => {};
+  const fetchMock = vi.fn(async (url: string) =>
+    url.endsWith('/ask')
+      ? json({ answer: 'Here is the report.', actions: [download], notes: [], sources: [], verified: true })
+      : new Promise<Response>((resolve) => {
+          finishZip = resolve;
+        }),
+  );
+  vi.stubGlobal('fetch', fetchMock);
+  render(<AssistantBubble onShowCalendar={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Ask about fire data' }));
+  fireEvent.click(screen.getByRole('button', { name: SUGGESTED_QUESTIONS[4] }));
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Download audit package' }));
+  const preparing = await screen.findByRole('button', { name: 'Preparing audit package…' });
+  expect(preparing).toBeDisabled();
+  fireEvent.click(preparing);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+
+  finishZip(new Response('{}', { status: 500 }));
+  expect(await screen.findByRole('button', { name: 'Download audit package' })).toBeEnabled();
+});
+
 test('fire map sources name the time window', () => {
   expect(describeSource({ endpoint: 'GET /api/v1/detections/recent', hours: 72, data_version: 'v1' })).toBe(
     'NASA FIRMS via firesync fire map, last 72 h · data version v1',
@@ -91,4 +116,48 @@ test('answer markdown becomes paragraphs, bullets and bold without raw HTML', ()
   expect(container.querySelector('li strong')).toHaveTextContent('September');
   expect(container.querySelector('p strong')).toHaveTextContent('above');
   expect(container.querySelector('img')).toBeNull();
+});
+
+test('hideBubble esconde o botão flutuante, e o painel aberto continua na tela', () => {
+  const { rerender } = render(<AssistantBubble onShowCalendar={vi.fn()} hideBubble />);
+  expect(screen.queryByRole('button', { name: 'Ask about fire data' })).not.toBeInTheDocument();
+
+  rerender(<AssistantBubble onShowCalendar={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Ask about fire data' }));
+  rerender(<AssistantBubble onShowCalendar={vi.fn()} hideBubble />);
+  expect(screen.getByRole('dialog')).toBeInTheDocument();
+});
+
+test('buttons name the region and period when one answer covers several', async () => {
+  const actions = [6, 3].map((id) => ({
+    type: 'show_calendar',
+    label: `${id === 6 ? 'Pantanal' : 'Cerrado'} · 2024-01 to 2024-12`,
+    area: { type: 'region', region_id: id },
+    start: '2024-01',
+    end: '2024-12',
+  }));
+  vi.stubGlobal('fetch', vi.fn(async () => json({ answer: 'Both.', actions, notes: [], sources: [], verified: true })));
+  render(<AssistantBubble onShowCalendar={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Ask about fire data' }));
+  fireEvent.click(screen.getByRole('button', { name: SUGGESTED_QUESTIONS[1] }));
+  expect(await screen.findByRole('button', { name: 'Show on calendar · Pantanal · 2024-01 to 2024-12' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Show on calendar · Cerrado · 2024-01 to 2024-12' })).toBeInTheDocument();
+});
+
+test('a failed question goes back to the box and Try again sends it again', async () => {
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(json({ error: { code: 'assistant_unavailable', message: 'Assistant unavailable, use the map.' } }, 503))
+    .mockResolvedValueOnce(json({ answer: 'Second try worked.', actions: [], notes: [], sources: [], verified: true }));
+  vi.stubGlobal('fetch', fetchMock);
+  render(<AssistantBubble onShowCalendar={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Ask about fire data' }));
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'E em 2023?' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Assistant unavailable');
+  expect(screen.getByLabelText('Your question')).toHaveValue('E em 2023?');
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  expect(await screen.findByText('Second try worked.')).toBeInTheDocument();
+  const body = JSON.parse(String((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body));
+  expect(body.messages).toEqual([{ role: 'user', content: 'E em 2023?' }]);
 });

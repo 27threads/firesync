@@ -142,6 +142,49 @@ São duas datas escolhidas para ilustrar, e não uma medição. Na segunda, as f
 - O job precisa do banco com `agregados_diarios` e de um servidor onde rodar. Sem a VPS, as notas podem ser calculadas no banco local e levadas no dump.
 - A frequência de uma faixa é uma média do passado, e não uma previsão para aquele lugar.
 
+## Validação com área queimada da NASA (issue #107)
+
+O modelo prevê detecções do VIIRS a partir de detecções do VIIRS. Para ver se as faixas acompanham o fogo de verdade, e não só o próprio gabarito, comparamos com uma medida independente: a **área queimada do MCD64A1 v061 da NASA** (MODIS, 500 m, banda "Burn Date" com o dia da queima), que mapeia a cicatriz pela mudança de reflectância, com outro sensor e outro método. O MapBiomas Fogo, a primeira opção, estava com o download suspenso.
+
+**Critério fixado antes de rodar (15/11/2026).** Unidade: célula H3 res 4 num domingo `t` de 2021 a 2024, na Amazônia (bioma 1 do IBGE, pelo centro da célula). Modelo: o de `risco_celulas.py`, treinado só com os anos anteriores ao de `t` (um treino por ano), com a série do banco. Área queimada: soma dos pixels com "Burn Date" em `t+1..t+14`, a mesma janela do alvo do modelo.
+
+1. Em **todos** os anos, a área queimada média cai de faixa em faixa (muito alto > alto > médio > menor).
+2. AUC da nota contra "1 km² ou mais queimado nos 14 dias seguintes" de pelo menos **0,80**. Sensibilidade: 0,5 e 5 km².
+
+**Resultado: os dois critérios passaram.** 2.128 células, 207 domingos, 440.496 células-domingo. Antes de confiar no número, conferimos o processamento: a área queimada total na Amazônia deu 25,3 mil km² (2021), 40,7 mil (2022), 38,1 mil (2023) e 85,4 mil (2024, o ano da seca); a banda "Burn Date" usa 0 (não queimou), -1 (sem dado), -2 (água) e 1..366; as células são as mesmas do banco (mãe da res 6 em res 4).
+
+| Ano | Muito alto | Alto | Médio | Menor | Ordem |
+| --- | --- | --- | --- | --- | --- |
+| 2021 | 2,91 | 0,95 | 0,69 | 0,10 | mantida |
+| 2022 | 5,12 | 1,41 | 0,77 | 0,12 | mantida |
+| 2023 | 4,27 | 1,19 | 0,84 | 0,15 | mantida |
+| 2024 | 10,68 | 2,01 | 1,28 | 0,20 | mantida |
+| Todos | **5,84** | **1,38** | **0,89** | **0,14** | mantida |
+
+Área queimada média (km²) por célula nos 14 dias seguintes, por faixa do modelo. Na faixa "muito alto" queima, em média, cerca de 40 vezes mais que na "menor".
+
+| Limiar de área queimada | Células-domingo acima | AUC (todos) | 2021 | 2022 | 2023 | 2024 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0,5 km² | 8,2% | 0,896 | 0,879 | 0,899 | 0,901 | 0,901 |
+| **1 km²** | 6,9% | **0,898** | 0,880 | 0,901 | 0,902 | 0,904 |
+| 5 km² | 3,1% | 0,906 | 0,893 | 0,909 | 0,898 | 0,916 |
+
+**O alvo do modelo e a área queimada.** Das células-domingo com fogo relevante (10 ou mais detecções em 14 dias), 36,9% tiveram 1 km² ou mais queimado, contra 2,2% das sem fogo relevante. Das que tiveram área queimada, 73,1% tinham fogo relevante. As duas medidas andam juntas, mas não são a mesma coisa: muita detecção sem cicatriz mapeada (nuvem, fumaça, queima pequena ou em área já queimada) e alguma cicatriz sem detecção.
+
+**As queimadas não avisadas (análise exploratória, depois do critério).** Dos 30.537 casos com 1 km² ou mais queimado, 69% estavam em "alto" ou "muito alto" (82% da área queimada), 8% em "médio" e 23% em "menor" (7.146 casos, 13% da área). Nos não avisados, 81% também não tiveram fogo relevante pelo VIIRS, e 46% não tinham nenhum foco nos 30 dias anteriores. Mais da metade (3.892 casos, 29,7 mil km²) fica no sul da Amazônia (latitude abaixo de −8°) de dezembro a abril, na época de chuva, e só 5,6% deles tiveram fogo relevante pelo VIIRS. Hipótese não testada: a data do MCD64A1 sai atrasada quando a cicatriz fica coberta por nuvem ou fumaça e só aparece meses depois. Os erros em que os dois satélites viram fogo e o modelo deu nota baixa são cerca de 1.400 casos (4,5% do total), quase todos na estação seca, em células sem foco no mês anterior: o fogo que "começa do nada", para o qual o modelo não tem pista.
+
+**O acerto medido é um piso.** O MCD64A1 deixa de marcar fogo que existiu: queimada menor que um pixel (500 m, ~25 ha) ou em faixa estreita; pixel sob nuvem ou fumaça ("sem dado"); área que já tinha queimado ou pasto queimado todo ano (a mudança de cor é pequena); fogo de sub-bosque, sob a copa verde; e data de queima fora da janela de 14 dias. Por isso parte dos "erros" do modelo é falta de registro da referência, e o acerto real tende a ser **maior** que o medido. A equipe decidiu (15/11/2026) não mexer mais no modelo antes da submissão. A explicação em linguagem simples está em [validacao-area-queimada.md](../validacao-area-queimada.md).
+
+**Limites e vieses**
+- Só a Amazônia e só 2021 a 2024. Os outros biomas não foram testados.
+- Nuvem e fumaça mascaram a área queimada (pixels -1), e queimas menores que ~25 ha quase não aparecem em 500 m: a área medida é um piso.
+- A data de queima do MCD64A1 tem incerteza de alguns dias; uma queima perto da borda da janela pode cair na semana vizinha.
+- Domingos seguidos têm janelas que se sobrepõem, então as células-domingo não são independentes, e a área média por faixa é puxada pela temporada (ago a out).
+- O bioma é o do centro da célula; células na divisa entram inteiras. 35 células da Amazônia com área queimada (27,9 km² em 4 anos) não têm nenhuma detecção na série e ficam de fora.
+- O produto sai com meses de atraso: valida o passado, não a nota de hoje.
+
+**Como refazer** (dentro de `data-pipeline/`, com `pip install pyhdf` e `EARTHDATA_TOKEN` no `.env`): `python validacao/area_queimada.py baixar` (576 HDF, 2,4 GB, fora do git), `processar` e `avaliar`, que grava `relatorios/area_queimada/relatorio.txt`.
+
 ## Acerto na Amazônia (2021 a 2024)
 
 Só as células do bioma Amazônia (2.129 células, pelo centro da célula), todos os domingos de 2021 a 2024, treinando cada ano só com os anteriores. Alvo: 10 ou mais detecções VIIRS nos 14 dias seguintes. "Aviso" é uma nota de 50% ou mais.
@@ -251,7 +294,7 @@ Na manhã, 0,92% das células descem uma faixa. Usar ontem é um pouco pior que 
 ## Limites
 
 - Escala de célula H3 res 4, avaliação semanal, horizonte de 14 dias. Em escala mais fina ou horizonte mais longo, o resultado pode ser outro.
-- O gabarito mede detecções do VIIRS, não área queimada.
+- O gabarito do treino mede detecções do VIIRS, não área queimada. A comparação com a área queimada da NASA foi feita só na Amazônia ([seção acima](#validação-com-área-queimada-da-nasa-issue-107)).
 - Só quatro anos de teste (2021 a 2024), com domingos. Falta testar 2025 e 2026 fora da amostra.
 - **Troca de satélite (S-NPP para NOAA-20): testada, sem prejuízo** (Eduardo, issue 102). O modelo foi treinado só com S-NPP, e o banco usa o NOAA-20 desde 01/11/2026. De abril de 2018 a 2024, o NOAA-20 vê 0,99 vez o S-NPP (0,97 a 1,03 por ano). Pontuando 69 domingos de 2021 a 2024 com o modelo treinado até 2020: só S-NPP, AUC 0,9490 e Brier 0,0592; **últimos 30 dias do NOAA-20 e o resto S-NPP (como na produção)**, AUC 0,9496 (+0,0007) e Brier 0,0586 (−0,9%); só NOAA-20, AUC 0,9483 e Brier 0,0600 (perde um pouco por não ter os anos antes de 2018). Dentro do critério (AUC −0,005 ou Brier +2%). Limite: o gabarito vem do S-NPP; não foi testado com o alvo pelo NOAA-20.
 - **Dado em tempo real (NRT) contra dado de arquivo (SP): não dá para testar hoje.** O modelo foi treinado com arquivo e o job pontua com NRT, que é provisório. O banco apaga o NRT quando o SP chega, e o SP do FIRMS só vai até 31/07/2026, onde o NRT começa (01/08). Não há período com os dois. Para testar, é preciso esperar o SP de agosto em diante, ou guardar o NRT de um período antes de o SP chegar.

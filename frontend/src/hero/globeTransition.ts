@@ -49,3 +49,7 @@ export function surfaceCameraDistance(height: number): number {
 export const litDiffuseGain = ({ ambient, sun }: { ambient: number; sun: number }) => (ambient + sun) / Math.PI;
 
 export const SPACECRAFT_LIGHT = { ambient: 0.8, sun: 2.3 };
+
+/** Quanto a janela rola (em alturas de tela) com o mapa em tela cheia já à mostra, antes de a abertura acabar. */
+export const MAP_ARRIVAL_HOLD = 0.8;
+

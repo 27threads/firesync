@@ -263,6 +263,24 @@
                 elevated activity before the official response; it does not show that the alert predicted a fire
                 before it started. This case is an illustration, not statistical evidence.
               </p>
+              <h3>14-day risk map, checked against NASA burned area</h3>
+              <p>
+                The risk tiers on the map come from a gradient boosting model that gives each H3 cell the chance of
+                relevant fire (10 or more VIIRS detections) in the next 14 days. It learns from VIIRS, so we checked it
+                with an independent NASA product: MODIS burned area, MCD64A1 v061 (500 m scars, with the day each pixel
+                burned). For every Sunday from 2021 to 2024, the model was trained only on earlier years and scored the
+                2,128 Amazon cells; we then measured the area NASA mapped as burned in the next 14 days, about 440,000
+                predictions. Both pass criteria were fixed before the run.
+              </p>
+              <ul>
+                <li>Burned area fell tier by tier in all four years. The very high tier was 11% of the predictions and
+                  held 75.5% of all burned area.</li>
+                <li>A place that burned got a higher score than one that did not in about 9 of 10 pairs (AUC 0.898,
+                  0.880 to 0.904 by year; the criterion was 0.80).</li>
+                <li>69% of the places that burned were flagged high or very high. Only 37% of the weeks with 10 or more
+                  VIIRS detections have a mapped scar of 1 km² or more, so part of the misses is missing reference data:
+                  69% is a floor.</li>
+              </ul>
               <h3>Limits</h3>
               <p>
                 The conversion assumes the ratio between the sensors in 2003 to 2011 was similar to the calibration
@@ -271,7 +289,8 @@
               </p>
               <p>
                 The alert and its test outcome use the same VIIRS sensor. The test measures subsequent satellite
-                detections, not burned area. Comparison with NASA MCD64A1 burned-area data remains a next step.
+                detections, not burned area. The 14-day risk map was compared with NASA MCD64A1 burned area (above);
+                the alert rule itself was not.
                 The seasonal reference excludes the evaluated year but includes later years, so this is a
                 retrospective assessment, not a historical forecast using only information available at the time.
               </p>
@@ -291,12 +310,13 @@
             <li>Fire detections: <a href="https://firms.modaps.eosdis.nasa.gov/" rel="noopener">NASA FIRMS</a>, MODIS C6.1 (Aqua) and VIIRS C2 (S-NPP, NOAA-20).</li>
             <li>Biome boundaries: IBGE, Biomas do Brasil 1:250,000.</li>
             <li>Reference series for validation: INPE, Programa Queimadas.</li>
+            <li>Burned area for checking the risk map: <a href="https://lpdaac.usgs.gov/products/mcd64a1v061/" rel="noopener">NASA MCD64A1 v061</a> (MODIS Burned Area, 500 m), from NASA LP DAAC.</li>
             <li>Historical alert example: Government of Mato Grosso do Sul, <a href="https://www.semadesc.ms.gov.br/?p=108045" rel="noopener">Decree 080/2020</a>, environmental emergency in the Pantanal (24 July 2020).</li>
             <li>Base maps: <a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs" rel="noopener">NASA EOSDIS GIBS</a> (Blue Marble Shaded Relief and Bathymetry, VIIRS Black Marble, Coastlines), with coastline data from <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a> contributors.</li>
             <li>Opening globe: Earth imagery from <a href="https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs" rel="noopener">NASA EOSDIS GIBS</a> (BlueMarble_ShadedRelief_Bathymetry); Aqua and Suomi NPP spacecraft models from <a href="https://github.com/nasa/NASA-3D-Resources" rel="noopener">NASA 3D Resources</a> (Brian E. Kumanchik and Christian A. Lopez, NASA). Orbits and sizes are illustrative. No NASA endorsement is implied.</li>
             <li>Color scale: cividis (Nuñez, Anderton and Renslow, 2018), through d3-scale-chromatic.</li>
             <li>Interface libraries: React, Vite, D3, GSAP, three.js, Leaflet, and Leaflet-Geoman. Typeface: Archivo (SIL Open Font License), through Fontsource.</li>
-            <li>Built for the NASA Space Apps Challenge 2026, challenge "MODIS and VIIRS Hot Spots". Parts of the code were written with AI assistance (Claude Code); the full list is in the project repository.</li>
+            <li>Built for the NASA Space Apps Challenge 2026, challenge "MODIS and VIIRS Hot Spots". Parts of the code were written with AI assistance (Claude Code, OpenAI Codex, Antigravity and Lovable); the full list is in the project repository.</li>
           </ul>
         </div>
       </section>

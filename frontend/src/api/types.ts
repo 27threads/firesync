@@ -107,10 +107,10 @@ export interface YearTotal {
 
 export interface SeasonalityMonth {
   month_of_year: number; // 1–12
-  median: number;
-  mean: number;
-  min: number;
-  max: number;
+  median: number | null; // null when the period has no complete year (n_years 0)
+  mean: number | null; // null when the period has no complete year (n_years 0)
+  min: number | null; // null when the period has no complete year (n_years 0)
+  max: number | null; // null when the period has no complete year (n_years 0)
   n_years: number;
 }
 
@@ -282,6 +282,8 @@ export interface AssistantMessage {
 
 export interface AssistantAction {
   type: 'show_calendar' | 'download_export';
+  /** Region and period, e.g. "Pantanal · 2024-01 to 2024-12": one answer can carry buttons for several. */
+  label?: string;
   area: RegionArea;
   start?: string;
   end?: string;

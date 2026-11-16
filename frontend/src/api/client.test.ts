@@ -321,4 +321,31 @@ describe('API client', () => {
       });
     }
   });
+
+  it('gives up when the API does not answer in time, so the page never stays on Loading forever', async () => {
+    vi.useFakeTimers();
+    // Like a browser: a fetch that never answers rejects with the abort reason once its signal aborts.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init: RequestInit) => new Promise((_, reject) => init.signal?.addEventListener('abort', () => reject(init.signal?.reason)))),
+    );
+    const caller = new AbortController(); // the explorer passes its own signal too
+    const health = fetchHealth(caller.signal);
+    const audit = fetchAuditPackage({ area: { type: 'region', region_id: 1 } });
+    const checks = [expect(health).rejects.toMatchObject({ name: 'TimeoutError' }), expect(audit).rejects.toMatchObject({ name: 'TimeoutError' })];
+    await vi.advanceTimersByTimeAsync(20_000);
+    await Promise.all(checks);
+    vi.useRealTimers();
+  });
+
+  it('still cancels at once when the caller aborts (a new area replaces the old request)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init: RequestInit) => new Promise((_, reject) => init.signal?.addEventListener('abort', () => reject(init.signal?.reason)))),
+    );
+    const caller = new AbortController();
+    const pending = fetchCalendar({ area: { type: 'region', region_id: 1 } }, caller.signal);
+    caller.abort(new DOMException('replaced', 'AbortError'));
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+  });
 });

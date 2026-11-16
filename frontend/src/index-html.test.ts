@@ -50,6 +50,13 @@ describe('index.html (static page shell)', () => {
     }
   });
 
+  it('declares every AI tool listed in the README, not only one', () => {
+    const credits = doc.getElementById('credits')?.textContent ?? '';
+    for (const tool of ['Claude Code', 'OpenAI Codex', 'Antigravity', 'Lovable']) {
+      expect(credits).toContain(tool);
+    }
+  });
+
   it('counts detections, never fires', () => {
     const text = doc.body.textContent ?? '';
     expect(text).not.toMatch(/\bnumber of fires\b/i);
@@ -102,6 +109,22 @@ describe('index.html (static page shell)', () => {
     expect(method).toMatch(/Pantanal[^.]*13\.8%/);
     expect(method).toMatch(/40 days before/);
     expect(method).not.toMatch(/\bpending\b/i);
+  });
+
+  // Validação do mapa de risco com a área queimada da NASA (docs/validacao-area-queimada.md, issue #107).
+  it('reports the 14-day risk map checked against NASA MCD64A1 burned area', () => {
+    const method = (doc.getElementById('method')?.textContent ?? '').replace(/\s+/g, ' ');
+    expect(method).toMatch(/MCD64A1/);
+    expect(method).toContain('0.898');
+    expect(method).toContain('75.5%');
+    expect(method).toMatch(/69%/);
+    expect(method).toMatch(/a floor/);
+    expect(method).not.toMatch(/MCD64A1 burned-area data remains a next step/);
+  });
+
+  it('credits NASA MCD64A1 in Data & credits', () => {
+    const credits = doc.getElementById('credits')?.textContent ?? '';
+    expect(credits).toContain('MCD64A1');
   });
 
   it('has the mount point for the interactive tool', () => {

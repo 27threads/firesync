@@ -32,8 +32,6 @@ function offline() {
 }
 
 beforeEach(() => {
-  // Como o Playwright, o teste não deixa a primeira região carregar sozinha.
-  Object.defineProperty(navigator, 'webdriver', { value: true, configurable: true });
   document.body.innerHTML = '';
 });
 
@@ -105,44 +103,13 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText(/longitude/i), { target: { value: '-60.0' } });
     fireEvent.change(screen.getByLabelText(/radius/i), { target: { value: '25' } });
     fireEvent.click(screen.getByRole('button', { name: /show this area/i }));
-    await waitFor(() => expect(calls.some((c) => c.url.endsWith('/api/v1/calendar'))).toBe(true));
-    const body = calls.find((c) => c.url.endsWith('/api/v1/calendar'))!.body as { area: unknown; start: string; end: string };
+    // The page also asks for the first region on load; this test is about the typed point.
+    const isPoint = (c: { url: string; body: unknown }) => c.url.endsWith('/api/v1/calendar') && (c.body as { area: { type: string } }).area.type === 'point';
+    await waitFor(() => expect(calls.some(isPoint)).toBe(true));
+    const body = calls.find(isPoint)!.body as { area: unknown; start: string; end: string };
     expect(body.area).toEqual({ type: 'point', lat: -3.1, lon: -60, radius_km: 25 });
     expect(body.start).toBe('2003-01');
     expect(await screen.findByRole('button', { name: /audit package/i })).toBeEnabled();
-  });
-
-  it('asks for recent detections around a new selection even before the map is on screen', async () => {
-    const calls = mockApi(() => json(example));
-    render(<App />);
-    const select = await screen.findByRole('combobox', { name: /region/i });
-    await waitFor(() => expect(select).toBeEnabled());
-    const before = calls.filter((c) => c.url.includes('/detections/recent')).length;
-    fireEvent.change(select, { target: { value: '1' } });
-    await waitFor(() =>
-      expect(calls.filter((c) => c.url.includes('/detections/recent') && c.url.includes('bbox=-74,-16.3,-43.9,5.3')).length).toBeGreaterThan(0),
-    );
-    expect(calls.filter((c) => c.url.includes('/detections/recent')).length).toBeGreaterThan(before);
-  });
-
-  it('lets an earlier recent-detections request finish when a newer one starts (no aborted responses)', async () => {
-    const signals: (AbortSignal | null | undefined)[] = [];
-    mockApi(() => json(example));
-    const base = globalThis.fetch as unknown as (url: string, init?: RequestInit) => Promise<Response>;
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((url: string, init?: RequestInit) => {
-        if (url.includes('/detections/recent')) signals.push(init?.signal);
-        return base(url, init);
-      }),
-    );
-    render(<App />);
-    const select = await screen.findByRole('combobox', { name: /region/i });
-    await waitFor(() => expect(select).toBeEnabled());
-    fireEvent.change(select, { target: { value: '1' } });
-    fireEvent.change(screen.getByRole('combobox', { name: /recent hot spots window/i }), { target: { value: '168' } });
-    await waitFor(() => expect(signals.length).toBeGreaterThanOrEqual(2));
-    expect(signals.some((s) => s?.aborted)).toBe(false);
   });
 
   it('never aborts a recent-detections request, not even when the map unmounts (StrictMode remounts in dev)', async () => {

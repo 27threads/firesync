@@ -1,12 +1,14 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MONTH_NAMES } from './calendar/calendarModel';
+import type { AreaInput } from './api/types';
 import { AssistantBubble } from './assistant/AssistantBubble';
 import { SelectionPanel } from './controls/SelectionPanel';
 import { buildExampleStory } from './discovery/exampleStory';
 import { prefersReducedMotion } from './hero/heroIntro';
+import { HERO_AREA_EVENT } from './hero/heroMapModel';
+import { useLeftHero } from './hero/useLeftHero';
 import { HistoryPanel } from './history/HistoryPanel';
 import { IndicatorRow } from './summary/IndicatorRow';
-import { MapStage } from './map/MapStage';
 import { useExplorer } from './state/useExplorer';
 import { Summary } from './summary/Summary';
 import { Verdict } from './summary/Verdict';
@@ -26,6 +28,7 @@ function scrollToExplore() {
 // Três momentos ligados: entender (abertura), descobrir (exemplo guiado) e investigar (área própria).
 export function App() {
   const ex = useExplorer();
+  const leftHero = useLeftHero();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [storyIndex, setStoryIndex] = useState(0);
 
@@ -52,6 +55,15 @@ export function App() {
     setSelectedKey(null);
     ex.selectArea(area, period);
   };
+
+  // An area chosen on the hero map (region, drawing or coordinates) becomes the explorer's area too.
+  const selectAreaRef = useRef(selectArea);
+  selectAreaRef.current = selectArea;
+  useEffect(() => {
+    const onHeroArea = (event: Event) => selectAreaRef.current((event as CustomEvent<AreaInput>).detail);
+    window.addEventListener(HERO_AREA_EVENT, onHeroArea);
+    return () => window.removeEventListener(HERO_AREA_EVENT, onHeroArea);
+  }, []);
 
   // Mesma condição do resumo: sem erro e sem área fora da cobertura.
   const hasAnswer = ['ready', 'demo', 'api_unavailable', 'loading'].includes(ex.result.kind);
@@ -85,9 +97,22 @@ export function App() {
 
         {showingDemoForOtherArea && (
           <p className="dark-notice" role="status">
-            <strong>API unavailable.</strong> Your area is outlined on the map, but the figures below belong to the demo example.
+            <strong>API unavailable.</strong> Your area is outlined on the map at the top, but the figures below belong to the demo example.
           </p>
         )}
+
+        {/* Right after the hero map: the fire calendar of the chosen area. */}
+        <HistoryPanel
+          shown={ex.shown}
+          result={ex.result}
+          selectedKey={selectedKey}
+          onSelectKey={setSelectedKey}
+          highlightMonthIndex={step?.monthIndex ?? null}
+          highlightYear={step?.year ?? null}
+          areaLabel={areaLabel}
+          periodLabel={periodLabel}
+          request={ex.request}
+        />
 
         {ex.shown && hasAnswer && <Verdict window={ex.shown.data.recent.last_7_days} areaLabel={areaLabel} />}
 
@@ -105,11 +130,6 @@ export function App() {
               onSetPeriod={ex.setPeriod}
               onShowExample={() => openExample(null)}
             />
-            <MapStage
-              shape={ex.selection.shape}
-              startOnArrival={ex.selection.isExample}
-              onSelectPolygon={(geometry) => selectArea({ type: 'geojson', geometry })}
-            />
           </div>
           <Summary
             shown={ex.shown}
@@ -124,21 +144,11 @@ export function App() {
           />
         </div>
 
-        <HistoryPanel
-          shown={ex.shown}
-          result={ex.result}
-          selectedKey={selectedKey}
-          onSelectKey={setSelectedKey}
-          highlightMonthIndex={step?.monthIndex ?? null}
-          highlightYear={step?.year ?? null}
-          areaLabel={areaLabel}
-          periodLabel={periodLabel}
-          request={ex.request}
-        />
       </div>
 
       {ASSISTANT_ENABLED && (
         <AssistantBubble
+          hideBubble={!leftHero}
           onShowCalendar={(action) => {
             selectArea(action.area, action.start && action.end ? { start: action.start, end: action.end } : undefined);
             scrollToExplore();

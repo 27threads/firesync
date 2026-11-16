@@ -34,7 +34,7 @@ O proxy existente encaminha `/api` para a API. `VITE_API_URL` permite uma API em
 | `RATE_LIMIT_EXPORT` | `2` | Pedidos de exportação por IP na janela |
 | `RATE_LIMIT_WINDOW` | `60` | Duração da janela móvel, em segundos |
 | `RESPONSE_CACHE_SIZE` | `128` | Máximo de respostas no LRU |
-| `ASSISTANT_PROVIDERS` | vazio (assistente desligado) | Provedores do `POST /ask` em ordem de fallback, no formato OpenAI chat completions: `base_url|chave|modelo[|reasoning_effort]`, separados por vírgula. O 4º campo só vai quando preenchido: modelos que raciocinam (Qwen, Gemini) gastam o `max_tokens` pensando sem ele (testado: `none` na Cerebras, Groq e OpenRouter; `low` no Gemini). Segredo: só no `.env` da VPS. Valor inválido desliga só o assistente (erro no log), a API sobe normal |
+| `ASSISTANT_PROVIDERS` | vazio (assistente desligado) | Provedores do `POST /ask` em ordem de fallback, no formato OpenAI chat completions: `base_url|chave|modelo[|reasoning_effort]`, separados por vírgula. O 4º campo só vai quando preenchido: modelos que raciocinam (gpt-oss, Gemini) gastam o `max_tokens` pensando sem ele. O valor aceito muda por modelo: `low` no gpt-oss e no Gemini, `none` no Nemotron do OpenRouter. Cadeia atual na [RFC 0004](../docs/rfcs/0004-assistente-virtual.md#provedores-e-cota). Segredo: só no `.env` da VPS. Valor inválido desliga só o assistente (erro no log), a API sobe normal |
 | `ASSISTANT_DAILY_LIMIT` | `500` | Pedidos do assistente que chegam a um provedor por dia (UTC), somando todos os IPs. Por processo; zera ao reiniciar |
 | `ASSISTANT_TIMEOUT_S` | `20` | Tempo máximo de cada chamada a um provedor |
 | `ASSISTANT_BUDGET_S` | `60` | Tempo máximo da pergunta inteira, somando rodadas e provedores. Fica abaixo dos ~100 s que o Cloudflare Tunnel espera |
@@ -54,6 +54,7 @@ O `pyproject.toml` mapeia `src/` para o pacote `backend`, sem diretório interme
 - `adapters/outbound/postgres/`: SQL parametrizado e tradução dos nomes/valores em português para inglês.
 - `adapters/outbound/config_file/`: leitura das regras versionadas.
 - `scripts/demo_data.py`: gerador C2 de dados sintéticos, separado do serviço de leitura.
+- `scripts/assistant_benchmark.py`: bateria do assistente (RFC 0004) com perguntas cujo gabarito sai do próprio calendário, incluindo continuação de conversa, fora do assunto e lugar sem cobertura. Rode à mão antes de mudar prompt, ferramenta ou provedor: precisa de `DATABASE_URL` com a carga real e de `ASSISTANT_PROVIDERS`, então não entra na esteira.
 - `tests/`: unidade, contratos HTTP, integração PostGIS e jornadas com navegador.
 
 Cada pedido lê metadados e dados em uma transação `REPEATABLE READ READ ONLY`, em UTC. O pool pertence à aplicação e fecha ao encerrar. Fatores são mantidos em memória por `data_version` completa, inclusive hora. O LRU de respostas usa área/parâmetros, `updated_at` e `data_version`; o calendário também inclui o dia UTC para atualizar os marcadores de mês/ano corrente. No mapa, o cache também expira quando o foco mais antigo sai da janela; resultados vazios são reavaliados após um minuto, mesmo sem atualização NRT. `ETag` acompanha as respostas JSON e GET aceita `If-None-Match`.

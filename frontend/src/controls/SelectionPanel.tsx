@@ -86,7 +86,7 @@ export function SelectionPanel({
           >
             Explore the example
           </button>
-          <p className="controls__hint">Or pick a region below, or draw on the map.</p>
+          <p className="controls__hint">Or pick a region below. To draw an area, use Draw area on the map at the top.</p>
         </div>
 
         <div className="field">

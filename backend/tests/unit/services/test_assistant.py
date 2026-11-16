@@ -111,9 +111,10 @@ def test_calendar_answer_uses_the_same_numbers_as_the_calendar_route():
     assert sent['indicators'] == readable(body['indicators'])
     assert result['answer'] == 'November 2026 had the most hotspots.'
     area = {'type': 'region', 'region_id': 1}
+    label = 'Test · 2026-01 to 2026-11'
     assert result['actions'] == [
-        {'type': 'show_calendar', 'area': area, 'start': '2026-01', 'end': '2026-11'},
-        {'type': 'download_export', 'area': area, 'start': '2026-01', 'end': '2026-11'}]
+        {'type': 'show_calendar', 'label': label, 'area': area, 'start': '2026-01', 'end': '2026-11'},
+        {'type': 'download_export', 'label': label, 'area': area, 'start': '2026-01', 'end': '2026-11'}]
     assert result['notes'] == [] and result['verified']
     assert result['sources'] == [{'endpoint': 'POST /api/v1/calendar', 'area': area, 'region': 'Test', 'start': '2026-01',
                                   'end': '2026-11', 'data_version': '2026-11-14T14:00:00Z',
@@ -134,7 +135,8 @@ def test_recent_tool_returns_the_recent_block_and_shows_the_default_period():
     result = ask(llm)
     sent = tool_results(llm)[0]
     assert sent['recent']['last_7_days']['detections'] == 7
-    assert result['actions'] == [{'type': 'show_calendar', 'area': {'type': 'region', 'region_id': 1}}]
+    assert result['actions'] == [{'type': 'show_calendar', 'label': 'Test',
+                                  'area': {'type': 'region', 'region_id': 1}}]
 
 
 def test_tool_error_goes_back_to_the_model_without_an_action():
@@ -164,10 +166,10 @@ def test_fire_map_lists_the_busiest_hexagons_and_adds_the_risk_note_when_scored(
     result = ask(llm, repository)
     sent = tool_results(llm)[0]
     assert sent['hours'] == 72 and sent['total_detections'] == 9
-    assert sent['top_hexagons'][0]['detections'] == 9 and sent['top_hexagons'][0]['risk_tier'] == 'very_high'
+    assert sent['top_hexagons'][0]['detections'] == 9 and sent['top_hexagons'][0]['risk_tier'] == 'very high'
     assert sent['risk_tiers'][0]['historical_share'] == 0.82
     lat, lon = h3.cell_to_latlng(h3.cell_to_parent(CELL, 4))
-    assert sent['look_first'][0]['center'] == f'{abs(lat):.2f}°S, {abs(lon):.2f}°W'
+    assert sent['areas to look at first'][0]['center'] == f'{abs(lat):.2f}°S, {abs(lon):.2f}°W'
     assert sent['top_hexagons'][0]['center'].endswith('°W')
     assert result['notes'] == [RISK_NOTE]
 
@@ -398,3 +400,112 @@ def test_highlights_without_counted_months():
     month = {'month': '2026-01', 'detections': None, 'anomaly_pct': None}
     assert 'peak_month' not in highlights([month], [], {'total_detections': 0})
 
+
+def test_regions_come_with_the_prompt():
+    llm = ScriptedLlm({'content': 'hi'})
+    ask(llm)
+    assert 'Regions (region_id name): 1 Test.' in llm.conversations[0][0]['content']
+
+
+def test_follow_up_answered_from_memory_is_sent_to_the_tools():
+    history = [{'role': 'user', 'content': 'How was the Test region in 2026?'},
+               {'role': 'assistant', 'content': 'It had 12,345 hotspots.'},
+               {'role': 'user', 'content': 'And the year before?'}]
+    llm = ScriptedLlm({'content': 'It had 54,321 hotspots.'},
+                      call('get_calendar', region_id=1, start='2025-01', end='2025-12'),
+                      {'content': 'The calendar shows the year.'})
+    result = ask(llm, messages=history)
+    correction = llm.conversations[1][-1]
+    assert correction['role'] == 'user' and 'without calling any tool' in correction['content']
+    assert result['verified'] and result['sources'][0]['start'] == '2025-01'
+
+
+def test_fire_map_says_how_old_the_data_is():
+    llm = ScriptedLlm(call('get_fire_map', hours=24), {'content': 'ok'})
+    ask(llm)
+    sent = tool_results(llm)[0]
+    assert sent['data_updated_at'] == '2026-11-14T15:00:00Z' and sent['hours_since_update'] == 0
+
+
+def test_action_label_names_region_and_period():
+    from backend.application.assistant_tools import action_label
+    assert action_label({'region': 'Pantanal', 'start': '2024-01', 'end': '2024-12'}) == 'Pantanal · 2024-01 to 2024-12'
+    assert action_label({'region': None}) is None
+
+
+def test_a_provider_that_failed_goes_last_for_a_minute():
+    now = [0.0]
+    opener = Opener(quota_error('https://a/v1/chat/completions'), {'content': 'b1'}, {'content': 'b2'},
+                    {'content': 'a again'})
+    chain = ProviderChain.from_env('https://a/v1|ka|m1,https://b/v1|kb|m2', 20, opener, monotonic=lambda: now[0])
+    assert chain.complete(QUESTION, [], FAR)['content'] == 'b1'
+    now[0] = 30
+    assert chain.complete(QUESTION, [], FAR)['content'] == 'b2'  # a is cooling down: b is asked first
+    now[0] = 61
+    assert chain.complete(QUESTION, [], FAR)['content'] == 'a again'
+    assert [url.split('/')[2] for url in opener.urls] == ['a', 'b', 'b', 'a']
+
+
+def test_a_figure_with_the_wrong_sign_is_flagged():
+    results = [{'anomaly_pct': -0.563, 'other_pct': 0.133, 'p25': 9095, 'p75': 20659}]
+    assert unverified_numbers('February was +56.3% above typical.', results) == ['+56.3']
+    assert unverified_numbers('February was -56,3% (\u221256.3%), March +13.3%, 56.3% below.', results) == []
+    assert unverified_numbers('Typical range 9,095-20,659 on 2026-11-14.', results) == []
+    assert unverified_numbers('20,659 at the start of the text is not negative.', results) == []
+
+
+ENGLISH = [{'role': 'user', 'content': 'Where is it burning right now?'}]
+
+
+@pytest.mark.parametrize('wrong', [
+    # Seen on the live API on 2026-11-16: a cached suggested question answered half and fully in Portuguese.
+    "It's burning with 2.390 hotspots nas últimas 24 horas, sobretudo no Cerrado.",
+    'Nas últimas 24 horas foram 2.390 focos na Amazônia e no Cerrado.',
+])
+def test_answer_in_another_language_gets_one_correction_round(wrong):
+    llm = ScriptedLlm({'content': wrong}, {'content': 'It is burning most in the Cerrado.'})
+    result = ask(llm, messages=ENGLISH)
+    correction = llm.conversations[-1][-1]
+    assert correction['role'] == 'user' and 'English' in correction['content']
+    assert result['answer'] == 'It is burning most in the Cerrado.'
+
+
+def test_portuguese_question_keeps_a_portuguese_answer():
+    llm = ScriptedLlm({'content': 'O fogo está concentrado no Cerrado e na Amazônia.'})
+    result = ask(llm, messages=[{'role': 'user', 'content': 'Onde está queimando agora?'}])
+    assert result['answer'] == 'O fogo está concentrado no Cerrado e na Amazônia.' and len(llm.conversations) == 1
+
+
+@pytest.mark.parametrize('leak', ['Look at 848a981ffffffff first.', 'Two cells are very_high in look_first.'])
+def test_internal_names_in_the_answer_get_one_correction_round(leak):
+    llm = ScriptedLlm({'content': leak}, {'content': 'Two areas in the Cerrado have very high risk.'})
+    result = ask(llm, messages=ENGLISH)
+    assert 'internal' in llm.conversations[-1][-1]['content']
+    assert result['answer'] == 'Two areas in the Cerrado have very high risk.'
+
+
+def test_answer_still_in_the_wrong_language_is_not_worth_caching():
+    from backend.application.assistant import worth_caching
+    llm = ScriptedLlm({'content': 'Nas últimas 24 horas o fogo foi no Cerrado.'},
+                      {'content': 'Nas últimas 24 horas o fogo foi no Cerrado.'})
+    result = ask(llm, messages=ENGLISH)
+    assert result['verified'] and not worth_caching(ENGLISH[0]['content'], result)
+    assert worth_caching(ENGLISH[0]['content'], {**result, 'answer': 'It burned in the Cerrado.'})
+
+
+def test_fire_map_sends_no_cell_ids_raw_probabilities_or_snake_case_tiers():
+    repository = FakeApiRepository()
+    repository.map_count = 9
+    repository.risk = {'data_ref': date(2026, 11, 14), 'scored_at': datetime(2026, 11, 14, 15, 5, tzinfo=UTC),
+                       'model_version': 'test', 'by_cell': {h3.cell_to_parent(CELL, 4): 0.99}}
+    llm = ScriptedLlm(call('get_fire_map', hours=24), {'content': 'ok'})
+    ask(llm, repository)
+    text = llm.conversations[-1][-1]['content']
+    assert h3.cell_to_parent(CELL, 4) not in text and 'prob' not in text
+    assert 'very_high' not in text and 'look_first' not in text
+
+
+def test_system_prompt_keeps_portuguese_region_names_out_of_the_answer_language():
+    llm = ScriptedLlm({'content': 'hi'})
+    ask(llm)
+    assert 'proper names' in llm.conversations[0][0]['content']

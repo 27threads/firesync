@@ -1,5 +1,6 @@
 """Tools the assistant model may call (RFC 0004). Each one runs the same use case as an HTTP route."""
 import json
+from datetime import datetime
 
 import h3
 
@@ -40,7 +41,7 @@ TOOL_SPECS = [
     {'type': 'function', 'function': {
         'name': 'get_fire_map',
         'description': 'Where it is burning now in the whole coverage: busiest hexagons with their center, '
-                       'cells to look at first and 14-day risk tiers.',
+                       'areas to look at first and 14-day risk tiers.',
         'parameters': {'type': 'object', 'properties': {
             'hours': {'type': 'integer', 'enum': list(MAP_WINDOWS), 'description': 'Time window up to now'}}}}},
 ]
@@ -100,6 +101,12 @@ def calendar_summary(body):
     return readable(summary)
 
 
+def action_label(source):
+    """'Pantanal · 2024-01 to 2024-12': one answer can carry buttons for several regions and periods."""
+    period = f"{source['start']} to {source['end']}" if source.get('start') else None
+    return ' · '.join(part for part in (source.get('region'), period) if part) or None
+
+
 def area_name(body):
     biomes = body['area'].get('biomes') or []
     return biomes[0]['name'] if len(biomes) == 1 else None
@@ -137,8 +144,12 @@ class Toolbox:
         return result
 
     def context(self):
+        # The regions come with the prompt: asking for them took one model round per question in testing.
+        with self.repository.read() as reader:
+            regions = ', '.join(f"{region['region_id']} {region['name']}" for region in reader.regions())
         return (f'Today is {self.now.date().isoformat()} (UTC). Data covers 2003-01 to '
-                f"{self.meta['last_month']}; resolve relative dates like 'last year' from today.")
+                f"{self.meta['last_month']}; resolve relative dates like 'last year' from today. "
+                f'Regions (region_id name): {regions}.')
 
     def source(self, endpoint, **details):
         return {'endpoint': endpoint, **{key: value for key, value in details.items() if value is not None},
@@ -167,13 +178,14 @@ class Toolbox:
 
     def get_calendar(self, region_id, start=None, end=None):
         request, body, source = self.calendar(region_id, start, end)
-        return calendar_summary(body), [{'type': 'show_calendar', **request},
-                                        {'type': 'download_export', **request}], [], source
+        label = action_label(source)
+        return calendar_summary(body), [{'type': 'show_calendar', 'label': label, **request},
+                                        {'type': 'download_export', 'label': label, **request}], [], source
 
     def get_recent(self, region_id):
         request, body, source = self.calendar(region_id)
         result = {'area': body['area'], 'coverage': body['coverage'], 'recent': body.get('recent')}
-        return readable(result), [{'type': 'show_calendar', **request}], [], source
+        return readable(result), [{'type': 'show_calendar', 'label': source.get('region'), **request}], [], source
 
     def get_fire_map(self, hours=24):
         with self.repository.read() as reader:
@@ -186,11 +198,16 @@ class Toolbox:
         hexagons = sorted(body['features'], key=lambda feature: feature['properties']['detections'], reverse=True)
         alerts = body.get('alerts') or {}
         risk = alerts.get('risk')
+        updated = datetime.fromisoformat(self.meta['updated_at'].replace('Z', '+00:00'))
         result = {'hours': body['hours'], 'windows_available_hours': list(MAP_WINDOWS),
+                  # An empty window can mean stale data, not no fire: the model has to see how old the data is.
+                  'data_updated_at': self.meta['updated_at'],
+                  'hours_since_update': round((self.now - updated).total_seconds() / 3600, 1),
                   'total_detections': body['total_detections'],
                   'top_hexagons': [hexagon_summary(feature['properties']) for feature in hexagons[:TOP_HEXAGONS]],
-                  'look_first': [look_first_summary(cell) for cell in alerts.get('priority', [])[:TOP_HEXAGONS]],
-                  'risk_tiers': risk['tiers'] if risk else None}
+                  'areas to look at first': [priority_summary(cell)
+                                             for cell in alerts.get('priority', [])[:TOP_HEXAGONS]],
+                  'risk_tiers': [tier_summary(tier) for tier in risk['tiers']] if risk else None}
         return (readable(result), [], [RISK_NOTE] if risk else [],
                 self.source('GET /api/v1/detections/recent', hours=query.hours))
 
@@ -200,15 +217,27 @@ def place(lat, lon):
     return f"{abs(lat):.2f}°{'N' if lat >= 0 else 'S'}, {abs(lon):.2f}°{'E' if lon >= 0 else 'W'}"
 
 
-def look_first_summary(cell):
+def words(code):
+    """'very_high' -> 'very high': models copy codes into the answer as they read them."""
+    return code.replace('_', ' ') if isinstance(code, str) else code
+
+
+def priority_summary(cell):
+    """No cell id and no raw probability: the answer names places by center and risk by tier."""
     lon, lat = cell['center']  # the map contract sends [lon, lat]
-    return {**{key: value for key, value in cell.items() if key != 'center'}, 'center': place(lat, lon)}
+    return {'center': place(lat, lon), 'alert_level': words(cell.get('alert_level')),
+            'detections_7d': cell.get('detections_7d'), 'typical_median': cell.get('typical_median'),
+            'share_followed_by_high': cell.get('share_followed_by_high'), 'risk_tier': words(cell.get('risk_tier'))}
+
+
+def tier_summary(tier):
+    return {'tier': words(tier['tier']), 'historical_share': tier['historical_share']}
 
 
 def hexagon_summary(properties):
     lat, lon = h3.cell_to_latlng(properties['h3'])
     return {'center': place(lat, lon), 'detections': properties['detections'],
-            'alert_level': properties.get('alert_level'), 'risk_tier': properties.get('risk_tier')}
+            'alert_level': words(properties.get('alert_level')), 'risk_tier': words(properties.get('risk_tier'))}
 
 
 def failure(code, message):

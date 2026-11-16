@@ -1,5 +1,50 @@
 # firesync
 
+**Is this fire normal? Here, this season.** NASA FIRMS shows where fire is. firesync tells you if it's normal.
+
+NASA Space Apps Challenge 2026 · challenge [MODIS and VIIRS Hot Spots](https://www.spaceappschallenge.org/2026/challenges/modis-and-viirs-hot-spots/)
+
+- **Live app:** https://firesync.nogranlabs.com.br (no login, desktop and mobile)
+- **Public API:** https://firesync-api.nogranlabs.com.br
+- **Project page text, with the full method, results and references:** [docs/pagina-projeto.md](docs/pagina-projeto.md)
+
+![firesync opening: the Earth with the Aqua (MODIS) and S-NPP/NOAA-20 (VIIRS) satellites](docs/img/site/opening.png)
+
+## For judges: what firesync does
+
+Fire teams in Brazil can see where satellites detect fire today, but not whether that is normal for the place and the season. Answering needs a long record, and NASA's record comes from two sensors that do not agree: VIIRS records about six times more detections than MODIS over the same fires. firesync converts the MODIS Aqua record (2003 to early 2012) to the VIIRS scale with factors calibrated in the 13 years both sensors flew, and joins it with VIIRS into **one monthly series from January 2003, with the uncertainty shown** wherever a month is estimated.
+
+![Fire calendar of the Amazon biome, January 2003 to November 2026, with estimated MODIS months hatched](docs/img/site/fire-calendar.png)
+
+- **Fire calendar** (months × years) for any area drawn in Brazil, with the seasonal pattern and the highest-fire years.
+- **Now against normal:** the last 7 days against the same dates in earlier years, with a versioned alert rule (Normal, Attention, Critical).
+- **Recent detections map** and a **14-day fire risk** per area from a model trained only on past data.
+- **Chat assistant** that answers in the language of the question, using the same API functions as the screen, with every number checked.
+- **Audit package:** a ZIP with raw counts, factors and formula, so anyone can rebuild every number.
+
+## What we measured
+
+All numbers below were measured, with pass criteria fixed before each run. Details in [docs/pagina-projeto.md](docs/pagina-projeto.md).
+
+| Check | Result |
+| --- | --- |
+| Calibration, leave-one-year-out (Amazon) | 5.7% average yearly error in 2012–2021, 6.4% in 2022–2024 |
+| Independent check against INPE (2003–2025) | monthly correlation 0.94 to 0.99 in all six biomes; no artificial jump at the 2012 sensor switch in the Amazon (−0.6%) |
+| Uncertainty range (P5–P95) | real value inside the range in 0.76–0.80 of months in five biomes, 0.87 in the Amazon fire season |
+| Alert rule v1, backtest 2013–2024 | 6.0 points more than a persistence rule at the same alert frequency (95% interval 4.1–8.0); Critical 40 days before the 2020 Pantanal emergency decree |
+| 14-day risk map against **NASA MCD64A1 burned area** (Amazon, 2021–2024) | AUC 0.898; the very high tier is 11% of predictions and held 75.5% of all burned area |
+| Speed | 100 × 100 km calendar in 2–9 ms, whole Amazon in about 0.8 s |
+
+**NASA data:** FIRMS (MODIS C6.1 and VIIRS C2, archive and near real time) is the core of every number. MCD64A1 v061 burned area checks the risk map. GIBS provides the base maps and the globe texture. NASA 3D Resources provides the satellite models.
+
+**AI use:** the idea and the method are the team's. AI coding assistants (Claude Code, OpenAI Codex, Antigravity, Lovable) wrote and reviewed code and documents from the team's decisions. The file-by-file list is in the [AI use table](#uso-de-ia) below (in Portuguese, like the internal team documents in `docs/`).
+
+---
+
+*Internal team documentation (in Portuguese) starts here.*
+
+**[Documentação do Sistema](docs/documentacao-sistema.md):** requisitos, arquitetura, integração, operação e qualidade em uma visão resumida.
+
 Calendário harmonizado de focos de calor (MODIS + VIIRS) para o NASA Space Apps 2026, desafio [MODIS and VIIRS Hot Spots](https://www.spaceappschallenge.org/2026/challenges/modis-and-viirs-hot-spots/).
 
 O usuário escolhe uma área e um período e vê um calendário meses × anos com o número de focos de calor. A série junta MODIS (2003 em diante) e VIIRS (2012 em diante) numa escala única, então o sensor de origem não importa mais para quem lê o calendário.
@@ -39,6 +84,9 @@ Leia nesta ordem antes de escrever código. Os documentos são a fonte de verdad
 | 23 | [Deploy](docs/deploy.md) | Front no Cloudflare, banco/API/job NRT na VPS pelo Cloudflare Tunnel, variáveis e segurança da VPS | Antes de publicar ou mexer em `infra/` |
 | 24 | [Página do projeto](docs/pagina-projeto.md) | Texto em inglês de cada campo da página do projeto no Space Apps (C9) | Antes de preencher ou mudar a página da submissão |
 | 25 | [RFC 0004: assistente virtual](docs/rfcs/0004-assistente-virtual.md) | Chat no site que responde perguntas com tool-use sobre os casos de uso da API: ferramentas, contrato `/ask`, front, riscos e plano | Antes de mexer no assistente |
+| 26 | [Documentação do Sistema](docs/documentacao-sistema.md) | Síntese formal dos requisitos, arquitetura, operação e qualidade | Para uma visão geral do sistema e revisão documental |
+| 27 | [Gravação da demo](docs/gravacao-demo.md) | Tomadas do vídeo v5 casadas com a legenda, prompt do assistente e do agente que opera o navegador. Legendas em [docs/video/](docs/video/) | Antes de gravar a tela do site |
+| 28 | [Validação com a área queimada da NASA](docs/validacao-area-queimada.md) | Em linguagem simples: como o modelo de risco foi testado contra o MCD64A1, o resultado, as queimadas não avisadas e por que o acerto medido é um piso | Antes de falar do acerto do mapa de risco na tela, no pitch ou no vídeo |
 
 Regras para agentes: [CLAUDE.md](CLAUDE.md).
 
@@ -116,7 +164,7 @@ Detalhes de cada etapa: [importacao-regioes.md](docs/importacao-regioes.md).
 - [x] Importador, pipeline, agregação, job NRT e série do INPE ([pipeline-dados.md](docs/pipeline-dados.md))
 - [x] API HTTP C1–C6 (validação com dados sintéticos; conferência da carga real pelo Eduardo em [validacao-api-eduardo.md](docs/validacao-api-eduardo.md))
 - [x] Frontend (D1–D7 prontos e conferidos com a carga real no site no ar em 15/11; aviso antecipado D10 no ar, conferido com a API real em 15/11; a demo D8 segue pendente)
-- [ ] Deploy público
+- [x] Deploy público (front em <https://firesync.nogranlabs.com.br>, API em <https://firesync-api.nogranlabs.com.br>; [deploy.md](docs/deploy.md))
 - [x] Texto da página do projeto ([pagina-projeto.md](docs/pagina-projeto.md); falta o link da demo)
 - [ ] Demo (D8)
 
@@ -126,6 +174,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 
 | Parte | Ferramenta | Como foi usada |
 | --- | --- | --- |
+| Documentação formal (`docs/documentacao-sistema.md`) | OpenAI Codex | Síntese das fontes do repositório, diagramas e revisão documental conforme comentários do PR #141; revisão da equipe pendente. |
 | Integração do PR #26 com a `main`, resolução de `data-pipeline/.coveragerc` e limpeza das pendências da B6 em `docs/` | OpenAI Codex | Preservação do mínimo de cobertura de 71% e atualização dos documentos conforme a issue #68; sem alteração das contas |
 | `data-pipeline/pipeline.py`, `agregar.py`, `eda.py`, `test_pipeline.py`, `test_banco.py`, `job_nrt.py`, `Dockerfile`, `migrations/` | Claude Code (Claude Opus 5.5) | Código gerado a partir das especificações de filtro escritas pelo time de dados. Revisado pela equipe |
 | `docs/banco.md`, `data-pipeline/migrations/001_inicial.sql` | Claude Code (Claude Opus 5.5) | Schema e documento de decisões gerados a partir dos docs do repo e de um benchmark local. Revisado pela equipe |
@@ -145,6 +194,7 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | `data-pipeline/validacao/modelo_risco.py`, `data-pipeline/tests/test_modelo_risco.py`, `docs/rfcs/0003-modelo-risco.md` | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Experimento do modelo de risco escrito com TDD a partir das decisões do Weberson (alvo, pistas, validação em avanço e regra de decisão fixada antes das rodadas de clima). A série dos dados públicos foi conferida contra a rodada da frente A no banco. O modelo da pergunta "fogo acima do normal?" não entra no produto. A equipe revisa no PR |
 | Nível de urgência no mapa de focos recentes (`backend/src/domain/calculations/cell_alerts.py`, `map_features.py`, `alert.py`, `adapters/outbound/postgres/api.py`, `config/alert_rules.json` 1.1, testes e `docs/api.md`) | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Escrito com TDD a partir da decisão do Weberson (risco dos próximos 14 dias pela `v1`, na célula de resolução 4 em que ela foi testada). Reaproveita a função `alert_level` da API, com teste de paridade com o `recent`. Rafael e Eduardo revisam no PR |
 | `data-pipeline/risco_celulas.py`, `data-pipeline/tests/test_risco_celulas.py`, `data-pipeline/migrations/005_risco_celulas.sql`, `config/risk_rules.json` | Claude Code (Claude Sonnet 5.5, Opus 5.5 e Fable 5.2) | Job do risco por célula com o modelo treinado ("onde vai ter fogo nos próximos 14 dias"), escrito com TDD a partir das decisões do Weberson (pergunta, alvo, variáveis, treino só com o passado, faixas por probabilidade e critério de decisão fixado antes de rodar). Reaproveita as funções do experimento do RFC 0003. A equipe revisa no PR |
+| `data-pipeline/validacao/area_queimada.py`, `data-pipeline/tests/test_area_queimada.py`, seção "Validação com área queimada da NASA" de `docs/rfcs/0003-modelo-risco.md`, `docs/validacao-area-queimada.md`, roteiro de `docs/pitch.md` com o mapa de risco | Claude Code (Claude Opus 5.5) | Validação das faixas de risco com a área queimada MCD64A1 v061 (issue #107): script e testes em TDD, critério fixado antes de rodar, conferência do processamento e redação do resultado. Revisado pela frente A |
 | Decisões do front em `docs/arquitetura.md` (pontos 5 a 8) e `frontend/README.md` | Claude Code (Claude Opus 5.5) | Levantamento das opções e redação das justificativas. As escolhas foram feitas pela equipe |
 | Ponto 4 de `docs/arquitetura.md` e responsáveis em `docs/tarefas.md` | Claude Code (Claude Opus 5.5) | Redação da justificativa e levantamento dos responsáveis pelos autores dos commits. As escolhas foram feitas pela equipe |
 | `frontend/` (D9: nova interface, `index.html`, `src/hero/`, `src/calendar/CalendarSvg.tsx`, `src/map/`, `src/summary/`, `src/history/`, `src/discovery/`, `src/state/`, `src/styles.css` e testes) | Claude Code (Claude Opus 5.5) | Abertura com GSAP, área de análise, descoberta guiada, tela de Método e diagrama da harmonização, escritos a partir do prompt de direção de arte da frente D, do `api.md` e do `ux-telas.md`. Reaproveita o cliente da API e os modelos de D1–D7. A equipe revisa no PR |
@@ -170,6 +220,18 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 | Assistente virtual: `backend/src/application/assistant.py`, `assistant_tools.py`, `backend/src/ports/llm.py`, `backend/src/adapters/outbound/llm/openai.py`, rota `/ask` no `app.py`, bucket `ask` no `limits.py`, `frontend/src/assistant/`, `askAssistant` no cliente, testes `test_assistant.py`, `test_ask_route.py` e `AssistantBubble.test.tsx` | Claude Code (Claude Opus 5.5) | Implementação do RFC 0004 com TDD: ferramentas sobre os casos de uso existentes, validação do `messages[]`, cadeia de provedores, teto diário e bolinha atrás de `VITE_ENABLE_ASSISTANT`. Depois da auditoria: fontes e checagem dos números na resposta, prazo total por pergunta, leitura curta no banco por ferramenta e foco preso no painel. Testado com Cerebras, Groq, Gemini e OpenRouter no banco local |
 | Toque no mapa no celular (`frontend/src/map/MapStage.tsx`, `MapStage.test.tsx`, `src/hero/OrbitalScene.tsx`, `src/styles.css`, `e2e/responsivo.spec.ts`) | Antigravity | Rolagem da página com 1 dedo sobre o mapa (com aviso temporário `"Use two fingers to move the map."`), arrasto e zoom do mapa com 2 dedos via `L.Handler.TouchZoom`, desenho de retângulo com 1 dedo quando o modo de desenho está ativo e preservação de `touch-action: pan-y` no canvas 3D da abertura. A equipe revisa no PR |
 | Roteiro final de 30 s e frase de potencial de impacto (`docs/pitch.md`, `docs/pagina-projeto.md`; issues #116 e #135) | Claude Code (Claude Opus 5.5) e Antigravity | Redação da seção de potencial de impacto (Weberson, frente B) e consolidação do roteiro final de 30 s no arco Problema → Decisão → Entrega (harmonização MODIS e VIIRS) → Prova → Impacto Global, alinhado ao Project Submission Guide com racional de UX do frontend e referências na página do projeto. Revisado pelo Mateus |
+| Tela do mapa em `lovable/` com o layout do Figma (`src/components/firesync/RecentWorkspace.tsx`, `AreaMap.tsx`, `OrbitalScene.tsx`, `src/lib/recent-data.ts`, `src/routes/index.tsx`, `styles.css`, `src/test/color-scale.test.ts`) | Claude Code (Claude Opus 5.5 e Claude Sonnet 5.5) | Abas Fire now e Risk, next 14 days, filtros, status, painel Indicators agrupado por faixa de risco, legenda, círculos de alerta, zoom suave pela roda e globo pausado atrás do mapa, a partir das telas do Figma desenhadas pela equipe. Teste das faixas de cor; conferido no navegador. A equipe revisa no PR |
+| Crédito de IA completo em Data & credits (`frontend/index.html`, `src/index-html.test.ts`) | Claude Code (Claude Opus 5.5) | Alinhamento da linha de IA do site com esta tabela (Claude Code, OpenAI Codex, Antigravity e Lovable), conforme a regra 7 do `docs/premiacao.md`. Teste escrito com a lista das quatro ferramentas. A equipe revisa no PR |
+| Botão do assistente só depois do hero (`frontend/src/hero/useLeftHero.ts`, `src/assistant/AssistantBubble.tsx`, `src/App.tsx`, testes) | Claude Code (Claude Sonnet 5.5) | O botão flutuante do assistente só aparece quando a abertura com o globo já saiu da tela, para não tomar espaço do hero. Hook com IntersectionObserver e teste antes do código; conferido no navegador em quatro pontos do scroll. A equipe revisa no PR |
+| Auditoria do assistente: continuação de conversa e dado velho no prompt e na rodada de correção (`backend/src/application/assistant.py`), regiões no contexto, frescor do mapa e rótulo das ações (`assistant_tools.py`), pausa do provedor que falhou (`adapters/outbound/llm/openai.py`), "Try again", rolagem e rótulos na bolinha (`frontend/src/assistant/`), bateria `backend/scripts/assistant_benchmark.py` e testes | Claude Code (Claude Opus 5.5) | Achados de uma auditoria reproduzidos com conversas reais na API local antes da correção, e conferidos depois pela bateria (10/10 na Cerebras em 3 de 4 rodadas) |
+| Mapa em tela cheia no hero do site (`frontend/src/hero/HeroMap.tsx`, `heroMap.css`, `heroMapModel.ts` e teste, ajustes em `OrbitalOpening.tsx`, `OrbitalScene.tsx`, `globeTransition.ts`, `styles.css`) | Claude Code (Claude Sonnet 5.5) | Porte para o `frontend/` do mapa do protótipo `lovable/` e das telas do Figma: abas Fire now e Risk, next 14 days, filtros, status, painel Indicators agrupado por risco, legenda compacta, ícones de Critical e Attention, cividis logarítmica, zoom suave pela roda e seta de descer. Regras do mapa em funções puras com 12 testes; conferido no navegador com a API real. A equipe revisa no PR |
+| Celular e fim do calendário (controles do mapa do hero que se cobriam, popup visível, hexágonos sempre na resolução H3 4 com `hexQueryZoom`, eixo do Seasonal pattern, gráfico "Is this year normal?" em `frontend/src/history/yearLines.tsx`, resumo sem a coluna vazia do segundo mapa, testes R8–R10 e de Vitest, retirada das jornadas R7, J2, J10 e J11 do segundo mapa) | Claude Code (Claude Opus 5.5) | Testes escritos antes de cada correção e vistos falhando; conferido no navegador em 375 px e 1280 px com dados reais da produção. A equipe revisa no PR |
+| `docs/gravacao-demo.md` | Claude Code (Claude Opus 5.5) | Plano de tomadas escrito a partir da legenda gravada pela equipe (`docs/video/`, feita pela equipe) e do pitch; prompt do assistente testado na API no ar. Revisado pela equipe |
+| Aviso de download no chat (`frontend/src/assistant/AssistantBubble.tsx`, teste, `styles.css`) | Claude Code (Claude Opus 5.5) | O botão "Download audit package" do assistente vira "Preparing audit package…" e fica desativado até o ZIP chegar, igual ao botão da barra de export, para o usuário não clicar várias vezes. Teste antes do código. A equipe revisa no PR |
+| Idioma e nomes internos na resposta do assistente (`backend/src/application/assistant.py`, `assistant_tools.py`, cache do `/ask` no `app.py`, testes `test_assistant.py` e `test_ask_route.py`) | Claude Code (Claude Opus 5.5) | Bug visto na API no ar: chip em inglês respondido em português e com `look_first`, `very_high`, probabilidade crua e ID H3. Teste com o modelo falso antes do código; rodada de correção para idioma e nome interno, resposta errada fora do cache, ferramentas sem ID de célula nem probabilidade. A equipe revisa no PR |
+| Correções da auditoria do front (`completeSeasonality` em `summaryModel.ts` e aviso sem ano completo nos dois gráficos e na pergunta guiada, timeout dos pedidos em `api/client.ts` sem `AbortSignal.any`, loop da abertura parado fora da tela, remoção do `HeroCalendar.tsx`, dos campos sem uso do `useExplorer` e de ~490 linhas de CSS órfão, fim do gancho `navigator.webdriver` e jornada J12) | Claude Code (Claude Opus 5.5) | Auditoria feita antes com a skill ponytail-audit; cada bug com teste que falhou antes da correção; o `null` da sazonalidade foi confirmado na API de produção. A equipe revisa no PR |
+| Seção em inglês para os jurados no topo do README (com capturas do site no ar em `docs/img/site/`), validação com o MCD64A1 na tela de Método e em Data & credits (`frontend/index.html`, teste em `src/index-html.test.ts`) e atualização de `docs/pagina-projeto.md` (MCD64A1, assistente, three.js, abertura no app) | Claude Code (Claude Opus 5.5) | Auditoria do README, da página do projeto e do site pelos critérios do `docs/premiacao.md`; números copiados de `docs/validacao-area-queimada.md` e da página do projeto, teste antes do texto. A equipe revisa no PR |
+| Cadeia de provedores do assistente (`docs/rfcs/0004-assistente-virtual.md`, `backend/README.md`) | Claude Code (Claude Opus 5.5) | Pesquisa das camadas gratuitas da Cerebras e da Groq e registro da troca do Qwen pelo `gpt-oss-120b`, decidida pela equipe. A bateria do assistente com a cadeia nova ainda roda antes do deploy |
 
 ## Dados e créditos
 
@@ -179,3 +241,4 @@ A submissão exige identificar o código gerado com IA. Registre aqui quais part
 - Textura da Terra na abertura (`frontend/src/hero/` e `lovable/`): [NASA GIBS](https://www.earthdata.nasa.gov/gibs), camada `BlueMarble_ShadedRelief_Bathymetry`
 - Modelos 3D do Aqua e do Suomi NPP: [NASA 3D Resources](https://github.com/nasa/NASA-3D-Resources)
 - Limites de países: [datasets/geo-countries](https://github.com/datasets/geo-countries) (Natural Earth)
+- Área queimada (validação do modelo de risco): [NASA MCD64A1 v061](https://lpdaac.usgs.gov/products/mcd64a1v061/) (MODIS Burned Area, 500 m)
