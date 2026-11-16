@@ -1,7 +1,7 @@
 import type { CalendarResponse } from '../api/types';
 import { MONTH_NAMES } from '../calendar/calendarModel';
 import { formatCount, formatDayRange, formatWindowValue } from '../format';
-import { compareToTypical } from '../summary/summaryModel';
+import { compareToTypical, completeSeasonality } from '../summary/summaryModel';
 
 // Perguntas e respostas da descoberta guiada. Todo texto sai dos campos da resposta:
 // nada de nome de evento, ano famoso ou número escrito à mão.
@@ -33,8 +33,10 @@ function recentStep(data: CalendarResponse): StoryStep {
   };
 }
 
-function seasonStep(data: CalendarResponse): StoryStep {
-  const peak = data.seasonality.reduce((best, m) => (m.median > best.median ? m : best));
+function seasonStep(data: CalendarResponse): StoryStep | null {
+  const season = completeSeasonality(data.seasonality);
+  if (!season) return null;
+  const peak = season.reduce((best, m) => (m.median > best.median ? m : best));
   const name = MONTH_NAMES[peak.month_of_year - 1];
   return {
     id: 'season',

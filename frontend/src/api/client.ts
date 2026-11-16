@@ -75,8 +75,22 @@ async function parseErrorResponse(response: Response): Promise<ApiClientError> {
   return new ApiClientError(response.status, code, retryAfter, message);
 }
 
-async function requestJson<T>(path: string, init: RequestInit): Promise<T> {
-  const response = await fetch(`${getApiBaseUrl()}${path}`, init);
+// Past this, a stuck API counts as unavailable (retry button) instead of an endless Loading.
+const REQUEST_TIMEOUT_MS = 20_000;
+// The assistant may use its whole server budget (ASSISTANT_BUDGET_S, 60 s) before answering.
+const ASK_TIMEOUT_MS = 70_000;
+
+// No AbortSignal.any: Safari before 17.4 (older iPhones) lacks it, and every request would fail there.
+function withTimeout(signal?: AbortSignal | null, ms = REQUEST_TIMEOUT_MS): AbortSignal {
+  const controller = new AbortController();
+  window.setTimeout(() => controller.abort(new DOMException('The API did not answer in time.', 'TimeoutError')), ms);
+  if (signal?.aborted) controller.abort(signal.reason);
+  signal?.addEventListener('abort', () => controller.abort(signal.reason), { once: true });
+  return controller.signal;
+}
+
+async function requestJson<T>(path: string, init: RequestInit, timeoutMs = REQUEST_TIMEOUT_MS): Promise<T> {
+  const response = await fetch(`${getApiBaseUrl()}${path}`, { ...init, signal: withTimeout(init.signal, timeoutMs) });
   if (!response.ok) {
     throw await parseErrorResponse(response);
   }
@@ -112,7 +126,7 @@ export async function fetchAuditPackage(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
-    signal,
+    signal: withTimeout(signal),
   });
   if (!response.ok) {
     throw await parseErrorResponse(response);
@@ -146,5 +160,5 @@ export function askAssistant(messages: AssistantMessage[], signal?: AbortSignal)
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ messages }),
     signal,
-  });
+  }, ASK_TIMEOUT_MS);
 }

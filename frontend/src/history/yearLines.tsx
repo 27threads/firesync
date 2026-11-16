@@ -3,6 +3,7 @@ import { useEffect, useId, useState } from 'react';
 import type { CalendarMonth, SeasonalityMonth } from '../api/types';
 import { MONTH_NAMES } from '../calendar/calendarModel';
 import { formatCount } from '../format';
+import { completeSeasonality, NO_COMPLETE_YEAR } from '../summary/summaryModel';
 import { NARROW_QUERY, useMediaQuery } from '../ui/useMediaQuery';
 
 /** Detections of each month of `year`, January to December; null where the record has no such month or no satellite data. */
@@ -50,15 +51,24 @@ export function YearLinesChart({ months, seasonality, highlightYear }: YearLines
     setFrom((f) => Math.min(f, highlightYear));
   }, [highlightYear]);
 
-  if (!years.length || seasonality.length !== 12) return null;
+  if (!years.length) return null;
+  const season = completeSeasonality(seasonality);
+  if (!season) {
+    return (
+      <section className="year-lines" aria-labelledby="year-lines-title">
+        <h3 id="year-lines-title">Is this a normal fire year?</h3>
+        <p className="notice">{NO_COMPLETE_YEAR}</p>
+      </section>
+    );
+  }
   const W = narrow ? 340 : 760;
   const H = narrow ? 230 : 270;
   const chosen = years.filter((y) => y >= from && y <= to);
   const lines = chosen.map((y) => ({ year: y, values: yearLine(months, y) }));
   const current = lines[lines.length - 1]?.values ?? Array(12).fill(null);
-  const nYears = seasonality[0]?.n_years ?? 0;
+  const nYears = season[0]?.n_years ?? 0;
 
-  const median = seasonality.map((s) => s.median);
+  const median = season.map((s) => s.median);
   const y = scaleLinear()
     .domain([0, linesMax(lines.map((l) => l.values), median) || 1])
     .nice()
@@ -71,8 +81,8 @@ export function YearLinesChart({ months, seasonality, highlightYear }: YearLines
   const path = (values: (number | null)[]) =>
     values.reduce<string>((d, v, i) => (v === null ? d : `${d}${d && values[i - 1] !== null ? 'L' : 'M'}${x(i)},${y(v)}`), '');
   const band =
-    seasonality.map((s, i) => `${i ? 'L' : 'M'}${x(i)},${y(s.max)}`).join('') +
-    [...seasonality].reverse().map((s, j) => `L${x(11 - j)},${y(s.min)}`).join('') +
+    season.map((s, i) => `${i ? 'L' : 'M'}${x(i)},${y(s.max)}`).join('') +
+    [...season].reverse().map((s, j) => `L${x(11 - j)},${y(s.min)}`).join('') +
     'Z';
   const lastIndex = current.reduce<number>((at, v, i) => (v === null ? at : i), -1);
   const lastValue = lastIndex >= 0 ? current[lastIndex] : null;
@@ -80,7 +90,7 @@ export function YearLinesChart({ months, seasonality, highlightYear }: YearLines
   const lastMonth = months.find((m) => m.month === `${to}-${String(lastIndex + 1).padStart(2, '0')}`);
   const soFar = lastMonth?.incomplete || lastMonth?.provisional ? ' so far' : '';
   // The band of the record years can go past the top of a quiet range: it is cut there, and the key says so.
-  const bandCut = Math.max(...seasonality.map((s) => s.max)) > y.domain()[1];
+  const bandCut = Math.max(...season.map((s) => s.max)) > y.domain()[1];
 
   return (
     <section className="year-lines" aria-labelledby="year-lines-title">

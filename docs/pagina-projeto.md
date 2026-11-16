@@ -50,6 +50,7 @@ firesync answers one question for the people who decide where to send fire briga
 - **Is it normal?** The last 7 days and the month to date are compared with the median of the same dates (within ±15 days) in earlier VIIRS years. The alert level (Normal, Attention, Critical) follows rule v1, versioned in `config/alert_rules.json`.
 - **Where next.** A 14-day risk for every area, in four tiers (very high, high, medium, lower). The "Where to look first" list ranks areas by risk, and high-risk areas enter the list even when there is no fire there now.
 - **24-year calendar.** The user draws an area (polygon or rectangle), picks one of the six biome regions, or types a point and radius, and sees a months × years calendar of fire detections from January 2003 on one scale. Estimated months (MODIS era) are hatched and carry an uncertainty range. A month with a satellite outage is shown as missing data, which is different from zero.
+- **Ask the data.** A chat assistant answers questions such as "is the Pantanal above normal this week?" in the language of the question. It does not write numbers itself: it calls the same API functions as the screen (calendar, recent window, map, risk) and every figure in the answer is checked against what those functions returned, with the sources shown.
 - **Downloads.** CSV tables, a PNG of the calendar and an **audit package** (ZIP) with the raw counts by cell, the conversion factors of every scenario, the formula and the filters, so anyone can rebuild the calendar.
 
 **How it works**
@@ -83,6 +84,7 @@ firesync answers one question for the people who decide where to send fire briga
 - **Database:** PostgreSQL 16 with PostGIS 3.4 and the Uber H3 grid.
 - **API:** Python, FastAPI and Uvicorn, in a hexagonal architecture.
 - **Front end:** TypeScript, React, Vite, Leaflet with Leaflet-Geoman, D3 (d3-scale, d3-scale-chromatic), GSAP, three.js for the opening globe, Archivo typeface.
+- **Assistant:** tool calling over the API's use cases, through OpenAI-compatible chat completion APIs with a fallback chain of providers.
 - **Tests and delivery:** pytest, Vitest, Testing Library, Playwright user journeys, GitHub Actions, Docker Compose, Cloudflare Workers and Cloudflare Tunnel.
 - **Hardware:** no special hardware. The site is static and the API and jobs run on one small virtual server.
 
@@ -116,16 +118,17 @@ The idea, the method and every pass or fail criterion are the team's, and were f
   - **VIIRS 375 m Collection 2**: S-NPP (observed record from February 2012 and calibration reference for 2012–2024), NOAA-20 (current record from November 2026) and NOAA-21 (backup in near real time).
   - **FIRMS API**, near real time, for the current month and the recent detections map.
   - Data from LANCE FIRMS, operated by NASA's Earth Science Data and Information System (ESDIS). Credit is shown in the app.
-- **NASA GIBS (Global Imagery Browse Services)**, base maps: VIIRS Black Marble (2016), Blue Marble Next Generation and Coastlines, through the WMTS endpoint. The opening globe texture in the prototype in the `lovable/` folder uses the GIBS layer BlueMarble_ShadedRelief_Bathymetry.
+- **NASA MCD64A1 v061 (MODIS Burned Area, 500 m)**, from NASA LP DAAC: independent check of the 14-day risk map, 2021–2024 in the Amazon. Not used to compute any number in the app. https://lpdaac.usgs.gov/products/mcd64a1v061/
+- **NASA GIBS (Global Imagery Browse Services)**, base maps: VIIRS Black Marble (2016), Blue Marble Next Generation and Coastlines, through the WMTS endpoint. The opening globe texture uses the GIBS layer BlueMarble_ShadedRelief_Bathymetry.
 - **NASA POWER** (daily rainfall, maximum temperature, humidity and wind) was tested as input to the risk models. It did not improve them under criteria fixed before the runs, so it is not in the product. The result is reported in the method notes.
-- **NASA 3D Resources**: 3D models of Aqua and Suomi NPP, used in the opening animation prototype in the `lovable/` folder.
+- **NASA 3D Resources**: 3D models of Aqua and Suomi NPP, used in the opening animation of the app.
 
 ## Space Agency Partner Data and Other References
 
 ### Space agency partner data
 
-- **INPE** (Instituto Nacional de Pesquisas Espaciais, Brazil), Programa Queimadas: monthly fire series for Brazil's biomes, used as the independent reference to check the harmonized series (2003–2025). https://data.inpe.br/queimadas/
-- **INPE**, Fire Risk index (Risco de Fogo), version 2.2, daily NetCDF files, 2021–2024: external benchmark for the 14-day risk model. Not used in the product.
+- **Brazilian Space Agency (AEB) / INPE** (Instituto Nacional de Pesquisas Espaciais, Brazil), Programa Queimadas: monthly fire series for Brazil's biomes, used as the independent reference to check the harmonized series (2003–2025). https://data.inpe.br/queimadas/
+- **Brazilian Space Agency (AEB) / INPE**, Fire Risk index (Risco de Fogo), version 2.2, daily NetCDF files, 2021–2024: external benchmark for the 14-day risk model. Not used in the product.
 
 ### Other data
 
@@ -133,11 +136,13 @@ The idea, the method and every pass or fail criterion are the team's, and were f
 - **NOAA Climate Prediction Center**, Oceanic Niño Index (ONI): tested as input to the risk model, not used in the product. https://www.cpc.ncep.noaa.gov/
 - **Government of Mato Grosso do Sul**, Decree 080/2020, environmental emergency in the Pantanal (24 July 2020): historical example for the alert. https://www.semadesc.ms.gov.br/?p=108045
 - **OpenStreetMap contributors**: coastline data in the GIBS Coastlines layer. https://www.openstreetmap.org/copyright
-- **datasets/geo-countries** (from Natural Earth): country boundaries in the opening animation prototype in the `lovable/` folder. https://github.com/datasets/geo-countries
+- **datasets/geo-countries** (from Natural Earth): country boundaries in the opening animation. https://github.com/datasets/geo-countries
 
 ### Scientific references
 
 - Nuñez, J. R., Anderton, C. R., Renslow, R. S. (2018). Optimizing colormaps with consideration for color vision deficiency to enable accurate interpretation of scientific data. PLOS ONE 13(7): e0199239. (cividis color scale)
+- IPAM (Instituto de Pesquisa Ambiental da Amazônia) (2024). CO₂ emissions from fires in the Amazon grow by 60% (June–August 2024 burned area and emissions reference). https://ipam.org.br/co2-emissions-from-fires-in-the-amazon-grow-by-60/
+- Sano, E. E. et al. / Oliveira et al. (Embrapa / Aliança da Terra). Implementation of fire policies in Brazil (reference for 12% burned-area reduction by brigades in the Cerrado). https://www.alice.cnptia.embrapa.br/alice/bitstream/doc/1136281/1/Sano-implementation-of-fire-policies-in-Brazil.pdf · https://www.aliancadaterra.org/_files/ugd/18a265_69d4f963acd24c3ab3f32f3a4b711f7e.pdf
 - NASA FIRMS: https://firms.modaps.eosdis.nasa.gov/
 - NASA GIBS: https://www.earthdata.nasa.gov/gibs
 - NASA POWER: https://power.larc.nasa.gov/
@@ -146,7 +151,7 @@ The idea, the method and every pass or fail criterion are the team's, and were f
 
 ### Software and libraries (all open source)
 
-- Front end: React, React DOM, Vite, TypeScript, Leaflet, Leaflet-Geoman (free), D3 (d3-scale, d3-scale-chromatic), GSAP, Fontsource Archivo (SIL Open Font License).
+- Front end: React, React DOM, Vite, TypeScript, Leaflet, Leaflet-Geoman (free), D3 (d3-scale, d3-scale-chromatic), GSAP, three.js, Fontsource Archivo (SIL Open Font License).
 - Front-end tests: Vitest, Testing Library (React, jest-dom), jsdom, Playwright.
 - API: FastAPI, Uvicorn, psycopg, h3, Shapely, pyproj.
 - Data pipeline and models: pandas, PyArrow, GeoPandas, pyogrio, Shapely, h3, psycopg, scikit-learn (HistGradientBoostingClassifier).
@@ -164,6 +169,8 @@ We used AI coding assistants to write and review code and documents from those d
 - **OpenAI Codex**: API domain, ports and adapters, HTTP routes, tests and documentation updates.
 - **Antigravity**: front-end area selection, recent detections layer, API integration and downloads.
 - **Lovable**: the opening animation prototype in the `lovable/` folder.
+
+The app itself also uses a language model at run time: the chat assistant. It only chooses which API function to call and words the answer; the numbers come from the API and are checked before the answer is shown.
 
 Code was written test-first where possible, and every change entered through a pull request with automated tests, reviewed by the team. The full list of AI-assisted parts, file by file and with the tool used, is in the "Uso de IA" table of the repository README: https://github.com/27threads/firesync#uso-de-ia
 

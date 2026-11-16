@@ -88,7 +88,21 @@ export interface SeasonalityModel {
   nYears: number | null; // null quando os meses têm números de anos diferentes
 }
 
-export function buildSeasonality(items: SeasonalityMonth[]): SeasonalityModel {
+export type CompleteSeasonalityMonth = SeasonalityMonth & { median: number; mean: number; min: number; max: number };
+
+/**
+ * The 12 months with their statistics, or null when the period has no complete year: the API then sends null
+ * medians (n_years 0), and drawing them would show zeros where there is no data.
+ */
+export function completeSeasonality(items: SeasonalityMonth[]): CompleteSeasonalityMonth[] | null {
+  const complete = items.length === 12 && items.every((s) => s.n_years > 0 && s.median !== null && s.mean !== null && s.min !== null && s.max !== null);
+  return complete ? (items as CompleteSeasonalityMonth[]) : null;
+}
+
+/** Shown instead of a seasonal chart when completeSeasonality is null. */
+export const NO_COMPLETE_YEAR = 'No complete year in this period, so there is no seasonal pattern to compare with. Widen the period to include at least one full year.';
+
+export function buildSeasonality(items: CompleteSeasonalityMonth[]): SeasonalityModel {
   const sorted = [...items].sort((a, b) => a.month_of_year - b.month_of_year);
   const months = sorted.map((m) => ({ name: MONTH_NAMES[m.month_of_year - 1], median: m.median, min: m.min, max: m.max }));
   const peak = months.reduce((best, m) => (m.median > best.median ? m : best));

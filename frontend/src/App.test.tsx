@@ -32,8 +32,6 @@ function offline() {
 }
 
 beforeEach(() => {
-  // Como o Playwright, o teste não deixa a primeira região carregar sozinha.
-  Object.defineProperty(navigator, 'webdriver', { value: true, configurable: true });
   document.body.innerHTML = '';
 });
 
@@ -105,8 +103,10 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText(/longitude/i), { target: { value: '-60.0' } });
     fireEvent.change(screen.getByLabelText(/radius/i), { target: { value: '25' } });
     fireEvent.click(screen.getByRole('button', { name: /show this area/i }));
-    await waitFor(() => expect(calls.some((c) => c.url.endsWith('/api/v1/calendar'))).toBe(true));
-    const body = calls.find((c) => c.url.endsWith('/api/v1/calendar'))!.body as { area: unknown; start: string; end: string };
+    // The page also asks for the first region on load; this test is about the typed point.
+    const isPoint = (c: { url: string; body: unknown }) => c.url.endsWith('/api/v1/calendar') && (c.body as { area: { type: string } }).area.type === 'point';
+    await waitFor(() => expect(calls.some(isPoint)).toBe(true));
+    const body = calls.find(isPoint)!.body as { area: unknown; start: string; end: string };
     expect(body.area).toEqual({ type: 'point', lat: -3.1, lon: -60, radius_km: 25 });
     expect(body.start).toBe('2003-01');
     expect(await screen.findByRole('button', { name: /audit package/i })).toBeEnabled();
