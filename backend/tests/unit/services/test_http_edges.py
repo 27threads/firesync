@@ -1,5 +1,9 @@
+from contextlib import contextmanager
+import csv
 from dataclasses import replace
+from io import BytesIO, StringIO
 import json
+from zipfile import ZipFile
 
 import pytest
 from fastapi.testclient import TestClient
@@ -40,6 +44,49 @@ def test_get_conditional_requests_map_cache_and_forced_modes():
         second = client.get(url, headers={'If-None-Match': first.headers['etag']})
         assert second.status_code == 304 and second.content == b''
         assert client.get('/api/v1/detections/recent?bbox=-61,-4,-59,-2&zoom=9&mode=hexagons').json()['mode'] == 'hexagons'
+
+
+def test_point_bodies_are_not_cached_but_hexagons_are():
+    """Audit 16/11: up to 50,000 points per body (~50 MB) times 128 cache entries could exhaust the API's memory."""
+    repo = FakeApiRepository()
+    with TestClient(create_app(repository=repo, clock=lambda: NOW)) as client:
+        points = '/api/v1/detections/recent?bbox=-61,-4,-59,-2&zoom=4&mode=points'
+        hexagons = '/api/v1/detections/recent?bbox=-61,-4,-59,-2&zoom=4&mode=hexagons'
+        assert client.get(points).json()['total_detections'] == 1
+        assert client.get(hexagons).json()['total_detections'] == 1
+        repo.map_count = 2
+        assert client.get(points).json()['total_detections'] == 2
+        assert client.get(hexagons).json()['total_detections'] == 1
+
+
+def test_export_streams_detections_while_the_read_transaction_is_open():
+    """Audit 16/11: up to 500,000 detections were held in memory as dicts; now they stream from the cursor into the zip."""
+    class StreamingRepository(FakeApiRepository):
+        is_open = False
+
+        @contextmanager
+        def read(self):
+            self.is_open = True
+            try:
+                yield self
+            finally:
+                self.is_open = False
+
+        def detections(self, snapshot, first, final):
+            total, rows = super().detections(snapshot, first, final)
+
+            def stream():
+                for row in rows:
+                    assert self.is_open, 'detections read after the transaction closed'
+                    yield row
+            return total, stream()
+
+    with TestClient(create_app(repository=StreamingRepository(), clock=lambda: NOW)) as client:
+        response = client.post('/api/v1/export', json={'area': {'type': 'region', 'region_id': 1}})
+        assert response.status_code == 200
+        with ZipFile(BytesIO(response.content)) as archive:
+            text = archive.read('detections.csv').decode('utf-8-sig')
+        assert list(csv.DictReader(StringIO(text)))[0]['confidence'] == 'high'
 
 
 def test_lru_eviction_keeps_recently_used_response():
