@@ -1,0 +1,36 @@
+The Amazon is burning. Where should firefighters act first?
+
+FireSync turns NASA satellite fire data into answers for fire crews: which areas are critical today, whether today's fire is normal for this place and season, and where fire risk is very high for the next 14 days.
+
+🔥 Try it (free, no login): https://firesync.nogranlabs.com.br
+💻 Source code: https://github.com/27threads/firesync
+
+WHAT IT DOES
+• Fire history calendar: 24 years (2003–2026) of NASA MODIS and VIIRS detections merged into one consistent series, with the uncertainty range shown for estimated months.
+• "Where to look first": areas ranked by alert level (Normal, Attention, Critical) and by a 14-day fire risk model.
+• Ask FireSync: an AI assistant that answers only with FireSync numbers, each one checked.
+• Audit package: download the raw counts, factors and formula and rebuild every number yourself.
+
+WHAT WE MEASURED
+• Checked against INPE (Brazil's space agency): monthly correlation of 0.94–0.99 in all six Brazilian biomes.
+• Tested on the Amazon, 2021–2024, trained only on past years: warned of 51 of 100 significant fire outbreaks, half of them 10+ days ahead.
+• Potential: in a year like 2024 (Jun–Aug), acting on these warnings could mean 700,000+ fewer acres burned (~290,000 ha). This is a pilot hypothesis based on a Cerrado brigade study (−12% burned area), not a measured result.
+
+NASA DATA
+• NASA FIRMS: MODIS Collection 6.1 (Aqua) and VIIRS Collection 2 (S-NPP, NOAA-20)
+• NASA MCD64A1 burned area (risk model validation)
+• NASA GIBS base maps
+
+TEAM 27 THREADS · Uberlândia, Brazil
+Mateus Nogueira
+Weberson David Azevedo Ramos
+Rafael Lopes Fraga
+Carlos Eduardo da Silva Pechiori
+Vinicius Lucas Guimarães
+Eduardo Lopes Valerio
+
+Challenge: Harmonization of MODIS and VIIRS Hot Spots · NASA Space Apps Challenge 2026
+Team page: https://www.spaceappschallenge.org/2026/find-a-team/27-threads-uberlandia/
+Full references and AI-use statement: https://github.com/27threads/firesync
+
+#NASASpaceApps #SpaceApps2026 #NASA #FIRMS #Wildfire #Amazon

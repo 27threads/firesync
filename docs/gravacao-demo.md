@@ -10,6 +10,8 @@ Critério: **Presentation** (o vídeo mostra o site funcionando) e **Validity** 
 | --- | --- |
 | [video/firesync-v5-legenda.srt](video/firesync-v5-legenda.srt) | Legenda em inglês, frase por frase. Sobe junto com o vídeo no YouTube |
 | [video/firesync-v5-legenda-karaoke.ass](video/firesync-v5-legenda-karaoke.ass) | Mesma fala, palavra por palavra (destaque amarelo), para queimar no vídeo. 1280 × 720, embaixo e no centro, margem de 44 px |
+| [video/youtube-titulo.txt](video/youtube-titulo.txt) | Título do vídeo no YouTube, pronto para colar |
+| [video/youtube-descricao.txt](video/youtube-descricao.txt) | Descrição do vídeo no YouTube, pronta para colar. Usa "warned of" e "could mean", que seguem a redação do [pitch.md](pitch.md), mesmo onde a fala diz "predicted" e "save" |
 
 A fala termina em **29,80 s**. O vídeo final não pode passar de 30,00 s, então não há tela depois da última palavra.
 
@@ -21,7 +23,7 @@ Os tempos são os da legenda. Grave cada tomada mais longa (3 a 5 s de sobra) e 
 
 | # | Tempo | Fala | Tela (site) | Texto sobreposto (inglês) |
 | --- | --- | --- | --- | --- |
-| 1 | 0,15–3,43 | "The Amazon is burning. Where should firefighters act first?" | Abrir <https://firesync.nogranlabs.com.br>. A descida do globo termina no mapa em tela cheia, aba `Fire now`, com os focos da Amazônia | Topo: `FireSync · Team [NAME] · [MEMBERS] · NASA Space Apps 2026 · MODIS and VIIRS Hot Spots` |
+| 1 | 0,15–3,43 | "The Amazon is burning. Where should firefighters act first?" | Abrir <https://firesync.nogranlabs.com.br>. A descida do globo termina no mapa em tela cheia, aba `Fire now`, com os focos da Amazônia | Topo: `FireSync · Team 27 Threads · NASA Space Apps 2026 · Harmonization of MODIS and VIIRS Hot Spots`. Embaixo, menor: `Mateus Nogueira · Weberson David Azevedo Ramos · Rafael Lopes Fraga · Carlos Eduardo da Silva Pechiori · Vinicius Lucas Guimarães · Eduardo Lopes Valerio` |
 | 2 | 3,43–6,81 | "I am Mateus, and FireSync shows which areas are critical today." | No seletor `Region: All Brazil`, escolher `Amazônia` (o mapa enquadra a Amazônia). Abrir `Indicators`, que mostra o painel `Where to look first`, e clicar no primeiro cartão com `Compared with usual Critical`. O mapa aproxima na área | — |
 | 3 | 6,81–12,44 | "We combined 24 years of data from NASA's MODIS and VIIRS satellites into a fire history calendar" | Clicar no aviso `Calendar below now shows Amazônia · See it`. O calendário da Amazônia aparece, de 2003 a 2026. Passar o mouse num mês hachurado (era MODIS) para mostrar a faixa de incerteza | Canto: `NASA FIRMS · MODIS C6.1 (2003–2012) + VIIRS C2 (2012–2026), one harmonized series`. Embaixo dele: `Checked against INPE: monthly correlation 0.94–0.99` |
 | 4 | 12,44–14,64 | "and a risk map for the following days." | Rolar de volta ao mapa do topo e clicar na aba `Risk, next 14 days`. O painel `Where to look first` passa a agrupar as áreas em `Very high`, `High` e as outras faixas | — |
@@ -92,6 +94,5 @@ O áudio já está gravado, e a legenda tem que repetir o que é falado. Duas pa
 
 ## Pendências
 
-- [ ] Nome da equipe e nomes dos membros no texto da tomada 1
 - [ ] IPAM e o estudo de brigadas no Cerrado em References ([pagina-projeto.md](pagina-projeto.md))
 - [ ] Link do vídeo no campo "Link to Project Demo", testado numa janela anônima
