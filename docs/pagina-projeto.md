@@ -118,6 +118,13 @@ Every check had its pass or fail criterion fixed before the run, and we tried to
 - **The virtual assistant stays inside the data.** It answers only with figures returned by our own API and shows its sources.
 - **A decision aid, not a decision.** The tool ranks where to look. It does not replace field information, wind, or the judgment of the commander.
 
+### Next steps
+
+- **Field updates from the fire line.** A login area for fire commanders and crews to report the conditions of each fire in real time (active, controlled, out, front advancing), so the map joins what the satellite sees with what the crews see on the ground.
+- **Geostationary satellites for faster updates.** VIIRS passes over each place a few times a day. The GOES-19 satellite (GOES-East, NOAA and NASA) watches Brazil continuously and its fire product (ABI Fire Detection and Characterization) is updated about every 10 minutes. Harmonizing GOES with VIIRS, the same way we joined MODIS and VIIRS, could cut the time between a fire starting and it appearing on the map, at the cost of a coarser pixel (about 2 km).
+- **Wind for spread danger.** Integrate a wind forecast API (for example NOAA's GFS) to show where an active fire is likely to spread and how fast. Today the tool ranks where fire may occur, not where it moves.
+- **Climate scenarios set by the user.** Let the user enter an El Niño or La Niña forecast (NOAA's Oceanic Niño Index) and see the scenario for the coming season. We tested the index as an input to the risk model and it did not help, because 13 years hold few El Niño episodes and the effect differs by region; so it would enter as a clearly labelled "what if" scenario, not as part of the measured model.
+
 ### Machine learning and AI tools
 
 **Machine learning inside the product.** firesync uses two machine-learning models, both trained only on NASA data:
