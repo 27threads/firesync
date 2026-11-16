@@ -12,7 +12,7 @@ firesync
 
 ## High-Level Project Summary
 
-Fire teams in Brazil can see where satellites detect fire today, but not whether today's activity is normal for that place and season. Answering that needs a long record, and NASA's record comes from two sensor generations that do not agree: VIIRS records about six times more detections than MODIS over the same fires. firesync converts the MODIS Aqua record (2003 to early 2012) to the VIIRS scale with factors calibrated in the 13 years both sensors flew, and joins it with the VIIRS record into one monthly series, with an uncertainty range wherever a month is estimated. Users draw any area in Brazil and see a months × years fire calendar, the seasonal pattern, the highest-fire years, and the last 7 days against the typical level for the same dates. A map of recent detections flags where to look first and shows a 14-day fire risk per area from a model trained only on past data. Every number can be rebuilt from a downloadable audit package.
+Fire teams in Brazil can see where satellites detect fire today, but not whether today's activity is normal for that place and season. Answering that needs a long record, and NASA's record comes from two sensor generations that do not agree: VIIRS records about six times more detections than MODIS over the same fires. firesync converts the MODIS Aqua record (2003 to early 2012) to the VIIRS scale with factors calibrated in the 13 years both sensors flew, and joins it with the VIIRS record into one monthly series, with an uncertainty range wherever a month is estimated. Users draw any area in Brazil and see a months × years fire calendar, the seasonal pattern, the highest-fire years, and the last 7 days against the typical level for the same dates. A map of recent detections flags where to look first and shows a 14-day fire risk per area from a model trained only on past data, checked against NASA MCD64A1 burned area. An assistant answers questions in plain language from the same numbers. Every number can be rebuilt from a downloadable audit package.
 
 ## Link to Project Demo
 
@@ -37,6 +37,7 @@ NASA FIRMS shows where fire is detected right now. People who respond to fires a
 - **Now against normal.** The last 7 days and the month to date are compared with the median of the same dates (within ±15 days) in earlier VIIRS years. An alert level (Normal, Attention, Critical) follows rule v1, which is versioned in `config/alert_rules.json`.
 - **Recent detections map.** The last 24, 72 or 168 hours as H3 hexagons or points, with an intensity class from fire radiative power.
 - **Early warning.** A "Where to look first" list ranks areas of about 1,770 km² (H3 resolution 4) by alert level and by a 14-day fire risk from a trained model. Areas with a high risk enter the list even when there is no fire there now.
+- **Ask the data.** A chat assistant answers questions such as "is the Pantanal above normal this week?" in the language of the question. It does not write numbers itself: it calls the same API functions as the screen (calendar, recent window, map, risk) and every figure in the answer is checked against what those functions returned, with the sources shown.
 - **Downloads.** CSV tables, a PNG of the calendar, and an audit ZIP with the raw counts by cell, the conversion factors of every calibration scenario, the formula and the filters used, so anyone can recompute the calendar.
 
 ### How it works
@@ -54,6 +55,7 @@ NASA FIRMS shows where fire is detected right now. People who respond to fires a
 - **Why the sensors disagree.** In 2024, in areas MODIS was observing, MODIS also saw 15–18% of the VIIRS fires under 2 MW and 71–87% of those of 25 MW or more. A model trained on 2019–2021 reproduced this pattern in 2022–2024.
 - **Alert rule v1, backtested 2013–2024** on H3 resolution 4 cells: after a Critical week, the next 14 days had unusually high VIIRS detections 26.6% of the time, 6.0 points more than a simple persistence rule at the same alert frequency (95% interval 4.1 to 8.0), with a gain in all 12 years. In the Pantanal in 2020, rule v1 reached Critical 40 days before the Mato Grosso do Sul emergency decree. A trained model beat v1 by only 0.9 points, so we kept the simple rule that anyone can check.
 - **14-day risk model**, tested on 2021–2024 and trained only on earlier years. When it flags a cell (probability of 50% or more), relevant fire followed in 78% of cases in the Amazon and 76% in Brazil (precision), and it flagged 74% of the Amazon cells that had relevant fire (66% in Brazil). In the map tiers, relevant fire followed in 82% (very high), 46% (high), 27% (medium) and 3% (lower) of past cases. On the same question, it ranked areas better than INPE's official fire-risk index in every year: 59–64% of its top 10% areas had relevant fire, against 25–31% for the index, which measures how flammable the vegetation is, not where detections will occur.
+- **14-day risk map against NASA burned area.** Because the model learns from VIIRS, we checked it with an independent NASA product, MODIS burned area MCD64A1 v061. For every Sunday from 2021 to 2024, the model was trained only on earlier years and scored the 2,128 Amazon cells (about 440,000 predictions); both pass criteria were fixed before the run. Burned area fell tier by tier in all four years: the very high tier was 11% of the predictions and held 75.5% of all burned area. A place that burned got a higher score than one that did not in about 9 of 10 pairs (AUC 0.898, 0.880 to 0.904 by year, criterion 0.80). 69% of the places that burned were flagged high or very high, and this is a floor: only 37% of the weeks with 10 or more VIIRS detections have a mapped scar of 1 km² or more.
 - **Speed**, measured on the test database: a 100 × 100 km calendar in 2–9 ms, the whole Amazon in about 0.8 s, recent detections in 19 ms.
 
 ### Limits we state on screen
@@ -76,7 +78,8 @@ NASA FIRMS shows where fire is detected right now. People who respond to fires a
 - **Data pipeline:** Python (pandas, PyArrow, GeoPandas, pyogrio, Shapely, h3, psycopg, scikit-learn).
 - **Database:** PostgreSQL 16 with PostGIS 3.4, Uber H3 grid.
 - **API:** Python, FastAPI and Uvicorn, hexagonal architecture.
-- **Front end:** TypeScript, React, Vite, Leaflet with Leaflet-Geoman, D3 (d3-scale, d3-scale-chromatic), GSAP, Archivo typeface.
+- **Front end:** TypeScript, React, Vite, Leaflet with Leaflet-Geoman, D3 (d3-scale, d3-scale-chromatic), GSAP, three.js, Archivo typeface.
+- **Assistant:** tool calling over the API's use cases, through OpenAI-compatible chat completion APIs with a fallback chain of providers.
 - **Tests and delivery:** pytest, Vitest, Testing Library, Playwright user journeys, GitHub Actions, Docker Compose, Cloudflare Workers and Cloudflare Tunnel.
 
 ## NASA Data
@@ -86,9 +89,10 @@ NASA FIRMS shows where fire is detected right now. People who respond to fires a
   - **VIIRS 375 m Collection 2**: S-NPP (observed record from February 2012 and calibration reference for 2012–2024), NOAA-20 (current record from November 2026) and NOAA-21 (backup in near real time).
   - **FIRMS API**, near real time, for the current month and the recent detections map.
   - Data from LANCE FIRMS, operated by NASA's Earth Science Data and Information System (ESDIS). Credit is shown in the app.
-- **NASA GIBS (Global Imagery Browse Services)**, base maps: VIIRS Black Marble (2016), Blue Marble Next Generation and Coastlines, through the WMTS endpoint. The opening globe texture in the prototype in the `lovable/` folder uses the GIBS layer BlueMarble_ShadedRelief_Bathymetry.
+- **NASA MCD64A1 v061 (MODIS Burned Area, 500 m)**, from NASA LP DAAC: independent check of the 14-day risk map, 2021–2024 in the Amazon. Not used to compute any number in the app. https://lpdaac.usgs.gov/products/mcd64a1v061/
+- **NASA GIBS (Global Imagery Browse Services)**, base maps: VIIRS Black Marble (2016), Blue Marble Next Generation and Coastlines, through the WMTS endpoint. The opening globe texture uses the GIBS layer BlueMarble_ShadedRelief_Bathymetry.
 - **NASA POWER** (daily rainfall, maximum temperature, humidity and wind) was tested as input to the risk models. It did not improve them under criteria fixed before the runs, so it is not in the product. The result is reported in the method notes.
-- **NASA 3D Resources**: 3D models of Aqua and Suomi NPP, used in the opening animation prototype in the `lovable/` folder.
+- **NASA 3D Resources**: 3D models of Aqua and Suomi NPP, used in the opening animation of the app.
 
 ## Space Agency Partner Data and Other References
 
@@ -103,7 +107,7 @@ NASA FIRMS shows where fire is detected right now. People who respond to fires a
 - **NOAA Climate Prediction Center**, Oceanic Niño Index (ONI): tested as input to the risk model, not used in the product. https://www.cpc.ncep.noaa.gov/
 - **Government of Mato Grosso do Sul**, Decree 080/2020, environmental emergency in the Pantanal (24 July 2020): historical example for the alert. https://www.semadesc.ms.gov.br/?p=108045
 - **OpenStreetMap contributors**: coastline data in the GIBS Coastlines layer. https://www.openstreetmap.org/copyright
-- **datasets/geo-countries** (from Natural Earth): country boundaries in the opening animation prototype in the `lovable/` folder. https://github.com/datasets/geo-countries
+- **datasets/geo-countries** (from Natural Earth): country boundaries in the opening animation. https://github.com/datasets/geo-countries
 
 ### Scientific references
 
@@ -116,7 +120,7 @@ NASA FIRMS shows where fire is detected right now. People who respond to fires a
 
 ### Software and libraries (all open source)
 
-- Front end: React, React DOM, Vite, TypeScript, Leaflet, Leaflet-Geoman (free), D3 (d3-scale, d3-scale-chromatic), GSAP, Fontsource Archivo (SIL Open Font License).
+- Front end: React, React DOM, Vite, TypeScript, Leaflet, Leaflet-Geoman (free), D3 (d3-scale, d3-scale-chromatic), GSAP, three.js, Fontsource Archivo (SIL Open Font License).
 - Front-end tests: Vitest, Testing Library (React, jest-dom), jsdom, Playwright.
 - API: FastAPI, Uvicorn, psycopg, h3, Shapely, pyproj.
 - Data pipeline and models: pandas, PyArrow, GeoPandas, pyogrio, Shapely, h3, psycopg, scikit-learn (HistGradientBoostingClassifier).
@@ -134,5 +138,7 @@ We used AI coding assistants to write and review code and documents from those d
 - **OpenAI Codex**: API domain, ports and adapters, HTTP routes, tests and documentation updates.
 - **Antigravity**: front-end area selection, recent detections layer, API integration and downloads.
 - **Lovable**: the opening animation prototype in the `lovable/` folder.
+
+The app itself also uses a language model at run time: the chat assistant. It only chooses which API function to call and words the answer; the numbers come from the API and are checked before the answer is shown.
 
 Code was written test-first where possible, and every change entered through a pull request with automated tests, reviewed by the team. The full list of AI-assisted parts, file by file and with the tool used, is in the "Uso de IA" table of the repository README: https://github.com/27threads/firesync#uso-de-ia
