@@ -358,6 +358,9 @@ def parse_missing(html, sp_fim):
     depois do último dia SP daquele satélite (regra do próprio FIRMS); antes disso o SP tem o dado.
     """
     tds = [t.strip() for t in re.findall(r"<td>(.*?)</td>", html, re.S)]
+    # A página tem falhas desde 2000: nenhuma célula é formato novo, não "nenhum dia sem dados" (o DELETE apagaria a tabela).
+    if not tds:
+        raise ValueError("missing_data: nenhuma célula <td> na tabela do FIRMS")
     rows = set()
     for i in range(0, len(tds), 4):
         for (data, sat), nrt in ((tds[i:i + 2], False), (tds[i + 2:i + 4], True)):

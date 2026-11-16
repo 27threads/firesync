@@ -56,6 +56,12 @@ try:
     raise AssertionError("satélite desconhecido deveria falhar")
 except ValueError:
     pass
+# auditoria 16/11: HTML em outro formato não pode virar "nenhum dia sem dados" (o DELETE apagaria a tabela)
+try:
+    parse_missing('<tr><td class="x">2020-01-01</td><td class="x">Aqua (MODIS)</td></tr>', fim)
+    raise AssertionError("tabela sem <td> reconhecível deveria falhar")
+except ValueError:
+    pass
 # cadastro: cada célula numa região só; borda sem dono vai para a primeira região que encosta
 from pipeline import assign_cells  # noqa: E402
 a, b = assign_cells([{1, 2}, {3}], [{1, 2, 9, 7}, {3, 2, 9, 8}])
@@ -115,8 +121,12 @@ assert meses_da_janela(date(2026, 12, 1)) == (date(2026, 11, 1), date(2027, 1, 1
 from job_nrt import dias_da_janela  # noqa: E402
 assert dias_da_janela(date(2026, 11, 14), date(2026, 11, 14)) == 2   # rodou há 3 h: as 48 h de sempre
 assert dias_da_janela(date(2026, 11, 14), date(2026, 11, 11)) == 4   # parado 3 dias: busca do dia 11 ao 14
-assert dias_da_janela(date(2026, 11, 14), date(2026, 11, 1)) == 5    # teto da API de área do FIRMS
-assert dias_da_janela(date(2026, 11, 14), None) == 5                 # banco sem NRT: o máximo
+assert dias_da_janela(date(2026, 11, 14), date(2026, 11, 1)) == 14   # parado 13 dias: busca todos (auditoria 16/11)
+assert dias_da_janela(date(2026, 11, 14), None) == 5                 # banco sem NRT: o máximo de um pedido
+# a janela vira pedidos de até 5 dias (teto da API de área do FIRMS), do mais antigo ao de hoje, sem buraco
+from job_nrt import blocos  # noqa: E402
+assert blocos(date(2026, 11, 14), 2) == [(date(2026, 11, 13), 2)]
+assert blocos(date(2026, 11, 14), 14) == [(date(2026, 11, 1), 5), (date(2026, 11, 6), 5), (date(2026, 11, 11), 4)]
 assert meses_da_janela(date(2026, 12, 2), 4) == (date(2026, 11, 1), date(2027, 1, 1))  # 4 dias cruzam o mês
 # INPE (A2): histórico mensal por estado × bioma -> bioma × ano × mês (soma os estados; mês vazio sai)
 from pipeline import inpe_mensal  # noqa: E402

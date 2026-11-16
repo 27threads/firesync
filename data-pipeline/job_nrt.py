@@ -5,7 +5,7 @@ Uso:
 
 Cada rodada:
     1. baixa VIIRS_NOAA20_NRT e VIIRS_NOAA21_NRT no bbox da cobertura, do último dia NRT gravado até hoje
-       (no mínimo 48 h, no máximo os 5 dias que a API de área aceita): um job parado não deixa buraco;
+       (no mínimo 48 h; em pedidos de até 5 dias, o teto da API de área): um job parado não deixa buraco;
     2. importa (upsert em `focos`, cobertura e SP substituindo NRT, ver pipeline.importar);
     3. atualiza `dias_sem_dados` (se a página do FIRMS falhar, segue com a tabela antiga e registra um aviso);
     4. refaz `agregados` e `agregados_diarios` dos meses da janela e grava `config.atualizado_em` (UTC, ISO 8601
@@ -32,10 +32,19 @@ log = logs.logger("job_nrt")
 
 
 def dias_da_janela(hoje, ultimo_nrt):
-    """Dias a baixar: do último dia com NRT gravado até hoje, entre DIAS e MAX_DIAS. Sem NRT no banco, o máximo."""
+    """Dias a baixar: do último dia com NRT gravado até hoje, no mínimo DIAS. Sem NRT no banco, MAX_DIAS.
+
+    Sem teto: um job parado mais de MAX_DIAS dias baixa todos os dias que faltam, em blocos (auditoria 16/11).
+    """
     if ultimo_nrt is None:
         return MAX_DIAS
-    return min(MAX_DIAS, max(DIAS, (hoje - ultimo_nrt).days + 1))
+    return max(DIAS, (hoje - ultimo_nrt).days + 1)
+
+
+def blocos(hoje, dias):
+    """A janela em pedidos de até MAX_DIAS (teto da API de área): [(primeiro dia, n dias)], do mais antigo a hoje."""
+    inicio = hoje - timedelta(days=dias - 1)
+    return [(inicio + timedelta(days=k), min(MAX_DIAS, dias - k)) for k in range(0, dias, MAX_DIAS)]
 
 
 def meses_da_janela(hoje, dias=DIAS):
@@ -83,10 +92,11 @@ def executar(conn, etapa):
     arquivos = []
     etapa.atual = "download"
     for fonte in FONTES:
-        dest = pasta / f"{fonte}_{agora:%Y%m%dT%H%M}.csv"
-        p.curl(f"{p.API}/area/csv/{key}/{fonte}/{bbox}/{dias}", dest)
-        arquivos.append(dest)
-        log.info("nrt_download_done", source=fonte, file=dest.name, bytes=dest.stat().st_size)
+        for inicio, n in blocos(agora.date(), dias):
+            dest = pasta / f"{fonte}_{inicio:%Y%m%d}_{agora:%Y%m%dT%H%M}.csv"
+            p.curl(f"{p.API}/area/csv/{key}/{fonte}/{bbox}/{n}/{inicio}", dest)
+            arquivos.append(dest)
+            log.info("nrt_download_done", source=fonte, file=dest.name, bytes=dest.stat().st_size)
     etapa.atual = "import"
     totais = p.importar(arquivos)
     etapa.atual = "missing_days"
