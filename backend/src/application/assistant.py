@@ -13,6 +13,8 @@ MAX_USER_CHARS = 1000
 MAX_ASSISTANT_CHARS = 4000  # earlier answers come back as history, and reports run past 1000 characters
 HISTORY_SENT = 6
 MAX_TOOL_ROUNDS = 4
+# Per reply: one reply could otherwise ask for ~144 calendars and hold the whole connection pool (audit 16/11).
+MAX_CALLS_PER_ROUND = 4
 SYSTEM_PROMPT = (
     'You are the firesync assistant. firesync shows NASA FIRMS fire detections (hotspots) from MODIS and VIIRS, '
     'harmonized to one VIIRS scale since January 2003, for the six Brazilian biomes of IBGE. '
@@ -248,8 +250,12 @@ class AskService:
                 conversation += [{'role': 'assistant', 'content': text},
                                  {'role': 'user', 'content': ' '.join(found) + FINAL}]
                 continue
+            # Every tool call sent back needs its tool result, so the cut applies to the message too.
+            calls = calls[:MAX_CALLS_PER_ROUND]
             conversation.append({'role': 'assistant', 'content': reply.get('content'), 'tool_calls': calls})
             for tool_call in calls:
+                if self.monotonic() >= deadline:
+                    raise CalendarError('assistant_unavailable', 'Assistant unavailable, use the map.')
                 function = tool_call.get('function') or {}
                 result = toolbox.run(function.get('name'), function.get('arguments'))
                 conversation.append({'role': 'tool', 'tool_call_id': tool_call.get('id'),

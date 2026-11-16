@@ -10,6 +10,7 @@ from backend.adapters.inbound.http.app import create_app
 PostgresHistoryRepository  # Instantiated in PostGIS integration tests.
 CalendarService.calculate  # Called by application, unit and integration tests.
 create_app  # Uvicorn --factory entry point, also used by TestClient.
+itersize  # noqa: F821 - psycopg reads it: rows per fetch of the export's server-side cursor.
 guard  # noqa: F821 - FastAPI middleware registration calls this closure.
 health  # noqa: F821 - FastAPI GET /health registration calls this closure.
 export  # noqa: F821 - FastAPI POST /export registration calls this closure.

@@ -178,7 +178,9 @@ def create_app(repository: ApiRepository | None = None, clock=None, monotonic=No
             snapshot, result = calculate_calendar(reader, area, start, end, now.date(), rules)
             request.state.n_cells = result['area']['n_cells']
             files, metadata = audit_document(reader, snapshot, result, payload, now, rules)
-        return Response(audit_zip(files, metadata), media_type='application/zip',
+            # Inside the transaction: detections stream from the database cursor into the zip.
+            archive = audit_zip(files, metadata)
+        return Response(archive, media_type='application/zip',
                         headers={'Content-Disposition': f'attachment; filename="firesync-{now.date()}.zip"'})
 
     @app.post('/api/v1/export')
@@ -198,7 +200,9 @@ def create_app(repository: ApiRepository | None = None, clock=None, monotonic=No
                 rows = reader.map_rows(query, now)
                 body = map_result(query, rows, meta['updated_at'], rules, risk_rules)
                 expires_at = rows['expires_at']
-                cache.put(key, (body, expires_at))
+                # Point bodies hold up to POINT_LIMIT features (~50 MB): caching 128 of them could exhaust memory.
+                if body['mode'] != 'points':
+                    cache.put(key, (body, expires_at))
             else:
                 body, expires_at = cached
             return json_response(request, body, meta, repr(query) + expires_at.isoformat())

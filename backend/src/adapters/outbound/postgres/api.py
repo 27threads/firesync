@@ -156,11 +156,11 @@ class PostgresApiReader(PostgresHistoryRepository):
         total = self.cursor.fetchone()['total']
         if total > DETECTION_LIMIT:
             return total, []
-        self.cursor.execute(f'SELECT {DETECTION_COLUMNS} FROM focos WHERE {where} ORDER BY datahora_utc,satelite,lat,lon', params)
-        rows = self.cursor.fetchall()
-        for row in rows:
-            row['acquired_utc'] = utc_text(row['acquired_utc'])
-        return total, rows
+        # Server-side cursor: up to DETECTION_LIMIT rows stream into the zip in batches instead of sitting in memory.
+        stream = self.cursor.connection.cursor(name='export_detections', row_factory=dict_row)
+        stream.itersize = 5000
+        stream.execute(f'SELECT {DETECTION_COLUMNS} FROM focos WHERE {where} ORDER BY datahora_utc,satelite,lat,lon', params)
+        return total, (dict(row, acquired_utc=utc_text(row['acquired_utc'])) for row in stream)
 
     def map_rows(self, query, now):
         west, south, east, north = query.bbox
