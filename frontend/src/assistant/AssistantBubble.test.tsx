@@ -47,6 +47,31 @@ test('a long earlier answer goes back as history cut to the API limit', async ()
   expect(body.messages.map((m: { content: string }) => m.content.length)).toEqual([SUGGESTED_QUESTIONS[4].length, 4000, 9]);
 });
 
+test('the audit download says it is preparing and blocks a second click until it ends', async () => {
+  const download = { type: 'download_export', area: { type: 'region', region_id: 6 }, start: '2020-01', end: '2020-12' };
+  let finishZip: (response: Response) => void = () => {};
+  const fetchMock = vi.fn(async (url: string) =>
+    url.endsWith('/ask')
+      ? json({ answer: 'Here is the report.', actions: [download], notes: [], sources: [], verified: true })
+      : new Promise<Response>((resolve) => {
+          finishZip = resolve;
+        }),
+  );
+  vi.stubGlobal('fetch', fetchMock);
+  render(<AssistantBubble onShowCalendar={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Ask about fire data' }));
+  fireEvent.click(screen.getByRole('button', { name: SUGGESTED_QUESTIONS[4] }));
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Download audit package' }));
+  const preparing = await screen.findByRole('button', { name: 'Preparing audit package…' });
+  expect(preparing).toBeDisabled();
+  fireEvent.click(preparing);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+
+  finishZip(new Response('{}', { status: 500 }));
+  expect(await screen.findByRole('button', { name: 'Download audit package' })).toBeEnabled();
+});
+
 test('fire map sources name the time window', () => {
   expect(describeSource({ endpoint: 'GET /api/v1/detections/recent', hours: 72, data_version: 'v1' })).toBe(
     'NASA FIRMS via firesync fire map, last 72 h · data version v1',

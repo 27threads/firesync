@@ -1,0 +1,98 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 720
+WrapStyle: 2
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: K,Inter Display ExtraBold,44,&H00FFFFFF,&H00FFFFFF,&H55000000,&H00000000,0,0,0,0,100,100,1,0,3,9,0,2,60,60,44,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.15,0:00:00.32,K,,0,0,0,,{\c&H00D4FF&}The{\c&HFFFFFF&}\h Amazon\h is\h burning.
+Dialogue: 0,0:00:00.32,0:00:00.61,K,,0,0,0,,The\h {\c&H00D4FF&}Amazon{\c&HFFFFFF&}\h is\h burning.
+Dialogue: 0,0:00:00.61,0:00:00.77,K,,0,0,0,,The\h Amazon\h {\c&H00D4FF&}is{\c&HFFFFFF&}\h burning.
+Dialogue: 0,0:00:00.77,0:00:01.21,K,,0,0,0,,The\h Amazon\h is\h {\c&H00D4FF&}burning.{\c&HFFFFFF&}
+Dialogue: 0,0:00:01.21,0:00:01.38,K,,0,0,0,,{\c&H00D4FF&}Where{\c&HFFFFFF&}\h should\h firefighters\h act\h first?
+Dialogue: 0,0:00:01.38,0:00:01.68,K,,0,0,0,,Where\h {\c&H00D4FF&}should{\c&HFFFFFF&}\h firefighters\h act\h first?
+Dialogue: 0,0:00:01.68,0:00:02.51,K,,0,0,0,,Where\h should\h {\c&H00D4FF&}firefighters{\c&HFFFFFF&}\h act\h first?
+Dialogue: 0,0:00:02.51,0:00:02.87,K,,0,0,0,,Where\h should\h firefighters\h {\c&H00D4FF&}act{\c&HFFFFFF&}\h first?
+Dialogue: 0,0:00:02.87,0:00:03.43,K,,0,0,0,,Where\h should\h firefighters\h act\h {\c&H00D4FF&}first?{\c&HFFFFFF&}
+Dialogue: 0,0:00:03.43,0:00:03.62,K,,0,0,0,,{\c&H00D4FF&}I{\c&HFFFFFF&}\h am\h Mateus,\h and\h FireSync\h shows
+Dialogue: 0,0:00:03.62,0:00:03.85,K,,0,0,0,,I\h {\c&H00D4FF&}am{\c&HFFFFFF&}\h Mateus,\h and\h FireSync\h shows
+Dialogue: 0,0:00:03.85,0:00:04.22,K,,0,0,0,,I\h am\h {\c&H00D4FF&}Mateus,{\c&HFFFFFF&}\h and\h FireSync\h shows
+Dialogue: 0,0:00:04.22,0:00:04.44,K,,0,0,0,,I\h am\h Mateus,\h {\c&H00D4FF&}and{\c&HFFFFFF&}\h FireSync\h shows
+Dialogue: 0,0:00:04.44,0:00:04.81,K,,0,0,0,,I\h am\h Mateus,\h and\h {\c&H00D4FF&}FireSync{\c&HFFFFFF&}\h shows
+Dialogue: 0,0:00:04.81,0:00:05.06,K,,0,0,0,,I\h am\h Mateus,\h and\h FireSync\h {\c&H00D4FF&}shows{\c&HFFFFFF&}
+Dialogue: 0,0:00:05.06,0:00:05.39,K,,0,0,0,,{\c&H00D4FF&}which{\c&HFFFFFF&}\h areas\h are\h critical\h today.
+Dialogue: 0,0:00:05.39,0:00:05.71,K,,0,0,0,,which\h {\c&H00D4FF&}areas{\c&HFFFFFF&}\h are\h critical\h today.
+Dialogue: 0,0:00:05.71,0:00:05.95,K,,0,0,0,,which\h areas\h {\c&H00D4FF&}are{\c&HFFFFFF&}\h critical\h today.
+Dialogue: 0,0:00:05.95,0:00:06.42,K,,0,0,0,,which\h areas\h are\h {\c&H00D4FF&}critical{\c&HFFFFFF&}\h today.
+Dialogue: 0,0:00:06.42,0:00:06.81,K,,0,0,0,,which\h areas\h are\h critical\h {\c&H00D4FF&}today.{\c&HFFFFFF&}
+Dialogue: 0,0:00:06.81,0:00:06.96,K,,0,0,0,,{\c&H00D4FF&}We{\c&HFFFFFF&}\h combined\h 24\h years\h of\h data
+Dialogue: 0,0:00:06.96,0:00:07.51,K,,0,0,0,,We\h {\c&H00D4FF&}combined{\c&HFFFFFF&}\h 24\h years\h of\h data
+Dialogue: 0,0:00:07.51,0:00:07.95,K,,0,0,0,,We\h combined\h {\c&H00D4FF&}24{\c&HFFFFFF&}\h years\h of\h data
+Dialogue: 0,0:00:07.95,0:00:08.15,K,,0,0,0,,We\h combined\h 24\h {\c&H00D4FF&}years{\c&HFFFFFF&}\h of\h data
+Dialogue: 0,0:00:08.15,0:00:08.32,K,,0,0,0,,We\h combined\h 24\h years\h {\c&H00D4FF&}of{\c&HFFFFFF&}\h data
+Dialogue: 0,0:00:08.32,0:00:08.65,K,,0,0,0,,We\h combined\h 24\h years\h of\h {\c&H00D4FF&}data{\c&HFFFFFF&}
+Dialogue: 0,0:00:08.65,0:00:08.85,K,,0,0,0,,{\c&H00D4FF&}from{\c&HFFFFFF&}\h NASA's\h MODIS\h and\h VIIRS\h satellites
+Dialogue: 0,0:00:08.85,0:00:09.21,K,,0,0,0,,from\h {\c&H00D4FF&}NASA's{\c&HFFFFFF&}\h MODIS\h and\h VIIRS\h satellites
+Dialogue: 0,0:00:09.21,0:00:09.52,K,,0,0,0,,from\h NASA's\h {\c&H00D4FF&}MODIS{\c&HFFFFFF&}\h and\h VIIRS\h satellites
+Dialogue: 0,0:00:09.52,0:00:09.72,K,,0,0,0,,from\h NASA's\h MODIS\h {\c&H00D4FF&}and{\c&HFFFFFF&}\h VIIRS\h satellites
+Dialogue: 0,0:00:09.72,0:00:10.03,K,,0,0,0,,from\h NASA's\h MODIS\h and\h {\c&H00D4FF&}VIIRS{\c&HFFFFFF&}\h satellites
+Dialogue: 0,0:00:10.03,0:00:10.69,K,,0,0,0,,from\h NASA's\h MODIS\h and\h VIIRS\h {\c&H00D4FF&}satellites{\c&HFFFFFF&}
+Dialogue: 0,0:00:10.69,0:00:11.03,K,,0,0,0,,{\c&H00D4FF&}into{\c&HFFFFFF&}\h a\h fire\h history\h calendar
+Dialogue: 0,0:00:11.03,0:00:11.15,K,,0,0,0,,into\h {\c&H00D4FF&}a{\c&HFFFFFF&}\h fire\h history\h calendar
+Dialogue: 0,0:00:11.15,0:00:11.35,K,,0,0,0,,into\h a\h {\c&H00D4FF&}fire{\c&HFFFFFF&}\h history\h calendar
+Dialogue: 0,0:00:11.35,0:00:11.80,K,,0,0,0,,into\h a\h fire\h {\c&H00D4FF&}history{\c&HFFFFFF&}\h calendar
+Dialogue: 0,0:00:11.80,0:00:12.44,K,,0,0,0,,into\h a\h fire\h history\h {\c&H00D4FF&}calendar{\c&HFFFFFF&}
+Dialogue: 0,0:00:12.44,0:00:12.62,K,,0,0,0,,{\c&H00D4FF&}and{\c&HFFFFFF&}\h a\h risk\h map
+Dialogue: 0,0:00:12.62,0:00:12.76,K,,0,0,0,,and\h {\c&H00D4FF&}a{\c&HFFFFFF&}\h risk\h map
+Dialogue: 0,0:00:12.76,0:00:12.99,K,,0,0,0,,and\h a\h {\c&H00D4FF&}risk{\c&HFFFFFF&}\h map
+Dialogue: 0,0:00:12.99,0:00:13.26,K,,0,0,0,,and\h a\h risk\h {\c&H00D4FF&}map{\c&HFFFFFF&}
+Dialogue: 0,0:00:13.26,0:00:13.39,K,,0,0,0,,{\c&H00D4FF&}for{\c&HFFFFFF&}\h the\h following\h days.
+Dialogue: 0,0:00:13.39,0:00:13.69,K,,0,0,0,,for\h {\c&H00D4FF&}the{\c&HFFFFFF&}\h following\h days.
+Dialogue: 0,0:00:13.69,0:00:14.05,K,,0,0,0,,for\h the\h {\c&H00D4FF&}following{\c&HFFFFFF&}\h days.
+Dialogue: 0,0:00:14.05,0:00:14.64,K,,0,0,0,,for\h the\h following\h {\c&H00D4FF&}days.{\c&HFFFFFF&}
+Dialogue: 0,0:00:14.64,0:00:14.82,K,,0,0,0,,{\c&H00D4FF&}In{\c&HFFFFFF&}\h tests,\h our\h AI\h predicted
+Dialogue: 0,0:00:14.82,0:00:15.35,K,,0,0,0,,In\h {\c&H00D4FF&}tests,{\c&HFFFFFF&}\h our\h AI\h predicted
+Dialogue: 0,0:00:15.35,0:00:15.57,K,,0,0,0,,In\h tests,\h {\c&H00D4FF&}our{\c&HFFFFFF&}\h AI\h predicted
+Dialogue: 0,0:00:15.57,0:00:15.74,K,,0,0,0,,In\h tests,\h our\h {\c&H00D4FF&}AI{\c&HFFFFFF&}\h predicted
+Dialogue: 0,0:00:15.74,0:00:16.44,K,,0,0,0,,In\h tests,\h our\h AI\h {\c&H00D4FF&}predicted{\c&HFFFFFF&}
+Dialogue: 0,0:00:16.44,0:00:16.69,K,,0,0,0,,{\c&H00D4FF&}half{\c&HFFFFFF&}\h of\h the\h Amazon's
+Dialogue: 0,0:00:16.69,0:00:16.97,K,,0,0,0,,half\h {\c&H00D4FF&}of{\c&HFFFFFF&}\h the\h Amazon's
+Dialogue: 0,0:00:16.97,0:00:17.12,K,,0,0,0,,half\h of\h {\c&H00D4FF&}the{\c&HFFFFFF&}\h Amazon's
+Dialogue: 0,0:00:17.12,0:00:17.47,K,,0,0,0,,half\h of\h the\h {\c&H00D4FF&}Amazon's{\c&HFFFFFF&}
+Dialogue: 0,0:00:17.47,0:00:17.70,K,,0,0,0,,{\c&H00D4FF&}major{\c&HFFFFFF&}\h fire\h outbreaks,
+Dialogue: 0,0:00:17.70,0:00:17.98,K,,0,0,0,,major\h {\c&H00D4FF&}fire{\c&HFFFFFF&}\h outbreaks,
+Dialogue: 0,0:00:17.98,0:00:19.00,K,,0,0,0,,major\h fire\h {\c&H00D4FF&}outbreaks,{\c&HFFFFFF&}
+Dialogue: 0,0:00:19.00,0:00:19.51,K,,0,0,0,,{\c&H00D4FF&}about{\c&HFFFFFF&}\h ten\h days\h ahead.
+Dialogue: 0,0:00:19.51,0:00:19.69,K,,0,0,0,,about\h {\c&H00D4FF&}ten{\c&HFFFFFF&}\h days\h ahead.
+Dialogue: 0,0:00:19.69,0:00:19.91,K,,0,0,0,,about\h ten\h {\c&H00D4FF&}days{\c&HFFFFFF&}\h ahead.
+Dialogue: 0,0:00:19.91,0:00:20.31,K,,0,0,0,,about\h ten\h days\h {\c&H00D4FF&}ahead.{\c&HFFFFFF&}
+Dialogue: 0,0:00:20.31,0:00:20.68,K,,0,0,0,,{\c&H00D4FF&}That's{\c&HFFFFFF&}\h time\h to\h act
+Dialogue: 0,0:00:20.68,0:00:21.01,K,,0,0,0,,That's\h {\c&H00D4FF&}time{\c&HFFFFFF&}\h to\h act
+Dialogue: 0,0:00:21.01,0:00:21.25,K,,0,0,0,,That's\h time\h {\c&H00D4FF&}to{\c&HFFFFFF&}\h act
+Dialogue: 0,0:00:21.25,0:00:21.62,K,,0,0,0,,That's\h time\h to\h {\c&H00D4FF&}act{\c&HFFFFFF&}
+Dialogue: 0,0:00:21.62,0:00:21.96,K,,0,0,0,,{\c&H00D4FF&}before{\c&HFFFFFF&}\h fires\h spread.
+Dialogue: 0,0:00:21.96,0:00:22.45,K,,0,0,0,,before\h {\c&H00D4FF&}fires{\c&HFFFFFF&}\h spread.
+Dialogue: 0,0:00:22.45,0:00:22.88,K,,0,0,0,,before\h fires\h {\c&H00D4FF&}spread.{\c&HFFFFFF&}
+Dialogue: 0,0:00:22.88,0:00:23.20,K,,0,0,0,,{\c&H00D4FF&}With{\c&HFFFFFF&}\h crews\h on\h the\h ground,
+Dialogue: 0,0:00:23.20,0:00:23.45,K,,0,0,0,,With\h {\c&H00D4FF&}crews{\c&HFFFFFF&}\h on\h the\h ground,
+Dialogue: 0,0:00:23.45,0:00:23.57,K,,0,0,0,,With\h crews\h {\c&H00D4FF&}on{\c&HFFFFFF&}\h the\h ground,
+Dialogue: 0,0:00:23.57,0:00:23.73,K,,0,0,0,,With\h crews\h on\h {\c&H00D4FF&}the{\c&HFFFFFF&}\h ground,
+Dialogue: 0,0:00:23.73,0:00:24.17,K,,0,0,0,,With\h crews\h on\h the\h {\c&H00D4FF&}ground,{\c&HFFFFFF&}
+Dialogue: 0,0:00:24.17,0:00:24.39,K,,0,0,0,,{\c&H00D4FF&}that{\c&HFFFFFF&}\h could\h save\h over\h 700,000\h acres.
+Dialogue: 0,0:00:24.39,0:00:24.65,K,,0,0,0,,that\h {\c&H00D4FF&}could{\c&HFFFFFF&}\h save\h over\h 700,000\h acres.
+Dialogue: 0,0:00:24.65,0:00:24.93,K,,0,0,0,,that\h could\h {\c&H00D4FF&}save{\c&HFFFFFF&}\h over\h 700,000\h acres.
+Dialogue: 0,0:00:24.93,0:00:25.25,K,,0,0,0,,that\h could\h save\h {\c&H00D4FF&}over{\c&HFFFFFF&}\h 700,000\h acres.
+Dialogue: 0,0:00:25.25,0:00:26.56,K,,0,0,0,,that\h could\h save\h over\h {\c&H00D4FF&}700,000{\c&HFFFFFF&}\h acres.
+Dialogue: 0,0:00:26.56,0:00:27.06,K,,0,0,0,,that\h could\h save\h over\h 700,000\h {\c&H00D4FF&}acres.{\c&HFFFFFF&}
+Dialogue: 0,0:00:27.06,0:00:27.38,K,,0,0,0,,{\c&H00D4FF&}Starting{\c&HFFFFFF&}\h with\h the\h Amazon,
+Dialogue: 0,0:00:27.38,0:00:27.64,K,,0,0,0,,Starting\h {\c&H00D4FF&}with{\c&HFFFFFF&}\h the\h Amazon,
+Dialogue: 0,0:00:27.64,0:00:27.83,K,,0,0,0,,Starting\h with\h {\c&H00D4FF&}the{\c&HFFFFFF&}\h Amazon,
+Dialogue: 0,0:00:27.83,0:00:28.34,K,,0,0,0,,Starting\h with\h the\h {\c&H00D4FF&}Amazon,{\c&HFFFFFF&}
+Dialogue: 0,0:00:28.34,0:00:28.64,K,,0,0,0,,{\c&H00D4FF&}then{\c&HFFFFFF&}\h forests\h worldwide.
+Dialogue: 0,0:00:28.64,0:00:29.08,K,,0,0,0,,then\h {\c&H00D4FF&}forests{\c&HFFFFFF&}\h worldwide.
+Dialogue: 0,0:00:29.08,0:00:29.80,K,,0,0,0,,then\h forests\h {\c&H00D4FF&}worldwide.{\c&HFFFFFF&}

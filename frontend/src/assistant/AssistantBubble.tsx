@@ -80,6 +80,7 @@ export function AssistantBubble({ onShowCalendar, hideBubble = false }: Props) {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [failedQuestion, setFailedQuestion] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const panelRef = useRef<HTMLElement>(null);
@@ -141,12 +142,19 @@ export function AssistantBubble({ onShowCalendar, hideBubble = false }: Props) {
     }
   }
 
+  // The audit ZIP takes a while to build; one request at a time, same as the export bar.
   async function download(action: AssistantAction) {
+    if (downloading) return;
+    setDownloading(true);
+    setFailure(null);
+    setFailedQuestion(null);
     try {
       const { blob, filename } = await fetchAuditPackage({ area: action.area, start: action.start, end: action.end });
       downloadBlob(blob, filename);
     } catch (error) {
       setFailure(error instanceof ApiClientError ? error.message : 'Download failed.');
+    } finally {
+      setDownloading(false);
     }
   }
 
@@ -212,9 +220,15 @@ export function AssistantBubble({ onShowCalendar, hideBubble = false }: Props) {
                     key={`${action.type}-${action.area.region_id}-${action.start ?? ''}-${action.end ?? ''}`}
                     type="button"
                     className="chip"
+                    disabled={action.type !== 'show_calendar' && downloading}
+                    aria-busy={action.type !== 'show_calendar' && downloading}
                     onClick={() => (action.type === 'show_calendar' ? onShowCalendar(action) : void download(action))}
                   >
-                    {action.type === 'show_calendar' ? 'Show on calendar' : 'Download audit package'}
+                    {action.type === 'show_calendar'
+                      ? 'Show on calendar'
+                      : downloading
+                        ? 'Preparing audit package…'
+                        : 'Download audit package'}
                     {action.label ? ` · ${action.label}` : ''}
                   </button>
                 ))}

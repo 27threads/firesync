@@ -2681,6 +2681,15 @@ select {
   text-align: left;
 }
 
+.assistant-panel .chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.assistant-panel .chip[aria-busy='true'] {
+  cursor: progress;
+}
+
 .assistant-msg {
   margin: 6px 0;
 }
