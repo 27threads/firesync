@@ -23,12 +23,29 @@ Os tempos são os da legenda. Grave cada tomada mais longa (3 a 5 s de sobra) e 
 | --- | --- | --- | --- | --- |
 | 1 | 0,15–3,43 | "The Amazon is burning. Where should firefighters act first?" | Abrir <https://firesync.nogranlabs.com.br>. A descida do globo termina no mapa em tela cheia, aba `Fire now`, com os focos da Amazônia | Topo: `FireSync · Team [NAME] · [MEMBERS] · NASA Space Apps 2026 · MODIS and VIIRS Hot Spots` |
 | 2 | 3,43–6,81 | "I am Mateus, and FireSync shows which areas are critical today." | No painel `Where to look first`, clicar no primeiro item `Critical`. O mapa centraliza na área | — |
-| 3 | 6,81–12,44 | "We combined 24 years of data from NASA's MODIS and VIIRS satellites into a fire history calendar" | Calendário da Amazônia (região `Amazônia`, período inteiro, 2003 a 2026). Passar o mouse num mês hachurado (era MODIS) para mostrar a faixa de incerteza | Canto: `NASA FIRMS · MODIS C6.1 (2003–2012) + VIIRS C2 (2012–2026), one harmonized series` |
+| 3 | 6,81–12,44 | "We combined 24 years of data from NASA's MODIS and VIIRS satellites into a fire history calendar" | Rolar até o calendário, logo abaixo do mapa. Se a área não for a Amazônia, escolher a região `Amazônia` no painel de seleção (período inteiro, 2003 a 2026). Passar o mouse num mês hachurado (era MODIS) para mostrar a faixa de incerteza | Canto: `NASA FIRMS · MODIS C6.1 (2003–2012) + VIIRS C2 (2012–2026), one harmonized series`. Embaixo dele: `Checked against INPE: monthly correlation 0.94–0.99` |
 | 4 | 12,44–14,64 | "and a risk map for the following days." | Voltar ao mapa e clicar na aba `Risk, next 14 days` | — |
-| 5 | 14,64–22,88 | "In tests, our AI predicted half of the Amazon's major fire outbreaks, about ten days ahead. That's time to act before fires spread." | Abrir `Ask firesync`, colar o prompt abaixo e enviar. A resposta aparece com `Critical fire now` e `Very high 14-day risk` | Topo: `Tested on Amazon 2021–2024 · trained only on past years · 51 of 100 significant outbreaks warned, half of them 10+ days ahead` |
-| 6 | 22,88–29,80 | "With crews on the ground, that could save over 700,000 acres. Starting with the Amazon, then forests worldwide." | Fechar o assistente. Mapa de risco escurecido (ou o globo se afastando) | Centro, grande: `Could mean 700,000+ fewer acres burned (~290,000 ha)`. Embaixo: `In a year like 2024 (Jun–Aug) · based on a Cerrado brigade study (−12% burned area) · pilot hypothesis`. Rodapé: `Data: NASA FIRMS (MODIS, VIIRS), NASA GIBS · INPE · firesync.nogranlabs.com.br` |
+| 5 | 14,64–22,88 | "In tests, our AI predicted half of the Amazon's major fire outbreaks, about ten days ahead. That's time to act before fires spread." | Abrir `Ask firesync`, colar o prompt abaixo e enviar. A resposta aparece com `Critical fire now` e `Very high 14-day risk` | Topo: `Tested on Amazon 2021–2024 · trained only on past years · 51 of 100 significant outbreaks warned, half of them 10+ days ahead`. Junto do painel: `AI assistant · answers only with FireSync numbers, each one checked` |
+| 6 | 22,88–29,80 | "With crews on the ground, that could save over 700,000 acres. Starting with the Amazon, then forests worldwide." | Fechar o assistente. Mapa de risco escurecido (ou o globo se afastando) | Centro, grande: `Could mean 700,000+ fewer acres burned (~290,000 ha)`. Embaixo: `In a year like 2024 (Jun–Aug) · based on a Cerrado brigade study (−12% burned area) · pilot hypothesis`. Rodapé: `Data: NASA FIRMS (MODIS, VIIRS), NASA GIBS · INPE · Open source, no login · firesync.nogranlabs.com.br` |
+
+O assistente (chatbot) aparece na tomada 5. O botão dele só surge depois da animação do hero.
 
 Se o assistente falhar na tomada 5 (`Daily limit reached`, `Assistant unavailable` ou `429`), troque por zoom nas áreas `Very high` da aba `Risk, next 14 days`, com o mesmo texto sobreposto.
+
+## Textos sobrepostos contra os requisitos e os critérios
+
+Conteúdo obrigatório da demo ([requisitos.md](requisitos.md), seção 5) e o que sobe a nota ([premiacao.md](premiacao.md)):
+
+| Exigência ou critério | Onde aparece |
+| --- | --- |
+| Nome da equipe, nomes dos membros, desafio escolhido | Tomada 1, topo |
+| Imagem do projeto e experiência do usuário | Tomadas 1 a 5, com o site funcionando |
+| Como os dados da NASA tornaram o projeto possível | Tomada 3 (MODIS + VIIRS numa série só) e rodapé da tomada 6 |
+| Tudo em inglês | Legendas e todos os textos sobrepostos |
+| Validity e Best Use of Science | Tomada 3 (comparação com o INPE) e tomada 5 (teste só com anos passados, 51 de 100) |
+| Relevance e Best Use of Data | Tomada 3 (nomes e versões dos produtos da NASA) |
+| Creativity | Tomada 3 (faixa de incerteza à mostra) e tomada 5 (assistente que só usa números checados) |
+| Impact e Local Impact | Tomadas 2 e 6 (onde agir hoje e o potencial em área queimada) |
 
 ## Prompt do assistente (tomada 5)
 
@@ -59,7 +76,7 @@ Perform these shots in order. Pause about 3 seconds before and after each one so
 
 1. Open https://firesync.nogranlabs.com.br and wait until the globe animation ends on the full-screen map with the "Fire now" tab selected. Hold still for 4 seconds.
 2. In the "Where to look first" panel, click the first item marked Critical. Wait until the map is centered on it. Hold 4 seconds.
-3. Open the fire calendar for the region "Amazônia" covering the whole period (2003 to the latest month). Hover one hatched month from the MODIS era (2003–2011) so its uncertainty range shows. Hold 6 seconds.
+3. Scroll down to the fire calendar right below the map. If its area is not the Amazon, pick the region "Amazônia" in the selection panel, whole period (2003 to the latest month). Hover one hatched month from the MODIS era (2003–2011) so its uncertainty range shows. Hold 6 seconds.
 4. Go back to the map and click the "Risk, next 14 days" tab. Hold 3 seconds.
 5. Open the "Ask firesync" chat. Paste exactly this text and press Enter:
    Answer in English. I lead fire crews in the Amazon. Which areas are critical today, and where is fire risk very high for the next 14 days? Three short bullets with place coordinates. No probabilities, no cell IDs.
