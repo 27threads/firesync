@@ -1,7 +1,7 @@
 import { scaleLinear } from 'd3-scale';
 import type { SeasonalityMonth } from '../api/types';
 import { formatCount } from '../format';
-import { buildSeasonality } from '../summary/summaryModel';
+import { buildSeasonality, completeSeasonality, NO_COMPLETE_YEAR } from '../summary/summaryModel';
 import { NARROW_QUERY, useMediaQuery } from '../ui/useMediaQuery';
 
 const M = { top: 16, right: 8, bottom: 26 };
@@ -20,7 +20,16 @@ export function SeasonalChart({ seasonality, includesEstimatedYears, highlightMo
   const narrow = useMediaQuery(NARROW_QUERY);
   const W = narrow ? 340 : 600;
   const H = narrow ? 220 : 250;
-  const model = buildSeasonality(seasonality);
+  const complete = completeSeasonality(seasonality);
+  if (!complete) {
+    return (
+      <section aria-labelledby="season-title">
+        <h3 id="season-title">Seasonal pattern</h3>
+        <p className="notice">{NO_COMPLETE_YEAR}</p>
+      </section>
+    );
+  }
+  const model = buildSeasonality(complete);
   const y = scaleLinear().domain([0, model.maxValue || 1]).nice().range([H - M.bottom, M.top]);
   const ticks = y.ticks(4);
   const left = Math.ceil(AXIS_GAP + CHAR_W * Math.max(...ticks.map((t) => formatCount(t).length)));
