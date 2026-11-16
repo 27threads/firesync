@@ -8,6 +8,7 @@ import {
   COUNT_GRADIENT,
   DEFAULT_FILTERS,
   HEX_FILL_OPACITY,
+  hexQueryZoom,
   INTENSITIES,
   LEVELS,
   MIN_ICON_HEX_RADIUS,
@@ -93,12 +94,19 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
   const footRef = useRef<HTMLElement>(null);
 
   // The footer grows to two or three lines (Risk tab, narrow screens): the controls above it follow its height.
+  // On the phone the toolbar wraps and the legend opens and closes: the panels below and the buttons above them follow too.
   useEffect(() => {
     const foot = footRef.current;
     const root = rootRef.current;
-    if (!foot || !root || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(() => root.style.setProperty('--hm-foot', `${foot.offsetHeight}px`));
-    observer.observe(foot);
+    const toolbar = root?.querySelector<HTMLElement>('.hm-toolbar');
+    const legend = root?.querySelector<HTMLElement>('.hm-legend');
+    if (!foot || !root || !toolbar || !legend || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      root.style.setProperty('--hm-foot', `${foot.offsetHeight}px`);
+      root.style.setProperty('--hm-top', `${toolbar.offsetTop + toolbar.offsetHeight}px`);
+      root.style.setProperty('--hm-legend', `${legend.offsetHeight}px`);
+    });
+    [foot, toolbar, legend].forEach((el) => observer.observe(el));
     return () => observer.disconnect();
   }, []);
 
@@ -219,7 +227,7 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
     setError('');
     const timer = window.setTimeout(() => {
       // Always hexagons: the points of a close zoom were hard to read (review on 15/11); the click summary explains a cell.
-      fetchRecentDetections({ bbox: view.bbox, zoom: view.zoom, hours: 24, mode: 'hexagons' }, controller.signal)
+      fetchRecentDetections({ bbox: view.bbox, zoom: hexQueryZoom(view.zoom), hours: 24, mode: 'hexagons' }, controller.signal)
         .then((response) => {
           if (!controller.signal.aborted) setData(response);
         })
@@ -256,12 +264,17 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
     layer.clearLayers();
     if (!data) return;
     const near = map.getZoom() >= 6;
+    // The popup pans clear of the toolbar and the status on top of the map (on the phone they hid it); at most half the map.
+    const root = rootRef.current;
+    const topControls = root ? [...root.querySelectorAll<HTMLElement>('.hm-toolbar, .hm-right')].map((el) => el.offsetTop + el.offsetHeight) : [];
+    const topPad = Math.min(Math.max(0, ...topControls) + 8, map.getSize().y / 2);
+    const popup = (maxWidth: number) => ({ className: 'hm-popup', maxWidth, autoPanPaddingTopLeft: [12, topPad] as [number, number] });
     if (data.mode === 'points') {
       for (const f of data.features) {
         const [lng, lat] = f.geometry.coordinates;
         const k = f.properties.intensity;
         L.circleMarker([lat, lng], { radius: k === 'high' ? 9 : k === 'medium' ? 7 : 5, color: '#ffffff', weight: 2, fillColor: countColor(k === 'high' ? 100 : k === 'medium' ? 10 : 1), fillOpacity: 0.95 })
-          .bindPopup(popupHtml(pointSummary(f.properties, lat, lng)), { className: 'hm-popup', maxWidth: 280 })
+          .bindPopup(popupHtml(pointSummary(f.properties, lat, lng)), popup(280))
           .addTo(layer);
       }
       return;
@@ -286,7 +299,7 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
         weight: risk && fire && near ? 2.5 : near ? 1.2 : 2.5,
         fillOpacity: HEX_FILL_OPACITY,
       })
-        .bindPopup(popupHtml(hexSummary(p, centreLat, centreLng, data.hours, shares)), { className: 'hm-popup', maxWidth: 300 })
+        .bindPopup(popupHtml(hexSummary(p, centreLat, centreLng, data.hours, shares)), popup(300))
         .addTo(layer);
       // Ícone de alerta: só quando o hexágono já comporta o símbolo.
       const level = p.alert_level;

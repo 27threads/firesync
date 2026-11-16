@@ -97,7 +97,7 @@ export function App() {
 
         {showingDemoForOtherArea && (
           <p className="dark-notice" role="status">
-            <strong>API unavailable.</strong> Your area is outlined on the map, but the figures below belong to the demo example.
+            <strong>API unavailable.</strong> Your area is outlined on the map at the top, but the figures below belong to the demo example.
           </p>
         )}
 

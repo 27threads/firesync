@@ -15,6 +15,11 @@ export const INTENSITIES: IntensityClass[] = ['high', 'medium', 'low'];
 // Over the dark Blue Marble the 0.55 of the first version hid the weak cells (review on 15/11).
 export const HEX_FILL_OPACITY = 0.8;
 
+// Zooming in, the API switches to finer H3 cells (resolution 5, then 6) that read as dots on the satellite image (review on 15/11).
+// Asking for zoom 4 at most keeps resolution 4, the cells of the opening view: they grow with the zoom instead of shrinking.
+const MAX_HEX_QUERY_ZOOM = 4;
+export const hexQueryZoom = (zoom: number): number => Math.min(zoom, MAX_HEX_QUERY_ZOOM);
+
 // Escala logarítmica cividis (acessível a daltonismo, RD03 e RD04). O zero tem cor própria, fora da rampa.
 export const COUNT_DOMAIN: [number, number] = [1, 100];
 export const ZERO_COLOR = '#d9dde3';

@@ -3,6 +3,7 @@ import {
   DEFAULT_FILTERS,
   HERO_AREA_EVENT,
   announceArea,
+  hexQueryZoom,
   hexSummary,
   place,
   pointSummary,
@@ -159,5 +160,13 @@ describe('hero area to the explorer', () => {
     announceArea({ type: 'region', region_id: 6 });
     window.removeEventListener(HERO_AREA_EVENT, listener);
     expect(seen).toEqual([{ type: 'region', region_id: 6 }]);
+  });
+});
+
+describe('hexQueryZoom', () => {
+  it('keeps the hexagons of the opening view when zooming in: never asks for a zoom past 4 (H3 resolution 4)', () => {
+    expect(hexQueryZoom(3.2)).toBe(3.2);
+    expect(hexQueryZoom(4)).toBe(4);
+    expect(hexQueryZoom(9.3)).toBe(4);
   });
 });

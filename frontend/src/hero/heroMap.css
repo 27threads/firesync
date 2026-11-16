@@ -548,13 +548,14 @@
     transform: none;
     max-width: none;
   }
+  /* Right below the toolbar, however many lines it wraps to. */
   .hm-filters {
-    top: 100px;
+    top: calc(var(--hm-top, 88px) + 8px);
     width: min(178px, calc(50vw - 18px));
   }
   /* Status and Indicators stay at the top right, like on a large screen; the status shows only its main line. */
   .hm-right {
-    top: 100px;
+    top: calc(var(--hm-top, 88px) + 8px);
     width: min(220px, calc(50vw - 18px));
   }
   .hm-right .hm-status span:not(.hm-alert) {
@@ -645,12 +646,16 @@
   width: 14px;
   height: 14px;
 }
+/* On the phone the legend and the zoom take the bottom corners: the two buttons stack above the legend, open or closed. */
 @media (max-width: 899px) {
+  .hm-next {
+    bottom: calc(var(--hm-foot, 30px) + var(--hm-legend, 40px) + 18px);
+  }
   .hm-back {
     top: auto;
-    bottom: calc(var(--hm-foot, 30px) + 64px);
+    bottom: calc(var(--hm-foot, 30px) + var(--hm-legend, 40px) + 70px);
   }
   .hm-announce {
-    bottom: calc(var(--hm-foot, 30px) + 100px);
+    bottom: calc(var(--hm-foot, 30px) + var(--hm-legend, 40px) + 106px);
   }
 }

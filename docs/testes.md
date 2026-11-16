@@ -37,8 +37,8 @@ Os dois, com papéis diferentes. **Não vale trocar os testes de unidade por cai
 Os testes da API e do front foram escritos no repositório antes das telas e dos endpoints:
 
 - **`backend/tests/domain/` e `backend/tests/application/`:** a especificação do núcleo da API (faixa P5–P95, origem e satélite do mês, intensidade, alerta, janelas, IDs H3, calendário). Os valores foram calculados à mão. As especificações implementadas, incluindo o alerta da issue #59, executam sem `xfail`. Novas especificações ainda não implementadas podem usar `xfail(strict=True)`; ao implementar, remova o marcador.
-- **`frontend/e2e/responsivo.spec.ts`:** R1–R7, medidas de layout em 375 px e 768 px no modo demo: abertura empilhada no tablet em pé, texto dos gráficos com pelo menos 10 px, calendário sem rolagem lateral, botões de 44 px na tela de toque, link da curva de detecção e rolagem da página com 1 dedo / movimento do mapa com 2 dedos.
-- **`frontend/e2e/jornadas.spec.ts`:** 11 jornadas (J1–J11), todas ativas e passando com a API simulada no desktop e no celular. `backend/tests/e2e/` acrescenta duas jornadas (desktop/celular) com front, proxy, API HTTP e PostGIS sintético, sem interceptar endpoints.
+- **`frontend/e2e/responsivo.spec.ts`:** R1–R6 e R8–R10, medidas de layout em 375 px e 768 px no modo demo: abertura empilhada no tablet em pé, texto dos gráficos com pelo menos 10 px, calendário sem rolagem lateral, botões de 44 px na tela de toque, link da curva de detecção, controles do mapa do hero sem se cobrir, página sem rolagem lateral e números dos eixos sem corte. A R7 (toque no segundo mapa) saiu com esse mapa no #149.
+- **`frontend/e2e/jornadas.spec.ts`:** jornadas J1 e J3–J9, ativas e passando com a API simulada no desktop e no celular. J2 (desenhar no mapa), J10 e J11 (lista "Where to look first") saíram com o segundo mapa no #149 e ainda não foram reescritas para o mapa do hero. `backend/tests/e2e/` acrescenta duas jornadas (desktop/celular) com front, proxy, API HTTP e PostGIS sintético, sem interceptar endpoints.
 
 ### Jornadas de usuário
 
