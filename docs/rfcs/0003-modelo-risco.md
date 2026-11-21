@@ -209,6 +209,18 @@ Faixas do mapa na Amazônia: muito alto (11% das células) teve fogo relevante e
 
 **Calibração:** a nota média é 14,1% e a frequência observada é 13,7%. Mas no meio da escala (notas de 30% a 80%) o modelo **exagera de 3 a 5 pontos percentuais** (no máximo 5,2). Exemplo: nota de 65% e frequência observada de 60%. Nos extremos (abaixo de 20% e acima de 80%) a diferença é de 0 a 2 pontos. O erro é para o lado de avisar um pouco demais. "Ponto percentual" é a diferença entre duas porcentagens da mesma coisa: 65% menos 60% são 5 pontos, e não 5% de erro.
 
+### Antecedência e captura (números do pitch e da página do projeto)
+
+Mesma base (Amazônia, 2021 a 2024, cada ano treinado só com os anteriores, aviso com nota de 50% ou mais), com notas **diárias**. Scripts em `data-pipeline/validacao/experimentos/` (PR #105).
+
+| Pergunta | Resultado | Script |
+| --- | --- | --- |
+| Dos inícios de fogo relevante (10 ou mais detecções VIIRS em 14 dias), quantos foram avisados antes? | **51 de cada 100**; 49 chegam sem aviso | `diario.py` |
+| Com quanta antecedência? | 42 de cada 100 com **3 dias ou mais**, 33 com **7 dias ou mais**; entre os avisados, mediana de **10 dias** | `diario.py` |
+| Olhando só as X% células de maior nota por semana, que parte do fogo relevante a brigada pega? | 20% das células: **66%**; 10%: **42%**. Sorteando, pega só a mesma parte das células escolhidas (10% pega 10%) | `captura.py` |
+
+A primeira versão da antecedência (`antecedencia.py`) usava só as notas de domingo e foi substituída pelo `diario.py`, que usa a nota de cada dia.
+
 ## Acerto por bioma
 
 Mesmo modelo (treinado até 2020), mesmos domingos de 2021 a 2024, mesma regra de aviso (nota de 50% ou mais), para a comparação ser justa. Alvo: 10 ou mais detecções VIIRS nos 14 dias seguintes. A célula entra no bioma pelo centro dela.
