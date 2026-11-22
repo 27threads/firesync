@@ -268,7 +268,8 @@ def normalize(df, kind):
     df = df.rename(columns={"brightness": "bright_ti4", "bright_t31": "bright_ti5"} if kind == "viirs" else {})
     df["acq_time"] = df.acq_time.str.zfill(4)  # API devolve "14" em vez de "0014" (já é UTC)
     df["version"] = df.version.replace("61.03", "6.03")  # API escreve 61.03, arquivo por país 6.03
-    df["provisional"] = df.version.str.contains("NRT")
+    # NRT, URT (ultra real-time) e RT (real-time) são todos provisórios; o SP é só número ("2", "6.03")
+    df["provisional"] = df.version.str.endswith("RT")
     if "type" not in df:
         df["type"] = pd.NA
     return df

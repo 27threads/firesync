@@ -84,7 +84,7 @@ Lê o `stage` (ou um CSV/ZIP do FIRMS passado como argumento) e grava em `focos`
 | Satélite | `Terra`, `Aqua`, `N` → `SNPP`, `N20`, `N21`. Valor desconhecido faz o arquivo falhar |
 | Confiança | VIIRS `l`/`n`/`h` → baixa/nominal/alta. MODIS `< 30` baixa, `30–79` nominal, `≥ 80` alta |
 | Data e hora | `acq_date` + `acq_time` (HHMM, UTC) → `datahora_utc` |
-| Qualidade | `NRT` se a versão tem "NRT", senão `SP` |
+| Qualidade | `NRT` se a versão termina em `NRT`, `URT` (ultra real-time) ou `RT` (real-time), senão `SP`. A API de área manda `2.1URT` junto com o `2.0NRT` desde 11/2026 |
 | H3 | célula na resolução da tabela `config` (o banco recusa outra) |
 | Chave única | (`satelite`, `lat`, `lon`, `datahora_utc`): `INSERT ... ON CONFLICT DO UPDATE`. Repetidos no mesmo arquivo viram uma linha |
 | Transação | um arquivo por transação: entra inteiro ou não entra |

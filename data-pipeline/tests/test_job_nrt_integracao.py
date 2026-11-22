@@ -54,7 +54,7 @@ def banco(monkeypatch, tmp_path):
     monkeypatch.setattr(p, "curl", curl_simulado)
     monkeypatch.setattr(p, "sem_dados", lambda: None)  # a página missing_data do FIRMS não entra no teste
     monkeypatch.setattr(p, "RAW", tmp_path)
-    yield {"conn": conn, "p": p, "job": job_nrt, "hoje": hoje}
+    yield {"conn": conn, "p": p, "job": job_nrt, "hoje": hoje, "csv": csv}
     gc.collect()  # solta conexões presas em tracebacks (e a trava do job)
     conn.execute("SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
                  "WHERE datname = current_database() AND pid <> pg_backend_pid()")
@@ -143,6 +143,20 @@ def test_rodada_repetida_nao_duplica(banco):
     banco["job"].rodada()
     assert conn.execute("SELECT count(*) FROM focos").fetchone()[0] == 2
     assert soma_do_mes(conn, hoje) == 2
+
+
+def test_linha_urt_entra_como_nrt_e_nao_apaga_o_nrt(banco, monkeypatch, capturar_logs):
+    """Bug de 17/11/2026: o FIRMS passou a mandar linhas `2.1URT` junto com as `2.0NRT`. Gravadas como SP, elas
+    faziam o `drop_nrt_under_sp` apagar todo o NRT do satélite até o dia delas, e o mapa ficava vazio."""
+    conn, hoje = banco["conn"], banco["hoje"]
+    csv = banco["csv"].assign(version=["2.0NRT", "2.1URT"])
+    monkeypatch.setattr(banco["p"], "curl", lambda url, dest=None: csv.to_csv(dest, index=False))
+    banco["job"].rodada()
+
+    assert conn.execute("SELECT qualidade, count(*) FROM focos GROUP BY 1").fetchall() == [("NRT", 2)]
+    assert soma_do_mes(conn, hoje) == 2
+    [fim] = capturar_logs.eventos("nrt_run_finished")
+    assert fim["nrt_replaced_by_sp"] == 0
 
 
 def test_falha_no_download_nao_grava_atualizado_em(banco, monkeypatch):

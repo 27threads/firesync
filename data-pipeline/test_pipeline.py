@@ -40,6 +40,12 @@ main, low = clean_viirs(v, log)
 assert len(main) == 2 and len(low) == 1, (main, low)
 assert main.high_conf.tolist() == [False, True]
 assert log == {"type!=0": 0, "frp<=0_ou_vazio": 1, "conf_l_noite": 1, "duplicatas_identicas": 1}, log
+
+# Bug de 17/11/2026: a API de área do NRT também manda URT (ultra real-time) e RT (real-time). Gravados como SP,
+# eles faziam o importador apagar todo o NRT do satélite até o dia deles.
+t = normalize(frame([[-3, -60, "2026-11-17", "312", "N20", "n", ver, 1.2, "N", None]
+                     for ver in ["2.0NRT", "2.1URT", "2.0RT", "2", "6.03"]], C), "viirs")
+assert t.provisional.tolist() == [True, True, True, False, False], t.provisional.tolist()
 # missing_data do FIRMS: colunas SP (data, satélite) e NRT (data, satélite), vazio quando não há
 from datetime import date  # noqa: E402
 from pipeline import parse_missing  # noqa: E402
