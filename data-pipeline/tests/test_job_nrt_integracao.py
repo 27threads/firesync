@@ -159,6 +159,31 @@ def test_linha_urt_entra_como_nrt_e_nao_apaga_o_nrt(banco, monkeypatch, capturar
     assert fim["nrt_replaced_by_sp"] == 0
 
 
+def test_versao_desconhecida_vinda_do_job_entra_como_nrt(banco, monkeypatch, capturar_logs):
+    """O FIRMS pode inventar outra versão amanhã: o que vem da fonte NRT é NRT, com qualquer texto."""
+    conn = banco["conn"]
+    csv = banco["csv"].assign(version=["2.0NRT", "9.9ABC"])
+    monkeypatch.setattr(banco["p"], "curl", lambda url, dest=None: csv.to_csv(dest, index=False))
+    banco["job"].rodada()
+
+    assert conn.execute("SELECT qualidade, count(*) FROM focos GROUP BY 1").fetchall() == [("NRT", 2)]
+    assert capturar_logs.eventos("firms_unknown_version")
+
+
+def test_job_nrt_nunca_grava_sp_nem_apaga_nrt(banco, monkeypatch, capturar_logs):
+    """Se um bug fizer o job NRT gerar linha SP, a rodada para antes de gravar: nada de apagar o NRT."""
+    conn, p = banco["conn"], banco["p"]
+    banco["job"].rodada()
+    normalize = p.normalize
+    monkeypatch.setattr(p, "normalize", lambda *a, **k: normalize(*a, **k).assign(provisional=False))
+    with pytest.raises(ValueError, match="SP"):
+        banco["job"].rodada()
+
+    assert conn.execute("SELECT qualidade, count(*) FROM focos GROUP BY 1").fetchall() == [("NRT", 2)]
+    [falha] = capturar_logs.eventos("nrt_run_failed")
+    assert falha["step"] == "import"
+
+
 def test_falha_no_download_nao_grava_atualizado_em(banco, monkeypatch):
     def curl_falha(url, dest=None):
         raise RuntimeError("curl falhou (22): https://x/api/area/csv/***/...")

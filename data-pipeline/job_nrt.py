@@ -6,7 +6,8 @@ Uso:
 Cada rodada:
     1. baixa VIIRS_NOAA20_NRT e VIIRS_NOAA21_NRT no bbox da cobertura, do último dia NRT gravado até hoje
        (no mínimo 48 h; em pedidos de até 5 dias, o teto da API de área): um job parado não deixa buraco;
-    2. importa (upsert em `focos`, cobertura e SP substituindo NRT, ver pipeline.importar);
+    2. importa (upsert em `focos` e cobertura, ver pipeline.importar); tudo entra como NRT, e uma linha SP
+       para a rodada antes de gravar, porque o SP apagaria o NRT;
     3. atualiza `dias_sem_dados` (se a página do FIRMS falhar, segue com a tabela antiga e registra um aviso);
     4. refaz `agregados` e `agregados_diarios` dos meses da janela e grava `config.atualizado_em` (UTC, ISO 8601
        com Z, o `updated_at` do api.md) na mesma transação (issue #15).
@@ -98,7 +99,7 @@ def executar(conn, etapa):
             arquivos.append(dest)
             log.info("nrt_download_done", source=fonte, file=dest.name, bytes=dest.stat().st_size)
     etapa.atual = "import"
-    totais = p.importar(arquivos)
+    totais = p.importar(arquivos, so_nrt=True)
     etapa.atual = "missing_days"
     try:
         p.sem_dados()

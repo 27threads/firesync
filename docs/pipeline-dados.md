@@ -84,7 +84,7 @@ Lê o `stage` (ou um CSV/ZIP do FIRMS passado como argumento) e grava em `focos`
 | Satélite | `Terra`, `Aqua`, `N` → `SNPP`, `N20`, `N21`. Valor desconhecido faz o arquivo falhar |
 | Confiança | VIIRS `l`/`n`/`h` → baixa/nominal/alta. MODIS `< 30` baixa, `30–79` nominal, `≥ 80` alta |
 | Data e hora | `acq_date` + `acq_time` (HHMM, UTC) → `datahora_utc` |
-| Qualidade | `NRT` se a versão termina em `NRT`, `URT` (ultra real-time) ou `RT` (real-time), senão `SP`. A API de área manda `2.1URT` junto com o `2.0NRT` desde 11/2026 |
+| Qualidade | `NRT` se o arquivo vem de uma fonte `*_NRT` (com qualquer versão) ou se a versão termina em `NRT`, `URT` (ultra real-time) ou `RT` (real-time); senão `SP`. A fonte manda porque o FIRMS muda o texto da versão sem avisar: em 11/2026 a fonte NRT passou a mandar `2.1URT`. Versão fora do padrão (número, com ou sem `NRT`/`URT`/`RT` no fim) gera o aviso `firms_unknown_version` no log |
 | H3 | célula na resolução da tabela `config` (o banco recusa outra) |
 | Chave única | (`satelite`, `lat`, `lon`, `datahora_utc`): `INSERT ... ON CONFLICT DO UPDATE`. Repetidos no mesmo arquivo viram uma linha |
 | Transação | um arquivo por transação: entra inteiro ou não entra |
@@ -141,7 +141,7 @@ A forma da curva é a mesma, que é o critério do plano de extração. Os ~5% a
 Mantém o banco atualizado sem a carga inteira. Cada rodada leva ~30 s:
 
 1. baixa as últimas 48 h de `VIIRS_NOAA20_NRT` e `VIIRS_NOAA21_NRT` no bbox da cobertura;
-2. `importar` (upsert: o que já está no banco vira "atualizado"; SP substitui NRT);
+2. `importar` (upsert: o que já está no banco vira "atualizado"). Tudo entra como NRT; uma linha SP para a rodada antes de gravar, porque o SP apagaria o NRT do satélite (bug de 17/11/2026);
 3. `agregar` só dos meses da janela (dois meses quando a janela cruza a virada);
 4. `sem_dados`;
 5. grava `config.atualizado_em`.
