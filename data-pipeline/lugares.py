@@ -76,7 +76,10 @@ def partes_por_celula(hexes, camada, chaves):
                          how="intersection", keep_geom_type=True)
     partes["area"] = partes.area
     soma = partes.groupby(["h3", *chaves], as_index=False)["area"].sum()
-    soma["parte"] = soma["area"] / soma["h3"].map(hexes.set_index("h3").area)
+    # Conta em float explícito: no pandas 3, sem nenhuma interseção o `map` de uma coluna de texto vazia sai como texto,
+    # e a divisão quebrava (PR #172).
+    area_da_celula = dict(zip(hexes["h3"], hexes.area.astype(float)))
+    soma["parte"] = soma["area"].astype(float) / soma["h3"].map(area_da_celula).astype(float)
     return soma.sort_values(["h3", "area", *chaves], ascending=[True, False, *[True] * len(chaves)])
 
 
