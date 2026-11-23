@@ -259,17 +259,28 @@ def stage():
             if df.empty:
                 log.info("stage_skipped", file=p.name, reason="no_rows_in_bbox")
                 continue
-            dentro = in_coverage(normalize(df, kind), regions)
+            dentro = in_coverage(normalize(df, kind, fonte=p.parent.name), regions)
             dentro.to_parquet(dest, index=False)
             log.info("stage_file_done", file=dest.name, rows_in_bbox=len(df), rows_in_coverage=len(dentro))
 
 
-def normalize(df, kind):
+VERSAO_CONHECIDA = r"^\d+(\.\d+)?(NRT|URT|RT)?$"  # SP é só número ("2", "6.03"); provisório termina em RT
+
+
+def normalize(df, kind, fonte=""):
+    """Colunas iguais para MODIS e VIIRS e a marca `provisional` (NRT).
+
+    `fonte` é o nome da fonte ou do arquivo. Tudo o que vem de uma fonte `*_NRT` é provisório, com qualquer
+    versão: o FIRMS muda o texto da versão sem avisar (em 11/2026 passou a mandar `2.1URT` na fonte NRT).
+    Sem fonte NRT, vale a versão. Versão fora do padrão gera o aviso `firms_unknown_version`.
+    """
     df = df.rename(columns={"brightness": "bright_ti4", "bright_t31": "bright_ti5"} if kind == "viirs" else {})
     df["acq_time"] = df.acq_time.str.zfill(4)  # API devolve "14" em vez de "0014" (já é UTC)
     df["version"] = df.version.replace("61.03", "6.03")  # API escreve 61.03, arquivo por país 6.03
-    # NRT, URT (ultra real-time) e RT (real-time) são todos provisórios; o SP é só número ("2", "6.03")
-    df["provisional"] = df.version.str.endswith("RT")
+    desconhecidas = sorted(set(df.version[~df.version.str.fullmatch(VERSAO_CONHECIDA, na=False)]))
+    if desconhecidas:
+        log.warning("firms_unknown_version", source=fonte, versions=desconhecidas)
+    df["provisional"] = df.version.str.endswith("RT") | ("_NRT" in fonte)
     if "type" not in df:
         df["type"] = pd.NA
     return df
@@ -438,13 +449,15 @@ def kind_of(df):
     return "modis" if df.satellite.isin(["Terra", "Aqua"]).all() else "viirs"
 
 
-def importar(paths=()):
+def importar(paths=(), so_nrt=False):
     """Carrega focos em `focos` (upsert pela chave única) e atualiza `cobertura`.
 
     Sem argumento: todos os parquet de data/staged/ (saída do `stage`).
     Com argumento: CSVs ou ZIPs do FIRMS, normalizados e recortados pela cobertura aqui mesmo.
     Cada arquivo é uma transação: ou entra inteiro, ou não entra.
     Devolve os totais de todos os arquivos (o job NRT registra quantos focos entraram).
+    `so_nrt` (job NRT): um arquivo com linha SP para tudo antes de gravar. SP no job NRT é bug, e o SP
+    apagaria o NRT do satélite (bug de 17/11/2026).
     """
     conn = db()
     res = int(config(conn, "h3_resolucao"))
@@ -464,7 +477,7 @@ def importar(paths=()):
         if kind is None:  # CSV/ZIP direto do FIRMS
             raw = read_raw(p, bbox)
             kind = kind_of(raw)
-            df = in_coverage(normalize(raw, kind), regions)
+            df = in_coverage(normalize(raw, kind, fonte=p.name), regions)
             lidas = len(raw)
         else:
             df = pd.read_parquet(p)
@@ -473,6 +486,8 @@ def importar(paths=()):
             log.info("import_file_skipped", file=p.name, reason="no_rows_in_coverage", rows_read=lidas)
             continue
         f = to_focos(df, kind, p.name, res)
+        if so_nrt and (f.qualidade == "SP").any():
+            raise ValueError(f"{p.name}: linhas SP no job NRT; nada foi gravado")
         buf = StringIO()
         f.to_csv(buf, index=False, header=False)
         with conn.transaction():
