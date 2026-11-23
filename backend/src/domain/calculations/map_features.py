@@ -25,6 +25,7 @@ def alerts_block(rows, rules, risk_rules=None):
     if levels is None:
         return None, {}
     scores = risk['by_cell'] if risk else {}
+    places = rows.get('places') or {}
     priority = []
     for cell in sorted(set(levels) | set(scores)):
         info = levels.get(cell, {})
@@ -33,7 +34,8 @@ def alerts_block(rows, rules, risk_rules=None):
             lat, lon = h3.cell_to_latlng(cell)
             item = {'h3': cell, 'alert_level': info.get('alert_level'), 'detections_7d': info.get('detections_7d'),
                     'typical_median': info.get('typical_median'),
-                    'share_followed_by_high': info.get('share_followed_by_high'), 'center': [lon, lat]}
+                    'share_followed_by_high': info.get('share_followed_by_high'), 'center': [lon, lat],
+                    'place': places.get(cell)}
             if risk:
                 item.update(risk_prob=scores.get(cell), risk_tier=tier)
             priority.append(item)

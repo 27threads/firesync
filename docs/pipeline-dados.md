@@ -154,6 +154,22 @@ Na VPS ele roda no container do `Dockerfile` desta pasta, com um laço de 3 h (c
 python job_nrt.py
 ```
 
+## Nome do lugar (`lugares.py`)
+
+Quem está no campo pensa em município, unidade de conservação ou terra indígena, e não em célula H3. O `lugares.py` cruza cada célula de resolução 4 da cobertura (as mães das células de `celula_regiao`) com três camadas oficiais, listadas em `lugares.json`, e troca a tabela `lugares_celula` (migration 006) inteira numa transação. A API só lê e devolve o `place` de cada item de `alerts.priority` ([api.md](api.md)).
+
+| Camada | Fonte | Regra |
+| --- | --- | --- |
+| Município e UF | IBGE, Malha Municipal 2024 | O que contém o centro da célula. Na costa e na fronteira, o que mais cobre a célula |
+| Unidades de conservação | MMA, CNUC (2024) | As que cobrem 1% da célula ou mais (≈ 18 km²), da maior para a menor parte, até 3 nomes. O CNUC grava em maiúsculas: o nome vira título |
+| Terras indígenas | Funai, `tis_poligonais` (WFS, com `maxFeatures`, sem ele o servidor responde 403) | A mesma regra das unidades de conservação |
+
+**Divisas dos estados no mapa do site.** `python lugares.py --estados ../frontend/public/brazil-states.geojson` (sem banco) junta os municípios da mesma malha do IBGE por UF, simplifica em ~1 km, tira as ilhas menores que ~12 km² e grava o contorno externo de cada estado, com o ponto da sigla dentro dele. Os municípios simplificados não encostam perfeitamente, e a união saía com buracos falsos (1.070 só no Pará): eram quase todo o peso do arquivo, que caiu de 1,6 MB para 243 KB (73 KB comprimido). O arquivo fica versionado no front; refazer só com malha nova do IBGE.
+
+A parte da célula é medida em área (projeção South America Albers Equal Area), não em graus. Lidas só as colunas usadas: outras colunas dos arquivos da Funai e do MMA têm texto cortado no meio de um caractere e quebram a leitura.
+
+Medido em 23/11/2026 com as camadas reais: 4.773 células no Brasil em 8 s (mais ~80 s para ler as camadas); 9 sem município (centro e célula no mar ou no país vizinho) e 2.840 com unidade de conservação ou terra indígena. Os arquivos (~260 MB) são baixados em `data/raw/` na primeira rodada, fora do git. As camadas mudam pouco: rodar de novo só quando o IBGE, o MMA ou a Funai publicarem versão nova.
+
 ## Logs estruturados (`logs.py`, RNF07)
 
 Todo o pipeline (`pipeline.py`, `agregar.py`, `job_nrt.py`) escreve **uma linha JSON por evento** em stderr, que o `docker compose logs` já junta. Nada de `print`: o que importa para depurar tem nome de evento e campos.
@@ -331,6 +347,7 @@ python pipeline.py sem_dados     # dias sem dado de satélite (FIRMS) -> dias_se
 python pipeline.py inpe          # série mensal do INPE por bioma -> referencia/inpe_mensal_biomas.csv
 python pipeline.py importar      # data/staged/ -> focos + cobertura (ou: importar arquivo.csv|.zip ...)
 python agregar.py                # focos -> agregados (ou: agregar.py 2026-10 2026-11 para refazer só esses meses)
+python lugares.py                # nome do lugar de cada célula res 4 -> lugares_celula (migration 006)
 python eda.py                    # reports/eda.html (antes: pip install matplotlib)
 python pipeline.py clean
 ```

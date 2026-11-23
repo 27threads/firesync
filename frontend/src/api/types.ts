@@ -203,6 +203,14 @@ export interface RiskLegend {
   tiers: RiskTierLegend[];
 }
 
+/** Where the cell is, from IBGE (municipality), MMA (conservation units) and Funai (indigenous lands). */
+export interface Place {
+  municipality: string | null;
+  state: string | null;
+  conservation_units: string[];
+  indigenous_lands: string[];
+}
+
 export interface PriorityCell {
   h3: string;
   alert_level: AlertLevel | null;
@@ -212,6 +220,7 @@ export interface PriorityCell {
   center: [number, number]; // [lon, lat], como o GeoJSON
   risk_prob?: number | null;
   risk_tier?: RiskTier | null;
+  place?: Place | null;
 }
 
 export interface RecentAlerts {

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { LayerGroup, Map as LeafletMap } from 'leaflet';
+import type { LayerGroup, Map as LeafletMap, TileLayer } from 'leaflet';
 import { fetchRecentDetections, fetchRegions } from '../api/client';
 import type { GeoJsonPolygon, PriorityCell, RecentDetectionsResponse, RegionOption } from '../api/types';
 import { loadLeafletWithGeoman } from '../controls/leafletLoader';
-import { BLUE_MARBLE_TILES, SURFACE_VIEW } from './globeTransition';
+import { SURFACE_VIEW } from './globeTransition';
+import { BASEMAPS, DEFAULT_BASEMAP, latestImageDate, latestImageLabel, type BasemapId } from './basemap';
 import {
   COUNT_GRADIENT,
   DEFAULT_FILTERS,
@@ -33,6 +34,8 @@ import {
   tierStartsOpen,
   type MapSummary,
 } from './heroMapModel';
+import { areaLink, parseAreaLink, placeName, protectedAreas } from './mapLink';
+import { STATE_BORDER_STYLE, STATES_URL, stateLabels, stateLabelsVisible, type StatesCollection } from './stateBorders';
 import './heroMap.css';
 
 interface Props {
@@ -50,6 +53,8 @@ interface View {
 }
 
 const PAGE = 10;
+/** Zoom of a shared link: the whole resolution 4 cell (about 42 km across) and its neighbours. */
+const LINK_ZOOM = 8;
 const cap = (text: string) => text[0]!.toUpperCase() + text.slice(1);
 const fmt = (n: number) => new Intl.NumberFormat('en-US').format(n);
 const escape = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -62,16 +67,22 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
   const mapRef = useRef<LeafletMap | null>(null);
   const leafletRef = useRef<typeof import('leaflet') | null>(null);
   const hexLayer = useRef<LayerGroup | null>(null);
+  const tileLayer = useRef<TileLayer | null>(null);
   const shapeLayer = useRef<LayerGroup | null>(null);
   const [ready, setReady] = useState(false);
   const [view, setView] = useState<View | null>(null);
   const [zoomTick, setZoomTick] = useState(0);
 
-  const [mode, setMode] = useState<HeroMode>('fire');
+  // A shared link (`?at=lat,lon&view=risk`) opens the map on that area, in that view, with the list open.
+  const [link] = useState(() => parseAreaLink(window.location.search));
+  const [mode, setMode] = useState<HeroMode>(link?.mode ?? 'fire');
+  // Clear view first: it is the image the globe lands on. "Latest image" shows the real last full day (smoke, clouds).
+  const [basemap, setBasemap] = useState<BasemapId>(DEFAULT_BASEMAP);
+  const [imageDate] = useState(() => latestImageDate(new Date()));
   const [filters, setFilters] = useState<HeroFilters>(DEFAULT_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(() => window.innerWidth >= 900);
   const [legendOpen, setLegendOpen] = useState(() => window.innerHeight >= 760);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(link !== null);
   const [shown, setShown] = useState(PAGE);
   const [groupOpen, setGroupOpen] = useState<Record<string, boolean>>({});
   const [groupShown, setGroupShown] = useState<Record<string, number>>({});
@@ -90,6 +101,8 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
   const [coords, setCoords] = useState({ lat: '-3.1', lon: '-60.2', radius: '50' });
   // Name of the area just sent to the calendar below, for the "See its calendar" hint.
   const [announced, setAnnounced] = useState('');
+  // Cell whose link was just copied, or whose link has to be shown because the clipboard is not available.
+  const [shared, setShared] = useState<{ h3: string; url: string; copied: boolean } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const footRef = useRef<HTMLElement>(null);
 
@@ -132,17 +145,44 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
       if (cancelled || !node) return;
       leafletRef.current = L;
       map = L.map(node, { zoomControl: false, scrollWheelZoom: false, fadeAnimation: false, zoomSnap: 0, minZoom: SURFACE_VIEW.zoom, preferCanvas: true }).setView(
-        [SURFACE_VIEW.latitude, SURFACE_VIEW.longitude],
-        SURFACE_VIEW.zoom,
+        link ? [link.lat, link.lon] : [SURFACE_VIEW.latitude, SURFACE_VIEW.longitude],
+        link ? LINK_ZOOM : SURFACE_VIEW.zoom,
         { animate: false },
       );
-      L.tileLayer(BLUE_MARBLE_TILES, {
-        attribution: 'Imagery: <a href="https://earthdata.nasa.gov/gibs" rel="noopener">NASA GIBS</a> · Blue Marble',
-        maxNativeZoom: 8,
-        maxZoom: 14,
-      }).addTo(map);
       hexLayer.current = L.layerGroup().addTo(map);
       shapeLayer.current = L.layerGroup().addTo(map);
+      // State borders above the hexagons (thin line, no fill, no clicks), loaded after the map opens.
+      const borders = map.createPane('hm-borders');
+      borders.style.zIndex = '450';
+      borders.style.pointerEvents = 'none';
+      const labels = L.layerGroup();
+      const syncLabels = () => {
+        if (!map) return;
+        if (stateLabelsVisible(map.getZoom())) labels.addTo(map);
+        else labels.remove();
+      };
+      map.on('zoomend', syncLabels);
+      fetch(STATES_URL)
+        .then((response) => (response.ok ? (response.json() as Promise<StatesCollection>) : null))
+        .then((states) => {
+          if (!states || cancelled || !map) return;
+          const renderer = L.canvas({ pane: 'hm-borders' });
+          L.geoJSON(states as unknown as GeoJSON.FeatureCollection, {
+            pane: 'hm-borders',
+            interactive: false,
+            style: () => ({ ...STATE_BORDER_STYLE, renderer }),
+          }).addTo(map);
+          for (const { state, latlng } of stateLabels(states)) {
+            L.marker(latlng, {
+              pane: 'hm-borders',
+              icon: L.divIcon({ className: 'hm-state-label', html: escape(state), iconSize: [28, 16], iconAnchor: [14, 8] }),
+              interactive: false,
+              keyboard: false,
+            }).addTo(labels);
+          }
+          syncLabels();
+        })
+        .catch(() => undefined); // without the borders the map works as before
       const publish = () => {
         if (!map) return;
         const b = map.getBounds();
@@ -175,7 +215,24 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
       map?.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [link]);
+
+  // Imagem de fundo: troca a camada do GIBS quando o usuário escolhe outra.
+  useEffect(() => {
+    const L = leafletRef.current;
+    const map = mapRef.current;
+    if (!L || !map) return;
+    const { url, maxNativeZoom, attribution } = BASEMAPS[basemap];
+    const layer = L.tileLayer(url, {
+      attribution: `Imagery: <a href="https://earthdata.nasa.gov/gibs" rel="noopener">NASA GIBS</a> · ${attribution}${basemap === 'latest' ? `, ${imageDate}` : ''}`,
+      maxNativeZoom,
+      maxZoom: 14,
+      date: imageDate,
+    } as import('leaflet').TileLayerOptions).addTo(map);
+    layer.bringToBack();
+    tileLayer.current?.remove();
+    tileLayer.current = layer;
+  }, [basemap, imageDate, ready]);
 
   // O mapa tem o tamanho certo só depois que a descida termina.
   useEffect(() => {
@@ -327,6 +384,15 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
     map.setView([cell.center[1], cell.center[0]], Math.max(map.getZoom(), 8), { animate: false });
   }, []);
 
+  const share = (cell: PriorityCell) => {
+    const url = areaLink(window.location.href, cell.center, mode);
+    const copy = navigator.clipboard?.writeText(url) ?? Promise.reject(new Error('no clipboard'));
+    copy.then(
+      () => setShared({ h3: cell.h3, url, copied: true }),
+      () => setShared({ h3: cell.h3, url, copied: false }),
+    );
+  };
+
   const zoomBy = (direction: 1 | -1) => {
     const map = mapRef.current;
     if (!map) return;
@@ -392,11 +458,17 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
   const risk = alerts?.risk;
   const fresh = data ? staleness(data.updated_at, clock) : null;
 
-  const card = (cell: PriorityCell) => (
-    <button key={cell.h3} type="button" className="hm-card" onClick={() => focusCell(cell)}>
-      <strong>
-        Area near {cell.center[1].toFixed(1)}, {cell.center[0].toFixed(1)}
-      </strong>
+  const card = (cell: PriorityCell) => {
+    const name = placeName(cell.place, cell.center[1], cell.center[0]);
+    return (
+    <div key={cell.h3} className="hm-cardwrap">
+    <button type="button" className="hm-card" onClick={() => focusCell(cell)}>
+      <strong>{name}</strong>
+      {protectedAreas(cell.place).map((area) => (
+        <span key={area} className="hm-line hm-protected">
+          {area}
+        </span>
+      ))}
       {mode === 'risk' ? (
         <span className="hm-line">
           Next 14 days{' '}
@@ -425,7 +497,15 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
         <span className="hm-tag">More than usual for the season</span>
       )}
     </button>
-  );
+    <button type="button" className="hm-share" onClick={() => share(cell)} aria-label={`Copy a link to ${name}`}>
+      {shared?.h3 === cell.h3 && shared.copied ? 'Link copied' : 'Copy link'}
+    </button>
+    {shared?.h3 === cell.h3 && !shared.copied && (
+      <input className="hm-sharelink" readOnly value={shared.url} aria-label={`Link to ${name}`} onFocus={(e) => e.currentTarget.select()} />
+    )}
+    </div>
+    );
+  };
 
   return (
     <div ref={rootRef} className="hm" data-active={active ? 'true' : 'false'} aria-hidden={!active} {...(active ? {} : { inert: '' as unknown as boolean })}>
@@ -684,6 +764,17 @@ export default function HeroMap({ active, onReturn, onNext }: Props) {
             </>
           ))}
       </section>
+
+      <button
+        type="button"
+        className="hm-basemap"
+        aria-pressed={basemap === 'latest'}
+        onClick={() => setBasemap((b) => (b === 'latest' ? 'clear' : 'latest'))}
+        title={basemap === 'latest' ? 'Back to the clear view (NASA Blue Marble)' : latestImageLabel(imageDate)}
+      >
+        {basemap === 'latest' ? 'Clear view' : 'Latest image'}
+      </button>
+      {basemap === 'latest' && <p className="hm-imagedate">{latestImageLabel(imageDate)}</p>}
 
       <div className="hm-zoom" role="toolbar" aria-label="Map navigation">
         <button type="button" onClick={() => zoomBy(1)} aria-label="Zoom in" title="Zoom in">

@@ -335,3 +335,35 @@ def test_map_ignores_risk_scores_that_are_too_old_or_missing(api_database, alert
     monkeypatch.setenv('RISK_MAX_AGE_DAYS', '10')
     with PostgresApiRepository(pool, alert_rules).read() as reader:
         assert reader.map_rows(query, NOW)['risk']['by_cell'] == {parent: pytest.approx(0.70)}
+
+
+def test_map_reads_the_place_of_the_cells_in_view_in_the_contract_names(api_database, alert_rules):
+    """`lugares_celula` fica em português, como o banco; a tradução para o contrato acontece aqui, num lugar só."""
+    from backend.adapters.outbound.postgres.api import PostgresApiRepository
+    from backend.domain.models.map_query import MapQuery
+    pool, _, cell = api_database
+    parent = h3.cell_to_parent(h3.int_to_str(cell), 4)
+    quiet = h3.latlng_to_cell(-2.5, -59.5, 4)          # no fire, listed only by its risk
+    far = h3.latlng_to_cell(-30, -50, 4)               # outside the view
+    with pool.connection() as conn:
+        score(conn, quiet, '2026-11-14', 0.70)
+        for place_cell, municipality in ((parent, 'Manaus'), (quiet, 'Itacoatiara'), (far, 'Longe')):
+            conn.execute("""INSERT INTO lugares_celula (h3, municipio, uf, unidades_conservacao, terras_indigenas, calculado_em)
+                VALUES (%s, %s, 'AM', ARRAY['Parque Teste'], '{}', now())""", (h3.str_to_int(place_cell), municipality))
+    with PostgresApiRepository(pool, alert_rules).read() as reader:
+        places = reader.map_rows(MapQuery.parse('-61,-4,-59,-2', '24', '4'), NOW)['places']
+    assert places == {
+        parent: {'municipality': 'Manaus', 'state': 'AM', 'conservation_units': ['Parque Teste'], 'indigenous_lands': []},
+        quiet: {'municipality': 'Itacoatiara', 'state': 'AM', 'conservation_units': ['Parque Teste'], 'indigenous_lands': []},
+    }
+
+
+def test_map_works_without_the_places_table_when_migration_006_was_not_applied(api_database, alert_rules):
+    from backend.adapters.outbound.postgres.api import PostgresApiRepository
+    from backend.domain.models.map_query import MapQuery
+    pool, _, _ = api_database
+    with pool.connection() as conn:
+        conn.execute('DROP TABLE lugares_celula')
+    with PostgresApiRepository(pool, alert_rules).read() as reader:
+        rows = reader.map_rows(MapQuery.parse('-61,-4,-59,-2', '24', '4'), NOW)
+    assert rows['places'] == {} and rows['cell_levels'] is not None

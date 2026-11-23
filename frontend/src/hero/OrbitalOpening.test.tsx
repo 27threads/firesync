@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { OrbitalOpening } from './OrbitalOpening';
 
 // O WebGL não existe no jsdom; a cena 3D tem a própria checagem no navegador.
@@ -25,5 +25,24 @@ describe('OrbitalOpening', () => {
   it('has no pause button or chapter dots: the globe tells its story by scrolling', () => {
     render(<OrbitalOpening />);
     expect(screen.queryByRole('button', { name: /pause the globe|play the globe|chapter/i })).toBeNull();
+  });
+});
+
+describe('OrbitalOpening with a shared area link', () => {
+  afterEach(() => window.history.replaceState(null, '', '/'));
+
+  it('goes straight down to the map, so the link opens on the area', async () => {
+    window.history.replaceState(null, '', '/?at=-3.1,-52.2&view=risk');
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    render(<OrbitalOpening />);
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'instant' })));
+    scrollTo.mockRestore();
+  });
+
+  it('stays on the globe without a link', () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    render(<OrbitalOpening />);
+    expect(scrollTo).not.toHaveBeenCalled();
+    scrollTo.mockRestore();
   });
 });

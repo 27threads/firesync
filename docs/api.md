@@ -310,7 +310,8 @@ Sempre GeoJSON, que o Leaflet desenha direto, sem precisar da biblioteca H3 no f
     "overall_share": 0.042,
     "priority": [
       { "h3": "84a8101ffffffff", "alert_level": "critical", "detections_7d": 46, "typical_median": 7,
-        "share_followed_by_high": 0.266, "center": [-60.2, -3.1] }
+        "share_followed_by_high": 0.266, "center": [-60.2, -3.1],
+        "place": { "municipality": "Manaus", "state": "AM", "conservation_units": [], "indigenous_lands": [] } }
     ]
   }
 }
@@ -331,6 +332,7 @@ Sempre GeoJSON, que o Leaflet desenha direto, sem precisar da biblioteca H3 no f
 | `priority` | Células em **Crítico**, depois em **Atenção**, cada grupo da maior para a menor razão entre a semana e o normal. Normal fica de fora |
 | `priority[].share_followed_by_high` | Com que frequência esse nível foi seguido de detecções incomumente altas nos 14 dias seguintes, no backtest de 2013 a 2024: Normal 2,6%, Atenção 10,7%, Crítico 26,6% (conferido no banco: 2,58%, 10,69% e 26,58%). No backtest o normal da célula usa todos os outros anos; no mapa usa só os anos anteriores ao atual, então a regra é quase a mesma, não idêntica. **É uma frequência do passado, não uma previsão** |
 | `priority[].center` | `[lon, lat]` do centro da célula, para o front levar o mapa até ela |
+| `priority[].place` | Nome do lugar, para quem está no campo reconhecer a área: `municipality` e `state` (município do centro da célula, IBGE), `conservation_units` (MMA, CNUC) e `indigenous_lands` (Funai), cada lista com até 3 nomes, da maior para a menor parte da célula, só os que cobrem 1% dela ou mais. `null` quando a célula não tem nome gravado (job `lugares.py` ainda não rodou, ou célula fora do Brasil). Vem da tabela `lugares_celula`; a API só lê |
 
 **Risco dos próximos 14 dias, do modelo treinado (RFC 0003).** O modelo roda **fora da API** (`data-pipeline/risco_celulas.py`) e grava a tabela `risco_celulas`; a API só lê. Para cada célula de resolução 4 na área visível, soma:
 
