@@ -46,6 +46,14 @@ Tudo em [`infra/docker-compose.yml`](../infra/docker-compose.yml). Nenhum servi�
 
 **Job de risco:** o serviço `job-risco` usa a mesma imagem do `job-nrt` e roda `risco_celulas.py --gravar` uma vez por dia: treina o modelo, pontua as células e grava em `risco_celulas`. As faixas vêm do `config/risk_rules.json`, montado só para leitura. A API esconde notas mais velhas que `RISK_MAX_AGE_DAYS` dias (padrão 2, tabela de variáveis no [backend/README.md](../backend/README.md)). Na VPS o `.env` usa 10: o job grava uma nota por dia, e o valor maior só pesa se ele parar de rodar. Primeira rodada na VPS em 15/11: 1,2 milhão de linhas de treino e 4.608 células gravadas para 14/11. Parado, o container usa 47 MiB; o pico de RAM durante a rodada não foi medido.
 
+**Remendo `hotfix_nrt` no banco (17/11):** o FIRMS passou a mandar linhas `2.1URT` junto com as `2.0NRT`. O importador gravava essas linhas como SP e, por causa da regra "SP substitui NRT" ([pipeline-dados.md](pipeline-dados.md)), apagava todo o NRT do satélite: o mapa e novembro ficaram com 0. Sem poder mudar o código na hora, a VPS ganhou um trigger em `focos` que grava `NRT` quando `arquivo_origem` tem `_NRT_`. O código já trata URT e RT como provisórios. Depois do `docker compose up -d --build` com essa versão, remova o trigger, a partir de `infra/`:
+
+```bash
+docker compose exec db psql -U firesync -d firesync -c "DROP TRIGGER hotfix_nrt ON focos; DROP FUNCTION hotfix_nrt();"
+```
+
+Remova só depois do rebuild: com a imagem antiga, a primeira rodada com uma linha URT apaga o NRT de novo.
+
 **Rate limit atrás do túnel:** todo pedido chega na API vindo do container do `cloudflared`. Por isso o compose define `CLIENT_IP_HEADER=CF-Connecting-IP`, e a API conta os pedidos pelo IP real do usuário. Só use essa variável atrás de um proxy que sobrescreve o header. Sem proxy, qualquer cliente escolheria o próprio IP.
 
 ## Segurança da VPS
