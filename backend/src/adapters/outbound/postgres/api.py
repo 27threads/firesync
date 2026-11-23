@@ -189,8 +189,26 @@ class PostgresApiReader(PostgresHistoryRepository):
         # sliding window. Empty results are rechecked after one minute.
         expires_at = (min(row['first_acquired'] for row in grouped) + timedelta(hours=query.hours)
                       if grouped else now + timedelta(minutes=1))
+        risk = self._risk_scores(grouped, now, query.bbox)
         return {'total': total, 'hexagons': grouped, 'points': points, 'expires_at': expires_at,
-                **self._cell_history(grouped, now), 'risk': self._risk_scores(grouped, now, query.bbox)}
+                **self._cell_history(grouped, now), 'risk': risk, 'places': self._places(grouped, risk)}
+
+    def _places(self, grouped, risk):
+        """Name of the place of each resolution 4 cell that can enter the priority list (`lugares_celula`, written by
+        `data-pipeline/lugares.py`). The Portuguese columns become the contract names here, and only here."""
+        cells = {h3.cell_to_parent(h3.int_to_str(row['h3']), ALERT_RESOLUTION) for row in grouped}
+        cells |= set(risk['by_cell']) if risk else set()
+        if not cells or len(cells) > MAX_ALERT_CELLS:
+            return {}
+        self.cursor.execute("SELECT to_regclass('lugares_celula') IS NOT NULL AS present")
+        if not self.cursor.fetchone()['present']:       # migration 006 not applied yet: the list works without names
+            return {}
+        self.cursor.execute("""SELECT h3, municipio, uf, unidades_conservacao, terras_indigenas FROM lugares_celula
+            WHERE h3 = ANY(%s::bigint[])""", ([h3.str_to_int(cell) for cell in cells],))
+        return {h3.int_to_str(row['h3']): {'municipality': row['municipio'], 'state': row['uf'],
+                                           'conservation_units': row['unidades_conservacao'],
+                                           'indigenous_lands': row['terras_indigenas']}
+                for row in self.cursor.fetchall()}
 
     def _risk_scores(self, grouped, now, bbox):
         """Scores of the trained model (`risco_celulas`) for the resolution 4 cells in view, or None without a fresh day.

@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY *.py regioes.json ./
+COPY *.py regioes.json lugares.json ./
 COPY migrations ./migrations
 # o job de risco (risco_celulas.py) importa as funções do experimento desta pasta
 COPY validacao/*.py ./validacao/

@@ -250,13 +250,16 @@ The submission requires identifying AI-generated code. Record here which parts w
 | Assistant provider chain (`docs/rfcs/0004-assistente-virtual.md`, `backend/README.md`) | Claude Code (Claude Opus 5.5) | Research of the Cerebras and Groq free tiers and record of the switch from Qwen to `gpt-oss-120b`, decided by the team. The assistant battery with the new chain still runs before the deploy |
 | API and pipeline audit fixes (map cache without point responses in `app.py`, streaming export with a named cursor in `postgres/api.py` and `zip_export.py`, empty missing_data parse in `pipeline.py`, NRT job window in 5-day blocks in `job_nrt.py`, call limit per assistant round in `assistant.py`, tests) | Claude Code (Claude Opus 5.5) | Audit done first with the ponytail-audit skill; each fix with a test that failed before. The export's named cursor only runs in the PostGIS integration tests. The team reviews in the PR |
 | README in English with the live site link and the team, status fixes in `docs/` (`requisitos.md`, `tarefas.md`, `ux-telas.md`, `arquitetura.md`, `validacao-api-eduardo.md`, RFC 0004, `backend/README.md`) | Claude Code (Claude Opus 5.5) | Translation of the README and comparison of the docs' statuses with the code on `main`; claims copied from `docs/pagina-projeto.md`. The team reviews in the PR |
+| Place names and area links in the priority list (`data-pipeline/lugares.py`, `lugares.json`, migration 006, `place` in the API, `frontend/src/hero/mapLink.ts`, cards in `HeroMap.tsx`, state borders in `stateBorders.ts` and `public/brazil-states.geojson`, "Latest image" button with the latest-day satellite image in `basemap.ts`, tests) | Claude Code (Claude Opus 5.5) | Requested by the team after the challenge; tests written before the code; checked with the real IBGE, MMA and Funai layers and in the browser against the live API. The team reviews in the PR |
 
 ## Data and credits
 
 - Fire detections: [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) (MODIS C6.1 and VIIRS C2)
 - Biome polygons: IBGE, Biomas do Brasil 1:250,000
+- Place names in the priority list and state borders on the map: IBGE, Malha Municipal 2024 (municipalities, merged into states); MMA, Cadastro Nacional de Unidades de Conservação (conservation units); Funai, Terras Indígenas (indigenous lands)
 - Validation series: INPE, Programa Queimadas
 - Earth texture in the opening (`frontend/src/hero/`): [NASA GIBS](https://www.earthdata.nasa.gov/gibs), layer `BlueMarble_ShadedRelief_Bathymetry`
+- Latest satellite image on the map ("Latest image" button): [NASA GIBS](https://www.earthdata.nasa.gov/gibs), layer `VIIRS_NOAA20_CorrectedReflectance_TrueColor` (the previous full day in UTC)
 - 3D models of Aqua and Suomi NPP: [NASA 3D Resources](https://github.com/nasa/NASA-3D-Resources)
 - Country borders: [datasets/geo-countries](https://github.com/datasets/geo-countries) (Natural Earth)
 - Burned area (risk model validation): [NASA MCD64A1 v061](https://lpdaac.usgs.gov/products/mcd64a1v061/) (MODIS Burned Area, 500 m)

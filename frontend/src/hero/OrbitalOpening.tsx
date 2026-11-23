@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useMediaQuery } from '../ui/useMediaQuery';
 import { chapterAt, journeyProgress, MAP_ARRIVAL_HOLD, smoothPhase, STACKED_OPENING_MAX_WIDTH } from './globeTransition';
 import { prefersReducedMotion } from './heroIntro';
+import { parseAreaLink } from './mapLink';
 import { OPENING_AUDIENCE, OPENING_CHAPTERS, OPENING_DATA_CREDIT } from './openingCopy';
 
 const OrbitalScene = lazy(() => import('./OrbitalScene'));
@@ -60,6 +61,27 @@ export function OrbitalOpening() {
     return () => {
       cancelAnimationFrame(frame);
       visibility?.disconnect();
+    };
+  }, []);
+
+  // A shared area link skips the globe: the page goes to the end of the descent, where the map is open.
+  // After the page loads, or the browser puts the scroll back where it was; 'instant', because the page has
+  // `scroll-behavior: smooth` and a smooth scroll is cut short while the page still loads.
+  useEffect(() => {
+    const element = section.current;
+    if (!element || !parseAreaLink(window.location.search)) return;
+    window.history.scrollRestoration = 'manual';
+    let timer = 0;
+    const go = () => {
+      timer = window.setTimeout(() =>
+        window.scrollTo({ top: window.scrollY + element.getBoundingClientRect().top + element.offsetHeight - window.innerHeight, behavior: 'instant' }),
+      );
+    };
+    if (document.readyState === 'complete') go();
+    else window.addEventListener('load', go, { once: true });
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('load', go);
     };
   }, []);
 

@@ -358,6 +358,28 @@
   border-radius: 8px;
   background: #f3f4f6;
 }
+.hm-cardwrap {
+  margin: 6px 0;
+}
+.hm-cardwrap .hm-card {
+  margin: 0;
+}
+.hm-protected {
+  color: #1f5f3a;
+  font-weight: 600;
+}
+.hm-share {
+  padding: 4px 10px;
+  font-size: 11px;
+  color: #2f4fd6;
+  text-decoration: underline;
+  background: none;
+}
+.hm-sharelink {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 11px;
+}
 .hm-card:hover {
   background: #e8eaee;
 }
@@ -658,4 +680,45 @@
   .hm-announce {
     bottom: calc(var(--hm-foot, 30px) + var(--hm-legend, 40px) + 106px);
   }
+}
+
+/* Sigla dos estados (divisas do IBGE) sobre a imagem de satélite. */
+.hm-state-label {
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-shadow: 0 0 3px #000000, 0 0 2px #000000;
+}
+
+/* Escolha da imagem de fundo (NASA GIBS), acima do zoom. */
+.hm-basemap {
+  position: absolute;
+  right: 12px;
+  bottom: calc(var(--hm-foot, 30px) + 128px);
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+.hm-basemap[aria-pressed='true'] {
+  color: #ffffff;
+  background: #2f4fd6;
+}
+.hm-imagedate {
+  position: absolute;
+  right: 12px;
+  bottom: calc(var(--hm-foot, 30px) + 166px);
+  max-width: 220px;
+  margin: 0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.6);
+  text-align: right;
 }

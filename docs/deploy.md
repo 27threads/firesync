@@ -44,6 +44,15 @@ Tudo em [`infra/docker-compose.yml`](../infra/docker-compose.yml). Nenhum servi�
 
 **API só com leitura:** a API usa o usuário `firesync_api` (só `SELECT`, `statement_timeout` de 30 s), criado no roteiro de carga. Um erro na API não apaga dados, e uma consulta pesada não segura o pool. O pipeline, o job NRT e o job de risco usam o `firesync`, que escreve.
 
+**Nome do lugar (migration 006):** a tabela `lugares_celula` é nova, e o `docker-entrypoint-initdb.d` só roda com o volume vazio. Uma vez, na VPS, a partir de `infra/`: aplicar a migration como o usuário `firesync` (o `ALTER DEFAULT PRIVILEGES` do [banco.md](banco.md) dá o `SELECT` ao `firesync_api`) e rodar o job com a imagem do `job-nrt`:
+
+```bash
+docker compose exec -T db psql -U firesync -d firesync < ../data-pipeline/migrations/006_lugares_celula.sql
+docker compose build job-nrt && docker compose run --rm job-nrt python lugares.py
+```
+
+O log termina com `places_saved` e o número de células. Até lá, a API funciona sem os nomes (`place: null`), e o front mostra as coordenadas.
+
 **Job de risco:** o serviço `job-risco` usa a mesma imagem do `job-nrt` e roda `risco_celulas.py --gravar` uma vez por dia: treina o modelo, pontua as células e grava em `risco_celulas`. As faixas vêm do `config/risk_rules.json`, montado só para leitura. A API esconde notas mais velhas que `RISK_MAX_AGE_DAYS` dias (padrão 2, tabela de variáveis no [backend/README.md](../backend/README.md)). Na VPS o `.env` usa 10: o job grava uma nota por dia, e o valor maior só pesa se ele parar de rodar. Primeira rodada na VPS em 15/11: 1,2 milhão de linhas de treino e 4.608 células gravadas para 14/11. Parado, o container usa 47 MiB; o pico de RAM durante a rodada não foi medido.
 
 **Rate limit atrás do túnel:** todo pedido chega na API vindo do container do `cloudflared`. Por isso o compose define `CLIENT_IP_HEADER=CF-Connecting-IP`, e a API conta os pedidos pelo IP real do usuário. Só use essa variável atrás de um proxy que sobrescreve o header. Sem proxy, qualquer cliente escolheria o próprio IP.
